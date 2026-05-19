@@ -23,8 +23,12 @@ export default async (req) => {
     });
   }
 
-  // Validação mínima dos campos obrigatórios
-  const required = ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
+  // Validação por tipo de formulário
+  const origem = body.origem === 'checklist' ? 'checklist' : 'mentoria';
+  const required = origem === 'checklist'
+    ? ['nome', 'email', 'whatsapp', 'atuacao']
+    : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
+
   for (const k of required) {
     if (!body[k] || String(body[k]).trim() === '') {
       return new Response(JSON.stringify({error: `Campo obrigatório ausente: ${k}`}), {
@@ -42,6 +46,7 @@ export default async (req) => {
     createdAt: new Date().toISOString(),
     status: 'novo',  // novo | lido | respondido | convidado | recusado
     notes: '',
+    origem,  // mentoria | checklist
     ...body,
   };
 
