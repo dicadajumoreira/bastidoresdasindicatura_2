@@ -1,0 +1,38 @@
+# Netlify config — Bastidores da Sindicatura
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+  command = "npm install"
+
+# API routes
+[[redirects]]
+  from = "/api/submit"
+  to = "/.netlify/functions/submit"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/leads"
+  to = "/.netlify/functions/leads"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/update-status"
+  to = "/.netlify/functions/update-status"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/auth"
+  to = "/.netlify/functions/auth"
+  status = 200
+  force = true
+
+# Headers de segurança no admin
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
