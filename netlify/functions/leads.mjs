@@ -5,7 +5,8 @@ import { getStore } from '@netlify/blobs';
 import { verify } from './auth.mjs';
 
 export default async (req) => {
-  const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return json({error: 'Servidor não configurado (AUTH_SECRET)'}, 500);
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
 

@@ -32,7 +32,11 @@ export default async (req) => {
   }
 
   const adminPassword = process.env.ADMIN_PASSWORD;
-  const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
+  const secret = process.env.AUTH_SECRET;
+
+  if (!secret) {
+    return json({error: 'Servidor não configurado (AUTH_SECRET)'}, 500);
+  }
 
   if (!adminPassword) {
     return json({error: 'Servidor não configurado (ADMIN_PASSWORD)'}, 500);

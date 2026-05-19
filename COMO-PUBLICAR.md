@@ -56,8 +56,8 @@ Confirma que as duas estão configuradas em **Site configuration → Environment
 
 | Nome | Valor |
 |------|-------|
-| `ADMIN_PASSWORD` | `Guigui0909` |
-| `AUTH_SECRET` | (qualquer string longa aleatória) |
+| `ADMIN_PASSWORD` | (a senha escolhida para o painel admin — nunca coloque no código) |
+| `AUTH_SECRET` | (qualquer string longa aleatória — nunca coloque no código) |
 
 Se você já tinha configurado antes, continuam ativas — só conferir.
 
@@ -75,7 +75,7 @@ Depois de adicionar/conferir, vá em **Deploys → Trigger deploy → Clear cach
 
 - **Landing pública:** `https://bastidores-da-sindicatura.netlify.app/` (e seu domínio próprio se já apontado)
 - **Painel admin:** `https://bastidores-da-sindicatura.netlify.app/admin`
-- **Senha admin:** `Guigui0909`
+- **Senha admin:** (definida na variável de ambiente `ADMIN_PASSWORD` no Netlify)
 - **Notificação por e-mail:** automática para `contato@dicadajumoreira.com.br`
 
 ## Atualizações futuras

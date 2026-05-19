@@ -9,7 +9,8 @@ const VALID_STATUS = new Set(['novo', 'lido', 'respondido', 'convidado', 'recusa
 export default async (req) => {
   if (req.method !== 'POST') return json({error: 'Method not allowed'}, 405);
 
-  const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return json({error: 'Servidor não configurado (AUTH_SECRET)'}, 500);
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   if (!verify(token, secret)) return json({error: 'Não autorizado'}, 401);
