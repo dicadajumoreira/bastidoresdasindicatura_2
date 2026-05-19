@@ -606,3 +606,79 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   font-family: var(--font-display);
   font-style: italic;
 }
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+@media (max-width: 1100px) {
+  .ad-app { grid-template-columns: 220px 1fr; }
+  .ad-app.has-detail {
+    grid-template-columns: 1fr;
+  }
+  .ad-app.has-detail .ad-side,
+  .ad-app.has-detail .ad-main { display: none; }
+  .ad-app.has-detail .ad-detail {
+    border-left: none;
+    max-height: 100vh;
+  }
+  .ad-main { padding: 28px 32px; }
+  .ad-h1 { font-size: 42px; }
+  .ad-search { width: 240px; }
+}
+
+@media (max-width: 720px) {
+  .ad-app {
+    grid-template-columns: 1fr;
+  }
+  .ad-side {
+    padding: 20px 18px;
+    flex-direction: column;
+  }
+  .ad-side .ad-brand { margin-bottom: 20px; }
+  .ad-side-section { margin-top: 12px; margin-bottom: 8px; }
+  .ad-side-foot { padding-top: 16px; }
+
+  .ad-main { padding: 22px 18px; max-height: none; }
+  .ad-main-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+  }
+  .ad-h1 { font-size: 36px; line-height: 0.95; }
+  .ad-h1-sub { font-size: 14px; }
+  .ad-search { width: 100%; }
+
+  .ad-list-item {
+    grid-template-columns: 10px 1fr;
+    gap: 12px;
+    padding: 14px 0;
+  }
+  .ad-list-date { display: none; }
+  .ad-list-name { font-size: 18px; }
+  .ad-list-meta { font-size: 11px; gap: 6px; }
+  .ad-list-origem { font-size: 11px; }
+
+  /* === LOGIN mobile === */
+  .ad-login-card { padding: 32px 24px; }
+  .ad-login-title { font-size: 42px; margin-bottom: 24px; }
+
+  /* === DETAIL mobile === */
+  .ad-detail { padding: 22px 18px 40px; gap: 18px; }
+  .ad-detail-name { font-size: 28px; }
+  .ad-detail-actions { flex-wrap: wrap; }
+  .ad-detail-actions .ad-btn { padding: 9px 14px; font-size: 10px; letter-spacing: 0.18em; }
+  .ad-status-card { padding: 16px; }
+  .ad-status-chip { padding: 7px 12px; font-size: 10px; letter-spacing: 0.18em; }
+  .ad-status-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .ad-section { padding: 16px; }
+  .ad-field-row { grid-template-columns: 1fr; gap: 2px; }
+  .ad-field-row dt { font-size: 10px; letter-spacing: 0.22em; }
+  .ad-field-row dd { font-size: 15px; }
+  .ad-field-row.is-long dd { font-size: 14px; }
+}
