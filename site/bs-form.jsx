@@ -76,7 +76,7 @@ const BsForm = () => {
     // 1. Envia para o backend (Blobs + painel admin)
     let backendOk = false;
     try {
-      const res = await fetch('/api/submit', {
+      const res = await fetch('/.netlify/functions/submit', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload),
