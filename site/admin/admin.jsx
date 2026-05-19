@@ -24,7 +24,11 @@ const fmtDate = (iso) => {
 
 const api = async (path, opts = {}) => {
   const token = sessionStorage.getItem(TOKEN_KEY) || '';
-  const res = await fetch(path, {
+  // Chama a function diretamente (sem depender do redirect /api/*)
+  const realPath = path.startsWith('/api/')
+    ? '/.netlify/functions/' + path.slice('/api/'.length)
+    : path;
+  const res = await fetch(realPath, {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
