@@ -20,12 +20,17 @@
       min-height: 100vh;
     }
     .ck-root {
-      width: 1440px;
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
       background: var(--onix);
       color: var(--offwhite);
       box-shadow: 0 30px 80px rgba(0,0,0,0.4);
       position: relative;
       overflow: hidden;
+    }
+    @media (max-width: 1440px) {
+      .ck-root { box-shadow: none; }
     }
     .ck-root::before {
       content: '';
@@ -309,6 +314,82 @@
       font-weight: 500;
       padding-left: 14px;
       border-left: 1px solid rgba(247, 245, 242, 0.18);
+    }
+
+    /* ============================================================
+       RESPONSIVO
+       ============================================================ */
+    @media (max-width: 1100px) {
+      .ck-topbar, .ck-hero, .ck-footer-block { padding-left: 56px; padding-right: 56px; }
+      .ck-hero { grid-template-columns: 1fr 380px; gap: 48px; padding-top: 72px; padding-bottom: 64px; }
+      .ck-hero-title { font-size: 88px; }
+    }
+
+    @media (max-width: 720px) {
+      .ck-topbar {
+        padding: 18px 22px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+      }
+      .ck-topbar-brand {
+        margin-left: 0;
+        flex-wrap: wrap;
+      }
+      .ck-topbar-brand-l1 { font-size: 18px; }
+      .ck-topbar-brand-l2 {
+        font-size: 9px;
+        letter-spacing: 0.26em;
+        padding-left: 10px;
+      }
+      .ck-hero {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        padding: 48px 22px 56px;
+        min-height: 0;
+      }
+      .ck-hero-eyebrow {
+        margin-bottom: 28px;
+        gap: 12px;
+      }
+      .ck-hero-eyebrow .bs-rule { width: 32px; }
+      .ck-hero-title {
+        font-size: 52px;
+        line-height: 0.9;
+        letter-spacing: -0.025em;
+        margin-bottom: 24px;
+      }
+      .ck-hero-lead {
+        font-size: 17px;
+        line-height: 1.45;
+        margin-bottom: 28px;
+      }
+      .ck-hero-meta {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        padding-top: 20px;
+      }
+      .ck-meta-v { font-size: 22px; }
+      .ck-meta-k { font-size: 9px; letter-spacing: 0.22em; }
+
+      .ck-form-wrap { padding: 32px 24px 28px; }
+      .ck-form-title { font-size: 30px; }
+      .ck-form-sub { font-size: 14px; }
+      .ck-cta {
+        padding: 16px 18px;
+        font-size: 12px;
+        letter-spacing: 0.2em;
+      }
+
+      .ck-footer-block {
+        padding: 32px 22px;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .ck-footer-text { font-size: 16px; }
+      .ck-footer-brand { text-align: left; }
+      .ck-footer-brand-l1 { font-size: 18px; }
+      .ck-footer-brand-l2 { font-size: 10px; letter-spacing: 0.24em; }
     }
   </style>
 
