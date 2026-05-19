@@ -4,6 +4,11 @@
   functions = "netlify/functions"
   command = "npm install"
 
+# Não escaneia arquivos de documentação por "secrets"
+# (o COMO-PUBLICAR.md pode mencionar variáveis de exemplo)
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = "COMO-PUBLICAR.md,README.md"
+
 # API routes
 [[redirects]]
   from = "/api/submit"
@@ -28,6 +33,18 @@
   to = "/.netlify/functions/auth"
   status = 200
   force = true
+
+# Admin sem trailing slash
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
+
+# /checklist sem barra final aponta para a landing
+[[redirects]]
+  from = "/checklist"
+  to = "/checklist/index.html"
+  status = 200
 
 # Headers de segurança no admin
 [[headers]]
