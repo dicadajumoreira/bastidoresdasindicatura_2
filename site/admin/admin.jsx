@@ -12,6 +12,12 @@ const STATUS_LABELS = {
 };
 const STATUS_ORDER = ['novo', 'lido', 'respondido', 'convidado', 'recusado'];
 
+const ORIGEM_LABELS = {
+  mentoria: 'Aplicação Mentoria',
+  checklist: 'Checklist Assembleias',
+};
+const ORIGEM_ORDER = ['mentoria', 'checklist'];
+
 /* ============================================================
    Helpers
    ============================================================ */
@@ -48,6 +54,7 @@ const api = async (path, opts = {}) => {
 const downloadCsv = (leads) => {
   const cols = [
     ['createdAt', 'Data'],
+    ['origem', 'Origem'],
     ['nome', 'Nome'],
     ['cidade', 'Cidade'],
     ['whatsapp', 'WhatsApp'],
@@ -186,7 +193,8 @@ const LeadDetail = ({lead, onClose, onUpdated}) => {
           <span className="ad-tag-sm">Aplicação · {fmtDate(lead.createdAt)}</span>
           <h2 className="ad-detail-name">{lead.nome}</h2>
           <p className="ad-detail-sub">
-            {lead.cidade}
+            <span className="ad-detail-origem">{ORIGEM_LABELS[lead.origem || 'mentoria']}</span>
+            {lead.cidade ? <> · {lead.cidade}</> : null}
             {lead.modalidade ? <> · <em>{lead.modalidade}</em></> : null}
           </p>
         </div>
@@ -235,37 +243,46 @@ const LeadDetail = ({lead, onClose, onUpdated}) => {
       <div className="ad-fields">
         <Section title="Dados de contato">
           <Field k="Nome" v={lead.nome} />
-          <Field k="Cidade / Estado" v={lead.cidade} />
+          {lead.cidade && <Field k="Cidade / Estado" v={lead.cidade} />}
           <Field k="WhatsApp" v={lead.whatsapp} />
           <Field k="E-mail" v={lead.email} />
-          <Field k="Instagram" v={lead.instagram} />
+          {lead.instagram && <Field k="Instagram" v={lead.instagram} />}
         </Section>
 
         <Section title="Atuação">
           <Field k="Atua como" v={lead.atuacao} />
-          <Field k="Tempo no mercado" v={lead.tempoMercado} />
-          <Field k="Condomínios sob gestão" v={lead.qtdCondominios} />
+          {lead.tempoMercado && <Field k="Tempo no mercado" v={lead.tempoMercado} />}
+          {lead.qtdCondominios && <Field k="Condomínios sob gestão" v={lead.qtdCondominios} />}
         </Section>
 
-        <Section title="Momento profissional">
-          <Field k="Maior desafio da rotina" v={lead.maiorDesafio} long />
-          <Field k="O que tem desgastado emocionalmente" v={lead.desgaste} long />
-          <Field k="Áreas para evoluir" v={Array.isArray(lead.areas) ? lead.areas.join(' · ') : lead.areas} />
-        </Section>
+        {/* Seções exclusivas da aplicação da mentoria */}
+        {lead.origem !== 'checklist' && (lead.maiorDesafio || lead.desgaste || lead.areas) && (
+          <Section title="Momento profissional">
+            <Field k="Maior desafio da rotina" v={lead.maiorDesafio} long />
+            <Field k="O que tem desgastado emocionalmente" v={lead.desgaste} long />
+            <Field k="Áreas para evoluir" v={Array.isArray(lead.areas) ? lead.areas.join(' · ') : lead.areas} />
+          </Section>
+        )}
 
-        <Section title="Sobre o futuro">
-          <Field k="O que espera desenvolver" v={lead.desenvolvimento} long />
-          <Field k="Maior objetivo profissional" v={lead.objetivo} long />
-          <Field k="Onde quer estar em dois anos" v={lead.onde2anos} long />
-        </Section>
+        {lead.origem !== 'checklist' && (lead.desenvolvimento || lead.objetivo || lead.onde2anos) && (
+          <Section title="Sobre o futuro">
+            <Field k="O que espera desenvolver" v={lead.desenvolvimento} long />
+            <Field k="Maior objetivo profissional" v={lead.objetivo} long />
+            <Field k="Onde quer estar em dois anos" v={lead.onde2anos} long />
+          </Section>
+        )}
 
-        <Section title="A pergunta mais importante" highlight>
-          <Field k="O que ninguém vê sobre a sua rotina" v={lead.bastidor} long />
-        </Section>
+        {lead.origem !== 'checklist' && lead.bastidor && (
+          <Section title="A pergunta mais importante" highlight>
+            <Field k="O que ninguém vê sobre a sua rotina" v={lead.bastidor} long />
+          </Section>
+        )}
 
-        <Section title="Modalidade escolhida">
-          <Field k="Modalidade" v={lead.modalidade} />
-        </Section>
+        {lead.modalidade && (
+          <Section title="Modalidade escolhida">
+            <Field k="Modalidade" v={lead.modalidade} />
+          </Section>
+        )}
       </div>
     </div>
   );
@@ -294,6 +311,7 @@ const Dashboard = ({onLogout}) => {
   const [error, setError] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('todos');
   const [modFilter, setModFilter] = React.useState('todos');
+  const [origemFilter, setOrigemFilter] = React.useState('todos');
   const [search, setSearch] = React.useState('');
   const [selected, setSelected] = React.useState(null);
 
@@ -319,6 +337,7 @@ const Dashboard = ({onLogout}) => {
 
   const filtered = leads.filter((l) => {
     if (statusFilter !== 'todos' && l.status !== statusFilter) return false;
+    if (origemFilter !== 'todos' && (l.origem || 'mentoria') !== origemFilter) return false;
     if (modFilter !== 'todos' && l.modalidade !== modFilter) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -331,7 +350,11 @@ const Dashboard = ({onLogout}) => {
   const counts = React.useMemo(() => {
     const c = {todos: leads.length};
     STATUS_ORDER.forEach((s) => c[s] = 0);
-    leads.forEach((l) => { c[l.status || 'novo'] = (c[l.status || 'novo'] || 0) + 1; });
+    ORIGEM_ORDER.forEach((o) => c['origem_' + o] = 0);
+    leads.forEach((l) => {
+      c[l.status || 'novo'] = (c[l.status || 'novo'] || 0) + 1;
+      c['origem_' + (l.origem || 'mentoria')] = (c['origem_' + (l.origem || 'mentoria')] || 0) + 1;
+    });
     return c;
   }, [leads]);
 
@@ -353,6 +376,18 @@ const Dashboard = ({onLogout}) => {
           <span className="ad-brand-l1">Bastidores</span>
           <span className="ad-brand-l2">Painel</span>
         </div>
+
+        <span className="ad-side-section">Origem</span>
+        <nav className="ad-side-nav">
+          <button className={origemFilter === 'todos' ? 'is-on' : ''} onClick={() => setOrigemFilter('todos')}>
+            <span>Todas</span><em>{counts.todos}</em>
+          </button>
+          {ORIGEM_ORDER.map((o) => (
+            <button key={o} className={origemFilter === o ? 'is-on' : ''} onClick={() => setOrigemFilter(o)}>
+              <span>{ORIGEM_LABELS[o]}</span><em>{counts['origem_' + o] || 0}</em>
+            </button>
+          ))}
+        </nav>
 
         <span className="ad-side-section">Status</span>
         <nav className="ad-side-nav">
@@ -415,9 +450,9 @@ const Dashboard = ({onLogout}) => {
                 <div className="ad-list-main">
                   <div className="ad-list-name">{l.nome}</div>
                   <div className="ad-list-meta">
-                    <span>{l.cidade}</span>
+                    <span className="ad-list-origem">{ORIGEM_LABELS[l.origem || 'mentoria']}</span>
                     <span className="ad-dot">·</span>
-                    <span>{l.atuacao || '—'}</span>
+                    <span>{l.cidade || l.atuacao || '—'}</span>
                     {l.modalidade && <><span className="ad-dot">·</span><em>{l.modalidade}</em></>}
                   </div>
                 </div>

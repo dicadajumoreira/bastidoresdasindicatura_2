@@ -418,6 +418,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   font-style: italic;
   color: var(--sand-deep);
 }
+.ad-list-origem {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--lavender-deep);
+  font-size: 13px;
+}
+.ad-list-item.is-on .ad-list-origem { color: var(--lavender); }
+
+.ad-detail-origem {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--lavender);
+  font-size: 14px;
+}
 .ad-dot { opacity: 0.5; }
 .ad-list-date {
   font-size: 11px;
