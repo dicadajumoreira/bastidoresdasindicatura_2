@@ -172,6 +172,14 @@
       margin-bottom: 6px;
       font-weight: 500;
     }
+    .ck-label .ck-opt {
+      letter-spacing: 0.04em;
+      text-transform: none;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--graphite-light);
+      margin-left: 4px;
+    }
     .ck-field input, .ck-field select {
       width: 100%;
       border: none;
@@ -415,7 +423,7 @@
 
   <script type="text/babel">
     const ChecklistLanding = () => {
-      const [data, setData] = React.useState({nome: '', cidade: '', estado: '', whatsapp: '', email: '', atuacao: ''});
+      const [data, setData] = React.useState({nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: ''});
       const [submitting, setSubmitting] = React.useState(false);
       const [error, setError] = React.useState('');
 
@@ -557,6 +565,10 @@
                     <input type="email" required value={data.email} onChange={(e) => setField('email', e.target.value)} placeholder="seu@email.com" />
                   </label>
                   <label className="ck-field">
+                    <span className="ck-label">@ nas redes sociais <span className="ck-opt">(opcional)</span></span>
+                    <input type="text" value={data.instagram} onChange={(e) => setField('instagram', e.target.value)} placeholder="@seuuser" />
+                  </label>
+                  <label className="ck-field">
                     <span className="ck-label">Atua hoje como</span>
                     <select required value={data.atuacao} onChange={(e) => setField('atuacao', e.target.value)}>
                       <option value="" disabled>Selecione</option>
@@ -615,6 +627,7 @@
     <input type="text" name="estado" />
     <input type="tel" name="whatsapp" />
     <input type="email" name="email" />
+    <input type="text" name="instagram" />
     <input type="text" name="atuacao" />
     <input type="text" name="origem" />
   </form>
