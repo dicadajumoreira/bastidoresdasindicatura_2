@@ -28,6 +28,23 @@ const fmtDate = (iso) => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+// Normalização para detecção de duplicidade
+const normEmail = (e) => (e || '').trim().toLowerCase();
+const normPhone = (p) => (p || '').replace(/\D/g, '');
+
+// Retorna os outros leads que compartilham email OU whatsapp com este
+const findDuplicates = (lead, allLeads) => {
+  const email = normEmail(lead.email);
+  const phone = normPhone(lead.whatsapp);
+  if (!email && !phone) return [];
+  return allLeads.filter((other) => {
+    if (other.id === lead.id) return false;
+    if (email && normEmail(other.email) === email) return true;
+    if (phone && normPhone(other.whatsapp) === phone) return true;
+    return false;
+  });
+};
+
 const api = async (path, opts = {}) => {
   const token = sessionStorage.getItem(TOKEN_KEY) || '';
   // Chama a function diretamente (sem depender do redirect /api/*)
@@ -156,7 +173,7 @@ const Login = ({onSuccess}) => {
 /* ============================================================
    LEAD DETAIL (drawer lateral)
    ============================================================ */
-const LeadDetail = ({lead, onClose, onUpdated}) => {
+const LeadDetail = ({lead, onClose, onUpdated, duplicates = [], onSelectLead}) => {
   const [status, setStatus] = React.useState(lead.status || 'novo');
   const [notes, setNotes] = React.useState(lead.notes || '');
   const [saving, setSaving] = React.useState(false);
@@ -211,6 +228,35 @@ const LeadDetail = ({lead, onClose, onUpdated}) => {
              target="_blank" rel="noreferrer">Instagram</a>
         )}
       </div>
+
+      {/* Duplicatas (mesmo e-mail ou WhatsApp) */}
+      {duplicates.length > 0 && (
+        <div className="ad-dup-card">
+          <div className="ad-dup-head">
+            <span className="ad-dup-badge ad-dup-badge-lg">{duplicates.length + 1}x</span>
+            <div>
+              <span className="ad-label">Outras aplicações desta pessoa</span>
+              <p className="ad-dup-hint">Mesmo e-mail ou WhatsApp. Clique para abrir.</p>
+            </div>
+          </div>
+          <ul className="ad-dup-list">
+            {duplicates.map((d) => (
+              <li key={d.id} className="ad-dup-item" onClick={() => onSelectLead && onSelectLead(d)}>
+                <span className={'ad-status-dot ad-status-' + (d.status || 'novo')} aria-hidden="true"></span>
+                <div className="ad-dup-item-main">
+                  <div className="ad-dup-item-meta">
+                    <span className="ad-dup-item-origem">{ORIGEM_LABELS[d.origem || 'mentoria']}</span>
+                    <span className="ad-dot">·</span>
+                    <span>{STATUS_LABELS[d.status || 'novo']}</span>
+                    {d.modalidade && <><span className="ad-dot">·</span><em>{d.modalidade}</em></>}
+                  </div>
+                </div>
+                <div className="ad-dup-item-date">{fmtDate(d.createdAt)}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Status + notas */}
       <div className="ad-status-card">
@@ -318,6 +364,7 @@ const Dashboard = ({onLogout}) => {
   const [statusFilter, setStatusFilter] = React.useState('todos');
   const [modFilter, setModFilter] = React.useState('todos');
   const [origemFilter, setOrigemFilter] = React.useState('todos');
+  const [dupFilter, setDupFilter] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [selected, setSelected] = React.useState(null);
 
@@ -341,10 +388,18 @@ const Dashboard = ({onLogout}) => {
 
   React.useEffect(() => { load(); }, []);
 
+  // Mapa de duplicatas: leadId → array de outros leads com mesmo email/whatsapp
+  const duplicateMap = React.useMemo(() => {
+    const map = new Map();
+    leads.forEach((l) => map.set(l.id, findDuplicates(l, leads)));
+    return map;
+  }, [leads]);
+
   const filtered = leads.filter((l) => {
     if (statusFilter !== 'todos' && l.status !== statusFilter) return false;
     if (origemFilter !== 'todos' && (l.origem || 'mentoria') !== origemFilter) return false;
     if (modFilter !== 'todos' && l.modalidade !== modFilter) return false;
+    if (dupFilter && (duplicateMap.get(l.id) || []).length === 0) return false;
     if (search) {
       const q = search.toLowerCase();
       const hay = [l.nome, l.cidade, l.email, l.whatsapp, l.instagram].filter(Boolean).join(' ').toLowerCase();
@@ -354,15 +409,16 @@ const Dashboard = ({onLogout}) => {
   });
 
   const counts = React.useMemo(() => {
-    const c = {todos: leads.length};
+    const c = {todos: leads.length, duplicates: 0};
     STATUS_ORDER.forEach((s) => c[s] = 0);
     ORIGEM_ORDER.forEach((o) => c['origem_' + o] = 0);
     leads.forEach((l) => {
       c[l.status || 'novo'] = (c[l.status || 'novo'] || 0) + 1;
       c['origem_' + (l.origem || 'mentoria')] = (c['origem_' + (l.origem || 'mentoria')] || 0) + 1;
+      if ((duplicateMap.get(l.id) || []).length > 0) c.duplicates += 1;
     });
     return c;
-  }, [leads]);
+  }, [leads, duplicateMap]);
 
   const onUpdated = (updated) => {
     setLeads((all) => all.map((l) => (l.id === updated.id ? updated : l)));
@@ -414,6 +470,13 @@ const Dashboard = ({onLogout}) => {
           <button className={modFilter === 'Executive' ? 'is-on' : ''} onClick={() => setModFilter('Executive')}>Executive</button>
         </nav>
 
+        <span className="ad-side-section">Duplicatas</span>
+        <nav className="ad-side-nav">
+          <button className={dupFilter ? 'is-on' : ''} onClick={() => setDupFilter(!dupFilter)}>
+            <span>Apenas com duplicata</span><em>{counts.duplicates}</em>
+          </button>
+        </nav>
+
         <div className="ad-side-foot">
           <button className="ad-btn-link" onClick={() => downloadCsv(filtered)} disabled={!filtered.length}>Exportar CSV</button>
           <button className="ad-btn-link" onClick={load}>Atualizar</button>
@@ -454,7 +517,13 @@ const Dashboard = ({onLogout}) => {
                 onClick={() => setSelected(l)}>
                 <span className={'ad-status-dot ad-status-' + (l.status || 'novo')} aria-hidden="true"></span>
                 <div className="ad-list-main">
-                  <div className="ad-list-name">{l.nome}</div>
+                  <div className="ad-list-name">
+                    {l.nome}
+                    {(() => {
+                      const n = (duplicateMap.get(l.id) || []).length;
+                      return n > 0 ? <span className="ad-dup-badge" title="Outras aplicações com mesmo e-mail ou WhatsApp">{n + 1}x</span> : null;
+                    })()}
+                  </div>
                   <div className="ad-list-meta">
                     <span className="ad-list-origem">{ORIGEM_LABELS[l.origem || 'mentoria']}</span>
                     <span className="ad-dot">·</span>
@@ -474,6 +543,8 @@ const Dashboard = ({onLogout}) => {
           lead={selected}
           onClose={() => setSelected(null)}
           onUpdated={onUpdated}
+          duplicates={duplicateMap.get(selected.id) || []}
+          onSelectLead={setSelected}
         />
       )}
     </div>

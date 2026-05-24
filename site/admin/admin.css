@@ -681,4 +681,98 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   .ad-field-row dt { font-size: 10px; letter-spacing: 0.22em; }
   .ad-field-row dd { font-size: 15px; }
   .ad-field-row.is-long dd { font-size: 14px; }
+  .ad-dup-card { padding: 16px; margin: 16px; }
+  .ad-dup-item { padding: 10px 12px; }
+  .ad-dup-item-date { font-size: 11px; }
+}
+
+/* ============================================================
+   DUPLICATAS — badge na lista + card no detail
+   ============================================================ */
+
+/* Badge "2x" / "3x" ao lado do nome na lista */
+.ad-dup-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 8px;
+  background: var(--sand, #DABDA9);
+  color: var(--onix, #1A1C29);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 3px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.ad-dup-badge-lg {
+  font-size: 13px;
+  padding: 4px 11px;
+  margin-left: 0;
+  letter-spacing: 0.1em;
+}
+
+/* Card no detail view com a lista de duplicatas */
+.ad-dup-card {
+  margin: 0 24px 20px;
+  padding: 18px 20px;
+  background: rgba(218, 189, 169, 0.08);
+  border: 1px solid rgba(218, 189, 169, 0.4);
+  border-radius: 4px;
+}
+.ad-dup-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.ad-dup-head > div { flex: 1; }
+.ad-dup-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--graphite-light, #5a5f6c);
+}
+.ad-dup-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ad-dup-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--offwhite, #F7F5F2);
+  border: 1px solid rgba(26, 28, 41, 0.08);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ad-dup-item:hover {
+  background: rgba(218, 189, 169, 0.15);
+  border-color: rgba(218, 189, 169, 0.6);
+}
+.ad-dup-item-main { min-width: 0; }
+.ad-dup-item-meta {
+  font-size: 13px;
+  color: var(--graphite, #3B3F4A);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ad-dup-item-origem {
+  font-weight: 600;
+  color: var(--onix, #1A1C29);
+}
+.ad-dup-item-meta em { font-style: italic; color: var(--sand-deep, #B89579); }
+.ad-dup-item-date {
+  font-size: 12px;
+  color: var(--graphite-light, #5a5f6c);
+  white-space: nowrap;
 }
