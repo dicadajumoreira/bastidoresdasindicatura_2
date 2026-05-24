@@ -2,37 +2,40 @@
 [build]
   publish = "site"
   functions = "netlify/functions"
-  command = "npm install"
 
-# Não escaneia arquivos de documentação por "secrets"
-# (o COMO-PUBLICAR.md pode mencionar variáveis de exemplo)
+# Força Node 20 (Functions v2 com `export default async (req) => Response`
+# precisa de Node 18+; 20 é o LTS atual mais estável).
 [build.environment]
+  NODE_VERSION = "20"
+  # Não escaneia arquivos de documentação por "secrets"
   SECRETS_SCAN_OMIT_PATHS = "COMO-PUBLICAR.md,README.md"
 
-# API routes
+# Bundler explícito para Functions v2
+[functions]
+  node_bundler = "esbuild"
+
+# As rotas /api/* agora são declaradas via `export const config = { path: ... }`
+# em cada function. Mantemos esses redirects como FALLBACK (não-force) caso
+# o declarative routing falhe por algum motivo.
 [[redirects]]
   from = "/api/submit"
   to = "/.netlify/functions/submit"
   status = 200
-  force = true
 
 [[redirects]]
   from = "/api/leads"
   to = "/.netlify/functions/leads"
   status = 200
-  force = true
 
 [[redirects]]
   from = "/api/update-status"
   to = "/.netlify/functions/update-status"
   status = 200
-  force = true
 
 [[redirects]]
   from = "/api/auth"
   to = "/.netlify/functions/auth"
   status = 200
-  force = true
 
 # Admin sem trailing slash
 [[redirects]]

@@ -1,8 +1,12 @@
-// Netlify Function · GET /api/leads
-// Retorna a lista de aplicações. Requer token Bearer válido.
+// Netlify Function v2 · GET /api/leads
+// Lista todas as aplicações. Exige token Bearer válido.
 
 import { getStore } from '@netlify/blobs';
-import { verify } from './auth.mjs';
+import { verify } from '../lib/auth-token.mjs';
+
+export const config = {
+  path: '/api/leads',
+};
 
 export default async (req) => {
   const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
@@ -16,22 +20,18 @@ export default async (req) => {
   const store = getStore({name: 'leads', consistency: 'strong'});
   const { blobs } = await store.list();
 
-  const leads = await Promise.all(
+  const raw = await Promise.all(
     blobs.map(async (b) => {
       try { return await store.get(b.key, {type: 'json'}); }
       catch { return null; }
     })
   );
 
-  // Ordena por data de criação desc
-  leads
+  const leads = raw
     .filter(Boolean)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
-  return json({
-    ok: true,
-    leads: leads.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-  });
+  return json({ok: true, leads});
 };
 
 function json(obj, status = 200) {

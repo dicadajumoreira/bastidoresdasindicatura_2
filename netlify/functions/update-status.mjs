@@ -1,8 +1,12 @@
-// Netlify Function · POST /api/update-status
-// Atualiza status ou notes de uma aplicação. Requer token Bearer.
+// Netlify Function v2 · POST /api/update-status
+// Atualiza status ou notas de uma aplicação. Exige token Bearer válido.
 
 import { getStore } from '@netlify/blobs';
-import { verify } from './auth.mjs';
+import { verify } from '../lib/auth-token.mjs';
+
+export const config = {
+  path: '/api/update-status',
+};
 
 const VALID_STATUS = new Set(['novo', 'lido', 'respondido', 'convidado', 'recusado']);
 
