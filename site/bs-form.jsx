@@ -99,6 +99,16 @@ const BsForm = () => {
     } catch (err) { /* ignora */ }
 
     if (backendOk) {
+      // Dispara conversão pro Meta Pixel
+      if (typeof window.fbq === 'function') {
+        const valor = data.modalidade === 'Executive' ? 8997 : 4997;
+        window.fbq('track', 'Lead', {
+          content_name: 'Aplicação Mentoria · ' + (data.modalidade || 'Bastidores'),
+          content_category: 'Mentoria',
+          value: valor,
+          currency: 'BRL',
+        });
+      }
       setStep(total + 1);
     } else {
       setSubmitError('Não conseguimos registrar agora. Tente novamente em instantes, por favor.');
