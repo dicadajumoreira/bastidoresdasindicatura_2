@@ -4,7 +4,7 @@
 import { sign, TOKEN_VALIDITY_HOURS } from '../lib/auth-token.mjs';
 
 export const config = {
-  path: '/api/auth',
+  path: ['/api/auth', '/.netlify/functions/auth'],
 };
 
 export default async (req) => {

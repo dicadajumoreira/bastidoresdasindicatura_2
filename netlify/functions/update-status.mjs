@@ -5,7 +5,7 @@ import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
 
 export const config = {
-  path: '/api/update-status',
+  path: ['/api/update-status', '/.netlify/functions/update-status'],
 };
 
 const VALID_STATUS = new Set(['novo', 'lido', 'respondido', 'convidado', 'recusado']);

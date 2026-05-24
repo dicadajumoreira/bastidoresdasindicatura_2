@@ -5,7 +5,7 @@ import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
 
 export const config = {
-  path: '/api/leads',
+  path: ['/api/leads', '/.netlify/functions/leads'],
 };
 
 export default async (req) => {

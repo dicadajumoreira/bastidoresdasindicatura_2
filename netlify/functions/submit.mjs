@@ -5,7 +5,7 @@
 import { getStore } from '@netlify/blobs';
 
 export const config = {
-  path: '/api/submit',
+  path: ['/api/submit', '/.netlify/functions/submit'],
 };
 
 export default async (req) => {
