@@ -1,0 +1,162 @@
+<!doctype html>
+<!-- Template padrão pra OG image de materiais gratuitos.
+     Use os data-* abaixo (e os search params ?type=, ?vol=, ?title=, ?desc=, ?url=)
+     pra customizar. O Chrome headless renderiza este HTML em 1200×630. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>OG · Material</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --onix: #1A1C29;
+    --sand: #DABDA9;
+    --sand-deep: #B89579;
+    --offwhite: #F7F5F2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: var(--onix);
+    color: var(--offwhite);
+    font-family: 'Epilogue', sans-serif;
+    background-image: radial-gradient(rgba(247,245,242,0.022) 1.5px, transparent 1.5px);
+    background-size: 4px 4px;
+  }
+  .frame {
+    position: absolute;
+    top: 32px; right: 32px; bottom: 32px; left: 32px;
+    border: 1px solid rgba(218, 189, 169, 0.28);
+    padding: 50px 64px;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Logo no topo, com destaque */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(218, 189, 169, 0.18);
+  }
+  .logo-mark {
+    width: 18px; height: 18px;
+    background: var(--sand);
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-family: 'Bodoni Moda', serif;
+    font-style: italic;
+    font-size: 34px;
+    font-weight: 500;
+    color: var(--offwhite);
+    letter-spacing: -0.005em;
+    line-height: 1;
+  }
+  /* Centro: tag + título + descrição */
+  .center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 22px 0;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    color: var(--sand);
+    font-size: 12px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .tag .rule { width: 42px; height: 1px; background: var(--sand); display: inline-block; }
+  .title {
+    font-family: 'Bodoni Moda', serif;
+    font-weight: 400;
+    font-size: 64px;
+    line-height: 0.96;
+    letter-spacing: -0.02em;
+    color: var(--offwhite);
+    margin-bottom: 22px;
+  }
+  .title em {
+    color: var(--sand);
+    font-style: italic;
+  }
+  .desc {
+    font-family: 'Bodoni Moda', serif;
+    font-style: italic;
+    font-size: 20px;
+    line-height: 1.45;
+    color: rgba(247, 245, 242, 0.78);
+    max-width: 920px;
+  }
+  /* Rodapé: por Juliana + URL */
+  .bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 22px;
+    border-top: 1px solid rgba(218, 189, 169, 0.18);
+  }
+  .by {
+    font-family: 'Bodoni Moda', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--sand);
+  }
+  .url {
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(247, 245, 242, 0.55);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">Bastidores da Sindicatura</span>
+    </div>
+    <div class="center">
+      <div class="tag">
+        <span class="rule"></span>
+        <span id="og-tag">Material gratuito</span>
+      </div>
+      <h1 class="title" id="og-title">Título do material.</h1>
+      <p class="desc" id="og-desc">Descrição.</p>
+    </div>
+    <div class="bottom">
+      <span class="by">Por Juliana Moreira</span>
+      <span class="url" id="og-url">bastidoresdasindicatura.com.br</span>
+    </div>
+  </div>
+
+  <script>
+    // Customização via query string: ?tag=...&title=...&desc=...&url=...
+    // Pode usar [[em]]palavra[[/em]] no título pra colorir/itálicar.
+    const p = new URLSearchParams(location.search);
+    const $ = (id) => document.getElementById(id);
+    if (p.has('tag')) $('og-tag').textContent = p.get('tag');
+    if (p.has('desc')) $('og-desc').textContent = p.get('desc');
+    if (p.has('url')) $('og-url').textContent = p.get('url');
+    if (p.has('title')) {
+      const raw = p.get('title');
+      const html = raw
+        .replace(/\[\[em\]\]/g, '<em>')
+        .replace(/\[\[\/em\]\]/g, '</em>')
+        .replace(/\n/g, '<br>');
+      $('og-title').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
