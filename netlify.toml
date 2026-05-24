@@ -20,6 +20,20 @@
 [functions]
   node_bundler = "esbuild"
 
+
+# Edge Function que bypassa o pre-renderer do Netlify nas pretty URLs
+[[edge_functions]]
+  function = "serve-html"
+  path = "/"
+
+[[edge_functions]]
+  function = "serve-html"
+  path = "/checklist/"
+
+[[edge_functions]]
+  function = "serve-html"
+  path = "/ebook-ia/"
+
 # As rotas /api/* agora são declaradas via `export const config = { path: ... }`
 # em cada function. Mantemos esses redirects como FALLBACK (não-force) caso
 # o declarative routing falhe por algum motivo.
