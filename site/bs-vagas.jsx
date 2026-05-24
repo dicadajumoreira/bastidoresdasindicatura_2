@@ -46,6 +46,8 @@ const BsVagas = () => (
 
           <footer className="bs-tier-foot">
             <span className="bs-tier-price-k">Investimento</span>
+            <span className="bs-tier-price-badge">1º lote · 30% OFF</span>
+            <span className="bs-tier-price-from">De <s>R$ 7.140</s> por</span>
             <span className="bs-tier-price-v">R$ 4.997</span>
             <a href="#contato" className="bs-tier-cta">
               <span>Quero aplicar para a Experience</span>
@@ -92,6 +94,8 @@ const BsVagas = () => (
 
           <footer className="bs-tier-foot">
             <span className="bs-tier-price-k">Investimento</span>
+            <span className="bs-tier-price-badge">1º lote · 30% OFF</span>
+            <span className="bs-tier-price-from">De <s>R$ 12.860</s> por</span>
             <span className="bs-tier-price-v">R$ 8.997</span>
             <a href="#contato" className="bs-tier-cta bs-tier-cta-light">
               <span>Quero aplicar para a Executive</span>
