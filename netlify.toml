@@ -10,6 +10,12 @@
   # Não escaneia arquivos de documentação por "secrets"
   SECRETS_SCAN_OMIT_PATHS = "COMO-PUBLICAR.md,README.md"
 
+# Desabilita TODO post-processing do Netlify (HTML minification,
+# bundling, snippet injection, pre-rendering pra bots). Resolve o
+# problema do WhatsApp/Facebook receberem HTML truncado sem og:* tags.
+[build.processing]
+  skip_processing = true
+
 # Bundler explícito para Functions v2
 [functions]
   node_bundler = "esbuild"
