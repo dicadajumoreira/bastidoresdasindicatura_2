@@ -15,8 +15,9 @@ const STATUS_ORDER = ['novo', 'lido', 'respondido', 'convidado', 'recusado'];
 const ORIGEM_LABELS = {
   mentoria: 'Aplicação Mentoria',
   checklist: 'Checklist Assembleias',
+  'ebook-ia': 'E-book IA',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia'];
 
 /* ============================================================
    Helpers

@@ -1,5 +1,5 @@
 // Netlify Function v2 · POST /api/submit
-// Recebe uma aplicação (mentoria ou checklist) e salva em Netlify Blobs.
+// Recebe uma aplicação (mentoria, checklist ou ebook-ia) e salva em Netlify Blobs.
 // A notificação por e-mail é feita pelo Netlify Forms (HTML estático escondido).
 
 import { getStore } from '@netlify/blobs';
@@ -8,6 +8,8 @@ export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
 };
 
+const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia']);
+
 export default async (req) => {
   if (req.method !== 'POST') return json({error: 'Method not allowed'}, 405);
 
@@ -15,8 +17,8 @@ export default async (req) => {
   try { body = await req.json(); } catch { return json({error: 'Invalid JSON'}, 400); }
 
   // Validação por tipo de formulário
-  const origem = body.origem === 'checklist' ? 'checklist' : 'mentoria';
-  const required = origem === 'checklist'
+  const origem = VALID_ORIGENS.has(body.origem) ? body.origem : 'mentoria';
+  const required = (origem === 'checklist' || origem === 'ebook-ia')
     ? ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'instagram', 'atuacao']
     : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
 
@@ -34,7 +36,7 @@ export default async (req) => {
     createdAt: new Date().toISOString(),
     status: 'novo',  // novo | lido | respondido | convidado | recusado
     notes: '',
-    origem,          // mentoria | checklist
+    origem,          // mentoria | checklist | ebook-ia
     ...body,
   };
 
