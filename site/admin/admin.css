@@ -292,7 +292,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
 .ad-main {
   background: var(--offwhite);
   color: var(--onix);
-  padding: 40px 48px;
+  padding: 32px 28px;
   overflow-y: auto;
   max-height: 100vh;
 }
@@ -909,4 +909,213 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   }
   .ad-bulk-actions .ad-btn { width: 100%; }
   .ad-danger-zone { padding: 16px; }
+}
+
+/* ============================================================
+   TABELA — visão completa de aplicações (substitui a lista vertical)
+   ============================================================ */
+
+.ad-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.ad-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+  color: var(--ink, #1A1C29);
+}
+.ad-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--onix, #1A1C29);
+  color: var(--offwhite, #F7F5F2);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(218, 189, 169, 0.4);
+  white-space: nowrap;
+  z-index: 5;
+}
+.ad-table thead th:first-child { border-top-left-radius: 4px; }
+.ad-table thead th:last-child { border-top-right-radius: 4px; }
+.ad-th-check { width: 36px; padding-left: 14px !important; padding-right: 4px !important; }
+.ad-th-date  { width: 82px; }
+
+.ad-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ad-table tbody tr:hover { background: rgba(218, 189, 169, 0.08); }
+.ad-table tbody tr.is-on { background: rgba(218, 189, 169, 0.18); }
+.ad-table tbody tr.is-checked { background: rgba(218, 189, 169, 0.12); }
+.ad-table tbody tr.is-checked.is-on { background: rgba(218, 189, 169, 0.22); }
+
+.ad-table tbody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(26, 28, 41, 0.06);
+  vertical-align: middle;
+  line-height: 1.4;
+}
+.ad-table tbody td a.ad-td-link,
+.ad-table tbody td span:not(.ad-chip):not(.ad-status-dot):not(.ad-dup-badge) {
+  white-space: nowrap;
+}
+.ad-table tbody td.ad-td-name span.ad-td-name-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ad-td-check {
+  padding-left: 16px !important;
+  padding-right: 4px !important;
+  width: 38px;
+}
+.ad-td-check .ad-list-check {
+  margin-right: 0;
+}
+
+.ad-td-name {
+  min-width: 170px;
+  max-width: 220px;
+}
+.ad-td-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ad-td-name-text {
+  font-weight: 500;
+  color: var(--ink, #1A1C29);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.ad-td-link {
+  color: var(--lavender-deep, #8A92D0);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.ad-td-link:hover {
+  color: var(--sand-deep, #B89579);
+  text-decoration: underline;
+}
+.ad-td-empty {
+  color: rgba(26, 28, 41, 0.3);
+  font-style: italic;
+}
+.ad-td-date {
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--graphite-light, #5a5f6c);
+  text-align: right;
+}
+
+/* Chips coloridos pra Origem e Status */
+.ad-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.ad-chip-origem-mentoria {
+  background: rgba(184, 192, 255, 0.18);
+  color: var(--lavender-deep, #8A92D0);
+}
+.ad-chip-origem-checklist {
+  background: rgba(218, 189, 169, 0.2);
+  color: var(--sand-deep, #B89579);
+}
+.ad-chip-status-novo {
+  background: rgba(218, 189, 169, 0.22);
+  color: var(--sand-deep, #B89579);
+}
+.ad-chip-status-lido {
+  background: rgba(138, 146, 208, 0.18);
+  color: var(--lavender-deep, #8A92D0);
+}
+.ad-chip-status-respondido {
+  background: rgba(148, 182, 162, 0.22);
+  color: #4F7A5D;
+}
+.ad-chip-status-convidado {
+  background: rgba(184, 192, 255, 0.22);
+  color: var(--lavender-deep, #8A92D0);
+}
+.ad-chip-status-recusado {
+  background: rgba(26, 28, 41, 0.08);
+  color: var(--graphite, #3B3F4A);
+}
+
+/* Esconde o dot na tabela em desktop (status já é chip) */
+@media (min-width: 901px) {
+  .ad-td-name-row .ad-status-dot { display: none; }
+}
+
+/* Responsivo: em tablet/mobile a tabela vira cards verticais */
+@media (max-width: 900px) {
+  .ad-table thead { display: none; }
+  .ad-table, .ad-table tbody, .ad-table tr, .ad-table td {
+    display: block;
+    width: 100%;
+  }
+  .ad-table tbody tr {
+    border: 1px solid rgba(26, 28, 41, 0.08);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: var(--offwhite, #F7F5F2);
+    position: relative;
+  }
+  .ad-table tbody tr.is-on {
+    border-color: var(--sand, #DABDA9);
+    background: rgba(218, 189, 169, 0.12);
+  }
+  .ad-table tbody td {
+    padding: 4px 0 4px 130px;
+    border: none;
+    position: relative;
+    text-align: left;
+    word-break: break-word;
+  }
+  .ad-table tbody td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 120px;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--graphite-light, #5a5f6c);
+    font-weight: 600;
+  }
+  .ad-table tbody td.ad-td-check {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: auto;
+    padding: 0;
+  }
+  .ad-table tbody td.ad-td-check::before { content: ''; display: none; }
+  .ad-table tbody td.ad-td-name {
+    padding-left: 0;
+    padding-right: 50px;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed rgba(26, 28, 41, 0.12);
+  }
+  .ad-table tbody td.ad-td-name::before { content: ''; display: none; }
+  .ad-td-name-text { white-space: normal; font-size: 15px; }
+  .ad-td-date { text-align: left; }
 }

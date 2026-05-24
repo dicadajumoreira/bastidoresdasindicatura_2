@@ -740,40 +740,91 @@ const Dashboard = ({onLogout}) => {
         )}
 
         {!loading && filtered.length > 0 && (
-          <ul className="ad-list">
-            {filtered.map((l) => (
-              <li
-                key={l.id}
-                className={'ad-list-item ' + (selected && selected.id === l.id ? 'is-on' : '') + (selectedIds.has(l.id) ? ' is-checked' : '')}
-                onClick={() => setSelected(l)}>
-                <input
-                  type="checkbox"
-                  className="ad-list-check"
-                  checked={selectedIds.has(l.id)}
-                  onChange={() => toggleSelected(l.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label="Selecionar"
-                />
-                <span className={'ad-status-dot ad-status-' + (l.status || 'novo')} aria-hidden="true"></span>
-                <div className="ad-list-main">
-                  <div className="ad-list-name">
-                    {l.nome}
-                    {(() => {
-                      const n = (duplicateMap.get(l.id) || []).length;
-                      return n > 0 ? <span className="ad-dup-badge" title="Outras aplicações com mesmo e-mail ou WhatsApp">{n + 1}x</span> : null;
-                    })()}
-                  </div>
-                  <div className="ad-list-meta">
-                    <span className="ad-list-origem">{ORIGEM_LABELS[l.origem || 'mentoria']}</span>
-                    <span className="ad-dot">·</span>
-                    <span>{l.cidade ? `${l.cidade}${l.estado ? ' / ' + l.estado : ''}` : (l.atuacao || '—')}</span>
-                    {l.modalidade && <><span className="ad-dot">·</span><em>{l.modalidade}</em></>}
-                  </div>
-                </div>
-                <div className="ad-list-date">{fmtDate(l.createdAt).split(' · ')[0]}</div>
-              </li>
-            ))}
-          </ul>
+          <div className="ad-table-wrap">
+          <table className="ad-table">
+            <thead>
+              <tr>
+                <th className="ad-th-check" aria-label="Selecionar"></th>
+                <th>Nome</th>
+                <th>WhatsApp</th>
+                <th>E-mail</th>
+                <th>Cidade / UF</th>
+                <th>Atuação</th>
+                <th>Origem</th>
+                <th>Status</th>
+                <th className="ad-th-date">Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((l) => {
+                const loc = splitLocation(l);
+                const locStr = loc.cidade ? `${loc.cidade}${loc.estado ? ' / ' + loc.estado : ''}` : '';
+                const waDigits = String(l.whatsapp || '').replace(/\D/g, '');
+                const dupN = (duplicateMap.get(l.id) || []).length;
+                const stopProp = (e) => e.stopPropagation();
+                return (
+                  <tr
+                    key={l.id}
+                    className={'ad-tr ' + (selected && selected.id === l.id ? 'is-on ' : '') + (selectedIds.has(l.id) ? 'is-checked' : '')}
+                    onClick={() => setSelected(l)}>
+                    <td className="ad-td-check" data-label="">
+                      <input
+                        type="checkbox"
+                        className="ad-list-check"
+                        checked={selectedIds.has(l.id)}
+                        onChange={() => toggleSelected(l.id)}
+                        onClick={stopProp}
+                        aria-label="Selecionar"
+                      />
+                    </td>
+                    <td className="ad-td-name" data-label="Nome">
+                      <div className="ad-td-name-row">
+                        <span className={'ad-status-dot ad-status-' + (l.status || 'novo')} aria-hidden="true"></span>
+                        <span className="ad-td-name-text">{l.nome}</span>
+                        {dupN > 0 && (
+                          <span className="ad-dup-badge" title="Outras aplicações com mesmo e-mail ou WhatsApp">{dupN + 1}x</span>
+                        )}
+                      </div>
+                    </td>
+                    <td data-label="WhatsApp">
+                      {l.whatsapp ? (
+                        <a className="ad-td-link" href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer" onClick={stopProp}>
+                          {l.whatsapp}
+                        </a>
+                      ) : <span className="ad-td-empty">—</span>}
+                    </td>
+                    <td data-label="E-mail">
+                      {l.email ? (
+                        <a className="ad-td-link" href={`mailto:${l.email}`} onClick={stopProp}>
+                          {l.email}
+                        </a>
+                      ) : <span className="ad-td-empty">—</span>}
+                    </td>
+                    <td data-label="Cidade / UF">
+                      {locStr || <span className="ad-td-empty">—</span>}
+                    </td>
+                    <td data-label="Atuação">
+                      {l.atuacao || <span className="ad-td-empty">—</span>}
+                    </td>
+                    <td data-label="Origem">
+                      <span className={'ad-chip ad-chip-origem ad-chip-origem-' + (l.origem || 'mentoria')}>
+                        {ORIGEM_LABELS[l.origem || 'mentoria']}
+                      </span>
+                    </td>
+                    <td data-label="Status">
+                      <span className={'ad-chip ad-chip-status ad-chip-status-' + (l.status || 'novo')}>
+                        {STATUS_LABELS[l.status || 'novo']}
+                      </span>
+                    </td>
+                    <td className="ad-td-date" data-label="Data">
+                      {fmtDate(l.createdAt).split(' · ')[0]}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          </div>
         )}
       </main>
 
