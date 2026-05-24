@@ -49,6 +49,14 @@
   to = "/checklist/index.html"
   status = 200
 
+
+# Força edge a revalidar HTML a cada request (impede bot ver versão stale)
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Netlify-CDN-Cache-Control = "public, max-age=0, must-revalidate"
+
 # Headers de segurança no admin
 [[headers]]
   for = "/admin/*"
