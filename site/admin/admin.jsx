@@ -1,5 +1,5 @@
 // Painel admin · Bastidores da Sindicatura
-// Login → lista de leads → detalhe → status + notas → export CSV
+// Login → lista de leads → detalhe → status + notas → export planilha .xlsx
 
 const TOKEN_KEY = 'bs-admin-token';
 
@@ -68,46 +68,93 @@ const api = async (path, opts = {}) => {
   return body;
 };
 
-const downloadCsv = (leads) => {
-  const cols = [
-    ['createdAt', 'Data'],
-    ['origem', 'Origem'],
-    ['nome', 'Nome'],
-    ['cidade', 'Cidade'],
-    ['estado', 'Estado'],
-    ['whatsapp', 'WhatsApp'],
-    ['email', 'E-mail'],
-    ['instagram', 'Instagram'],
-    ['atuacao', 'Atuação'],
-    ['tempoMercado', 'Tempo no mercado'],
-    ['qtdCondominios', 'Condomínios'],
-    ['maiorDesafio', 'Maior desafio'],
-    ['desgaste', 'Desgaste'],
-    ['areas', 'Áreas para evoluir'],
-    ['desenvolvimento', 'Desenvolvimento'],
-    ['objetivo', 'Objetivo'],
-    ['onde2anos', 'Onde em 2 anos'],
-    ['bastidor', 'Pergunta principal'],
-    ['modalidade', 'Modalidade'],
-    ['status', 'Status'],
-    ['notes', 'Notas'],
-  ];
-  const esc = (v) => {
-    if (v == null) return '';
-    const s = Array.isArray(v) ? v.join('; ') : String(v);
-    return '"' + s.replace(/"/g, '""').replace(/\n/g, ' ') + '"';
-  };
-  const head = cols.map((c) => esc(c[1])).join(',');
-  const rows = leads.map((l) => cols.map(([k]) => esc(k === 'createdAt' ? fmtDate(l[k]) : l[k])).join(','));
-  const csv = '\ufeff' + [head, ...rows].join('\n');
+// Separa cidade e estado para a planilha.
+// Leads novos do checklist: já vem separado (cidade + estado).
+// Leads antigos da mentoria: cidade vem como "São Paulo / SP" sem estado.
+const splitLocation = (lead) => {
+  if (lead.estado) return {cidade: lead.cidade || '', estado: lead.estado};
+  const raw = lead.cidade || '';
+  const m = raw.match(/^(.+?)\s*\/\s*([A-Za-z]{2})\s*$/);
+  if (m) return {cidade: m[1].trim(), estado: m[2].toUpperCase()};
+  return {cidade: raw, estado: ''};
+};
 
-  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+const downloadXlsx = async (leads) => {
+  if (typeof ExcelJS === 'undefined') {
+    alert('Biblioteca de planilha ainda carregando. Aguarde e tente de novo.');
+    return;
+  }
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Bastidores da Sindicatura';
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet('Leads', {
+    views: [{state: 'frozen', ySplit: 1}],
+  });
+
+  ws.columns = [
+    {header: 'Nome', key: 'nome', width: 32},
+    {header: 'WhatsApp', key: 'whatsapp', width: 20},
+    {header: 'E-mail', key: 'email', width: 36},
+    {header: 'Cidade', key: 'cidade', width: 24},
+    {header: 'Estado', key: 'estado', width: 10},
+    {header: 'Página de captação', key: 'pagina', width: 26},
+  ];
+
+  leads.forEach((l) => {
+    const loc = splitLocation(l);
+    ws.addRow({
+      nome: l.nome || '',
+      whatsapp: l.whatsapp || '',
+      email: l.email || '',
+      cidade: loc.cidade,
+      estado: loc.estado,
+      pagina: ORIGEM_LABELS[l.origem || 'mentoria'],
+    });
+  });
+
+  // Header destacado
+  const header = ws.getRow(1);
+  header.height = 22;
+  header.eachCell((cell) => {
+    cell.font = {bold: true, color: {argb: 'FFF7F5F2'}, size: 11};
+    cell.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FF1A1C29'}};
+    cell.alignment = {vertical: 'middle', horizontal: 'left', indent: 1};
+    cell.border = {
+      top: {style: 'thin', color: {argb: 'FF1A1C29'}},
+      left: {style: 'thin', color: {argb: 'FF1A1C29'}},
+      bottom: {style: 'thin', color: {argb: 'FF1A1C29'}},
+      right: {style: 'thin', color: {argb: 'FF1A1C29'}},
+    };
+  });
+
+  // Bordas + zebra striping nas linhas de dados
+  for (let r = 2; r <= ws.rowCount; r++) {
+    const row = ws.getRow(r);
+    row.height = 20;
+    row.eachCell({includeEmpty: true}, (cell) => {
+      cell.font = {color: {argb: 'FF1A1C29'}, size: 11};
+      cell.alignment = {vertical: 'middle', horizontal: 'left', indent: 1};
+      cell.border = {
+        top: {style: 'thin', color: {argb: 'FFE0DAD0'}},
+        left: {style: 'thin', color: {argb: 'FFE0DAD0'}},
+        bottom: {style: 'thin', color: {argb: 'FFE0DAD0'}},
+        right: {style: 'thin', color: {argb: 'FFE0DAD0'}},
+      };
+      if (r % 2 === 0) {
+        cell.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFFBF9F5'}};
+      }
+    });
+  }
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bastidores-leads-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `bastidores-leads-${new Date().toISOString().slice(0, 10)}.xlsx`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 /* ============================================================
@@ -632,7 +679,7 @@ const Dashboard = ({onLogout}) => {
         </nav>
 
         <div className="ad-side-foot">
-          <button className="ad-btn-link" onClick={() => downloadCsv(filtered)} disabled={!filtered.length}>Exportar CSV</button>
+          <button className="ad-btn-link" onClick={() => downloadXlsx(filtered)} disabled={!filtered.length}>Exportar planilha</button>
           <button className="ad-btn-link" onClick={load}>Atualizar</button>
           <button className="ad-btn-link ad-btn-logout" onClick={logout}>Sair</button>
         </div>
