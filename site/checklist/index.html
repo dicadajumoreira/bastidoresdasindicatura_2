@@ -431,7 +431,7 @@
 
       const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
-      const canSend = data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.atuacao && !submitting;
+      const canSend = data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.instagram && data.atuacao && !submitting;
 
       const submit = async (e) => {
         e.preventDefault();
@@ -565,8 +565,8 @@
                     <input type="email" required value={data.email} onChange={(e) => setField('email', e.target.value)} placeholder="seu@email.com" />
                   </label>
                   <label className="ck-field">
-                    <span className="ck-label">@ nas redes sociais <span className="ck-opt">(opcional)</span></span>
-                    <input type="text" value={data.instagram} onChange={(e) => setField('instagram', e.target.value)} placeholder="@seuuser" />
+                    <span className="ck-label">@ nas redes sociais</span>
+                    <input type="text" required value={data.instagram} onChange={(e) => setField('instagram', e.target.value)} placeholder="@seuuser" />
                   </label>
                   <label className="ck-field">
                     <span className="ck-label">Atua hoje como</span>
