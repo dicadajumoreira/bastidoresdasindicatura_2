@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Bloqueia áreas administrativas e endpoints
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.netlify/
+
+# Bloqueia o material baixável "wrapper" (a entrega oficial é o PDF)
+Disallow: /checklist/material.html
+
+# Sitemap pra ajudar buscadores a indexar
+Sitemap: https://bastidoresdasindicatura.com.br/sitemap.xml
