@@ -17,7 +17,7 @@ export default async (req) => {
   // Validação por tipo de formulário
   const origem = body.origem === 'checklist' ? 'checklist' : 'mentoria';
   const required = origem === 'checklist'
-    ? ['nome', 'email', 'whatsapp', 'atuacao']
+    ? ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'atuacao']
     : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
 
   for (const k of required) {

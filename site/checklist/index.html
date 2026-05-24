@@ -186,6 +186,13 @@
     }
     .ck-field input::placeholder { color: rgba(26, 28, 41, 0.35); font-style: italic; }
     .ck-field input:focus, .ck-field select:focus { border-bottom-color: var(--onix); }
+    .ck-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+    .ck-row .ck-field { margin-bottom: 0; }
+    .ck-row + .ck-field { margin-top: 18px; }
     .ck-field select {
       appearance: none;
       cursor: pointer;
@@ -375,6 +382,12 @@
       .ck-form-wrap { padding: 32px 24px 28px; }
       .ck-form-title { font-size: 30px; }
       .ck-form-sub { font-size: 14px; }
+      .ck-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+      .ck-row .ck-field { margin-bottom: 18px; }
+      .ck-row + .ck-field { margin-top: 0; }
       .ck-cta {
         padding: 16px 18px;
         font-size: 12px;
@@ -402,13 +415,15 @@
 
   <script type="text/babel">
     const ChecklistLanding = () => {
-      const [data, setData] = React.useState({nome: '', whatsapp: '', email: '', atuacao: ''});
+      const [data, setData] = React.useState({nome: '', cidade: '', estado: '', whatsapp: '', email: '', atuacao: ''});
       const [submitting, setSubmitting] = React.useState(false);
       const [error, setError] = React.useState('');
 
       const setField = (k, v) => setData((d) => ({...d, [k]: v}));
 
-      const canSend = data.nome && data.whatsapp && data.email && data.atuacao && !submitting;
+      const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+      const canSend = data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.atuacao && !submitting;
 
       const submit = async (e) => {
         e.preventDefault();
@@ -520,6 +535,19 @@
                     <span className="ck-label">Nome completo</span>
                     <input type="text" required value={data.nome} onChange={(e) => setField('nome', e.target.value)} placeholder="Como devo te chamar?" />
                   </label>
+                  <div className="ck-row">
+                    <label className="ck-field">
+                      <span className="ck-label">Cidade</span>
+                      <input type="text" required value={data.cidade} onChange={(e) => setField('cidade', e.target.value)} placeholder="Sua cidade" />
+                    </label>
+                    <label className="ck-field">
+                      <span className="ck-label">Estado</span>
+                      <select required value={data.estado} onChange={(e) => setField('estado', e.target.value)}>
+                        <option value="" disabled>UF</option>
+                        {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+                      </select>
+                    </label>
+                  </div>
                   <label className="ck-field">
                     <span className="ck-label">WhatsApp</span>
                     <input type="tel" required value={data.whatsapp} onChange={(e) => setField('whatsapp', e.target.value)} placeholder="(11) 99999-9999" />
@@ -583,6 +611,8 @@
   <form name="checklist-assembleias" data-netlify="true" netlify-honeypot="bot-field" hidden>
     <input type="text" name="bot-field" />
     <input type="text" name="nome" />
+    <input type="text" name="cidade" />
+    <input type="text" name="estado" />
     <input type="tel" name="whatsapp" />
     <input type="email" name="email" />
     <input type="text" name="atuacao" />

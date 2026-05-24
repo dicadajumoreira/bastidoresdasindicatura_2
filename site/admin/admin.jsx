@@ -57,6 +57,7 @@ const downloadCsv = (leads) => {
     ['origem', 'Origem'],
     ['nome', 'Nome'],
     ['cidade', 'Cidade'],
+    ['estado', 'Estado'],
     ['whatsapp', 'WhatsApp'],
     ['email', 'E-mail'],
     ['instagram', 'Instagram'],
@@ -243,7 +244,12 @@ const LeadDetail = ({lead, onClose, onUpdated}) => {
       <div className="ad-fields">
         <Section title="Dados de contato">
           <Field k="Nome" v={lead.nome} />
-          {lead.cidade && <Field k="Cidade / Estado" v={lead.cidade} />}
+          {lead.cidade && (
+            <Field
+              k="Cidade / Estado"
+              v={`${lead.cidade}${lead.estado ? ' / ' + lead.estado : ''}`}
+            />
+          )}
           <Field k="WhatsApp" v={lead.whatsapp} />
           <Field k="E-mail" v={lead.email} />
           {lead.instagram && <Field k="Instagram" v={lead.instagram} />}
@@ -452,7 +458,7 @@ const Dashboard = ({onLogout}) => {
                   <div className="ad-list-meta">
                     <span className="ad-list-origem">{ORIGEM_LABELS[l.origem || 'mentoria']}</span>
                     <span className="ad-dot">·</span>
-                    <span>{l.cidade || l.atuacao || '—'}</span>
+                    <span>{l.cidade ? `${l.cidade}${l.estado ? ' / ' + l.estado : ''}` : (l.atuacao || '—')}</span>
                     {l.modalidade && <><span className="ad-dot">·</span><em>{l.modalidade}</em></>}
                   </div>
                 </div>
