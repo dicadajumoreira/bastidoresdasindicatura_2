@@ -57,6 +57,28 @@
     Cache-Control = "public, max-age=0, must-revalidate"
     Netlify-CDN-Cache-Control = "public, max-age=0, must-revalidate"
 
+
+# Força servir HTML estático sem passar por qualquer interceptação
+# (pre-rendering, snippet injection, etc.) — necessário pra bots de
+# WhatsApp/Facebook/etc. verem as meta tags og:* corretas.
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/checklist/"
+  to = "/checklist/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/ebook-ia/"
+  to = "/ebook-ia/index.html"
+  status = 200
+  force = true
+
 # Headers de segurança no admin
 [[headers]]
   for = "/admin/*"
