@@ -776,3 +776,137 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   color: var(--graphite-light, #5a5f6c);
   white-space: nowrap;
 }
+
+/* ============================================================
+   EXCLUSÃO — checkbox, barra bulk, botão danger, zona de exclusão
+   ============================================================ */
+
+/* Checkbox em cada item da lista */
+.ad-list-check {
+  width: 16px;
+  height: 16px;
+  margin-right: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--sand, #DABDA9);
+}
+.ad-list-item.is-checked {
+  background: rgba(218, 189, 169, 0.12);
+}
+
+/* Barra superior de ação em massa */
+.ad-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 22px;
+  margin: 0 0 18px;
+  background: var(--onix, #1A1C29);
+  color: var(--offwhite, #F7F5F2);
+  border: 1px solid var(--sand, #DABDA9);
+  border-radius: 4px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-wrap: wrap;
+}
+.ad-bulk-count {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.ad-bulk-count strong {
+  display: inline-block;
+  background: var(--sand, #DABDA9);
+  color: var(--onix, #1A1C29);
+  padding: 2px 9px;
+  border-radius: 3px;
+  margin-right: 6px;
+  font-weight: 700;
+}
+.ad-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Botões danger (excluir definitivo) e variantes claras */
+.ad-btn-danger {
+  background: #c54a3f;
+  color: #fff;
+  border: 1px solid #c54a3f;
+}
+.ad-btn-danger:hover:not(:disabled) {
+  background: #a33a30;
+  border-color: #a33a30;
+}
+.ad-btn-danger-ghost {
+  background: transparent;
+  color: #c54a3f;
+  border: 1px solid rgba(197, 74, 63, 0.4);
+}
+.ad-btn-danger-ghost:hover:not(:disabled) {
+  background: rgba(197, 74, 63, 0.08);
+  border-color: #c54a3f;
+}
+.ad-btn-light {
+  background: var(--offwhite, #F7F5F2);
+  color: var(--onix, #1A1C29);
+  border: 1px solid var(--offwhite, #F7F5F2);
+}
+.ad-btn-light:hover:not(:disabled) {
+  background: var(--offwhite-warm, #EFEAE1);
+}
+.ad-btn-ghost-light {
+  background: transparent;
+  color: var(--offwhite, #F7F5F2);
+  border: 1px solid rgba(247, 245, 242, 0.3);
+}
+.ad-btn-ghost-light:hover:not(:disabled) {
+  background: rgba(247, 245, 242, 0.08);
+  border-color: rgba(247, 245, 242, 0.6);
+}
+
+/* Zona de exclusão no rodapé do detail */
+.ad-danger-zone {
+  padding: 20px 24px 28px;
+  border-top: 1px dashed rgba(26, 28, 41, 0.15);
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ad-danger-info {
+  margin: 0;
+  font-size: 12px;
+  color: var(--graphite, #3B3F4A);
+  font-style: italic;
+  line-height: 1.5;
+}
+.ad-danger-info em {
+  color: var(--sand-deep, #B89579);
+  font-style: italic;
+  font-weight: 500;
+}
+.ad-danger-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Em mobile a barra bulk vira coluna */
+@media (max-width: 720px) {
+  .ad-bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .ad-bulk-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ad-bulk-actions .ad-btn { width: 100%; }
+  .ad-danger-zone { padding: 16px; }
+}

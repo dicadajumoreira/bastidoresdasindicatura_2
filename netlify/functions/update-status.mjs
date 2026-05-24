@@ -21,7 +21,7 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'Invalid JSON'}, 400); }
 
-  const { id, status, notes } = body || {};
+  const { id, status, notes, deleted } = body || {};
   if (!id) return json({error: 'id obrigatório'}, 400);
   if (status && !VALID_STATUS.has(status)) return json({error: 'status inválido'}, 400);
 
@@ -29,10 +29,16 @@ export default async (req) => {
   const current = await store.get(id, {type: 'json'});
   if (!current) return json({error: 'Não encontrado'}, 404);
 
+  // Soft delete / restore via flag `deleted: true/false`
+  const deletePatch = typeof deleted === 'boolean'
+    ? {deleted, deletedAt: deleted ? new Date().toISOString() : null}
+    : {};
+
   const updated = {
     ...current,
     ...(status ? {status} : {}),
     ...(typeof notes === 'string' ? {notes} : {}),
+    ...deletePatch,
     updatedAt: new Date().toISOString(),
   };
 

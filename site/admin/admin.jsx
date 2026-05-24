@@ -173,7 +173,7 @@ const Login = ({onSuccess}) => {
 /* ============================================================
    LEAD DETAIL (drawer lateral)
    ============================================================ */
-const LeadDetail = ({lead, onClose, onUpdated, duplicates = [], onSelectLead}) => {
+const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplicates = [], onSelectLead}) => {
   const [status, setStatus] = React.useState(lead.status || 'novo');
   const [notes, setNotes] = React.useState(lead.notes || '');
   const [saving, setSaving] = React.useState(false);
@@ -198,6 +198,44 @@ const LeadDetail = ({lead, onClose, onUpdated, duplicates = [], onSelectLead}) =
       alert(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const softDelete = async () => {
+    if (!window.confirm(`Excluir a aplicação de ${lead.nome}? Vai pra Lixeira — você pode restaurar depois.`)) return;
+    try {
+      const res = await api('/api/update-status', {
+        method: 'POST',
+        body: JSON.stringify({id: lead.id, deleted: true}),
+      });
+      onDeleted(res.lead);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const restore = async () => {
+    try {
+      const res = await api('/api/update-status', {
+        method: 'POST',
+        body: JSON.stringify({id: lead.id, deleted: false}),
+      });
+      onUpdated(res.lead);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const hardDelete = async () => {
+    if (!window.confirm(`Apagar DEFINITIVAMENTE a aplicação de ${lead.nome}? Esta ação NÃO pode ser desfeita.`)) return;
+    try {
+      await api('/api/delete-permanent', {
+        method: 'POST',
+        body: JSON.stringify({id: lead.id}),
+      });
+      onHardDeleted(lead.id);
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -336,6 +374,25 @@ const LeadDetail = ({lead, onClose, onUpdated, duplicates = [], onSelectLead}) =
           </Section>
         )}
       </div>
+
+      {/* Zona de exclusão */}
+      <div className="ad-danger-zone">
+        {lead.deleted ? (
+          <>
+            <p className="ad-danger-info">
+              Esta aplicação está na <em>Lixeira</em> desde {fmtDate(lead.deletedAt)}.
+            </p>
+            <div className="ad-danger-actions">
+              <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={restore}>Restaurar</button>
+              <button className="ad-btn ad-btn-danger ad-btn-sm" onClick={hardDelete}>Apagar definitivamente</button>
+            </div>
+          </>
+        ) : (
+          <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
+            Excluir aplicação
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -365,8 +422,21 @@ const Dashboard = ({onLogout}) => {
   const [modFilter, setModFilter] = React.useState('todos');
   const [origemFilter, setOrigemFilter] = React.useState('todos');
   const [dupFilter, setDupFilter] = React.useState(false);
+  const [showLixeira, setShowLixeira] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [selected, setSelected] = React.useState(null);
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const toggleSelected = (id) => {
+    setSelectedIds((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -388,18 +458,26 @@ const Dashboard = ({onLogout}) => {
 
   React.useEffect(() => { load(); }, []);
 
-  // Mapa de duplicatas: leadId → array de outros leads com mesmo email/whatsapp
+  // Active leads = não-deletados; deletados ficam separados pra Lixeira
+  const activeLeads = React.useMemo(() => leads.filter((l) => !l.deleted), [leads]);
+  const deletedLeads = React.useMemo(() => leads.filter((l) => l.deleted), [leads]);
+
+  // Mapa de duplicatas, calculado SOMENTE entre leads ativos
   const duplicateMap = React.useMemo(() => {
     const map = new Map();
-    leads.forEach((l) => map.set(l.id, findDuplicates(l, leads)));
+    activeLeads.forEach((l) => map.set(l.id, findDuplicates(l, activeLeads)));
     return map;
-  }, [leads]);
+  }, [activeLeads]);
 
-  const filtered = leads.filter((l) => {
-    if (statusFilter !== 'todos' && l.status !== statusFilter) return false;
-    if (origemFilter !== 'todos' && (l.origem || 'mentoria') !== origemFilter) return false;
-    if (modFilter !== 'todos' && l.modalidade !== modFilter) return false;
-    if (dupFilter && (duplicateMap.get(l.id) || []).length === 0) return false;
+  const sourceLeads = showLixeira ? deletedLeads : activeLeads;
+
+  const filtered = sourceLeads.filter((l) => {
+    if (!showLixeira) {
+      if (statusFilter !== 'todos' && l.status !== statusFilter) return false;
+      if (origemFilter !== 'todos' && (l.origem || 'mentoria') !== origemFilter) return false;
+      if (modFilter !== 'todos' && l.modalidade !== modFilter) return false;
+      if (dupFilter && (duplicateMap.get(l.id) || []).length === 0) return false;
+    }
     if (search) {
       const q = search.toLowerCase();
       const hay = [l.nome, l.cidade, l.email, l.whatsapp, l.instagram].filter(Boolean).join(' ').toLowerCase();
@@ -409,20 +487,89 @@ const Dashboard = ({onLogout}) => {
   });
 
   const counts = React.useMemo(() => {
-    const c = {todos: leads.length, duplicates: 0};
+    const c = {todos: activeLeads.length, duplicates: 0, lixeira: deletedLeads.length};
     STATUS_ORDER.forEach((s) => c[s] = 0);
     ORIGEM_ORDER.forEach((o) => c['origem_' + o] = 0);
-    leads.forEach((l) => {
+    activeLeads.forEach((l) => {
       c[l.status || 'novo'] = (c[l.status || 'novo'] || 0) + 1;
       c['origem_' + (l.origem || 'mentoria')] = (c['origem_' + (l.origem || 'mentoria')] || 0) + 1;
       if ((duplicateMap.get(l.id) || []).length > 0) c.duplicates += 1;
     });
     return c;
-  }, [leads, duplicateMap]);
+  }, [activeLeads, deletedLeads, duplicateMap]);
 
   const onUpdated = (updated) => {
     setLeads((all) => all.map((l) => (l.id === updated.id ? updated : l)));
     setSelected(updated);
+  };
+
+  const onDeleted = (updated) => {
+    setLeads((all) => all.map((l) => (l.id === updated.id ? updated : l)));
+    setSelected(null);
+    setSelectedIds((s) => { const n = new Set(s); n.delete(updated.id); return n; });
+  };
+
+  const onHardDeleted = (id) => {
+    setLeads((all) => all.filter((l) => l.id !== id));
+    setSelected(null);
+    setSelectedIds((s) => { const n = new Set(s); n.delete(id); return n; });
+  };
+
+  const bulkSoftDelete = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(`Excluir ${ids.length} ${ids.length === 1 ? 'aplicação' : 'aplicações'}? Vai${ids.length === 1 ? '' : 'm'} pra Lixeira — você pode restaurar depois.`)) return;
+    setBulkBusy(true);
+    try {
+      const results = await Promise.all(ids.map((id) =>
+        api('/api/update-status', {method: 'POST', body: JSON.stringify({id, deleted: true})})
+          .then((r) => r.lead).catch(() => null)
+      ));
+      const okMap = new Map(results.filter(Boolean).map((l) => [l.id, l]));
+      setLeads((all) => all.map((l) => okMap.get(l.id) || l));
+      clearSelection();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkRestore = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    setBulkBusy(true);
+    try {
+      const results = await Promise.all(ids.map((id) =>
+        api('/api/update-status', {method: 'POST', body: JSON.stringify({id, deleted: false})})
+          .then((r) => r.lead).catch(() => null)
+      ));
+      const okMap = new Map(results.filter(Boolean).map((l) => [l.id, l]));
+      setLeads((all) => all.map((l) => okMap.get(l.id) || l));
+      clearSelection();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkHardDelete = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(`Apagar DEFINITIVAMENTE ${ids.length} ${ids.length === 1 ? 'aplicação' : 'aplicações'}? Esta ação NÃO pode ser desfeita.`)) return;
+    setBulkBusy(true);
+    try {
+      const results = await Promise.all(ids.map((id) =>
+        api('/api/delete-permanent', {method: 'POST', body: JSON.stringify({id})})
+          .then(() => id).catch(() => null)
+      ));
+      const okSet = new Set(results.filter(Boolean));
+      setLeads((all) => all.filter((l) => !okSet.has(l.id)));
+      clearSelection();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(filtered.map((l) => l.id)));
   };
 
   const logout = () => {
@@ -477,6 +624,13 @@ const Dashboard = ({onLogout}) => {
           </button>
         </nav>
 
+        <span className="ad-side-section">Lixeira</span>
+        <nav className="ad-side-nav">
+          <button className={showLixeira ? 'is-on' : ''} onClick={() => { setShowLixeira(!showLixeira); clearSelection(); setSelected(null); }}>
+            <span>{showLixeira ? 'Voltar pra aplicações' : 'Ver excluídos'}</span><em>{counts.lixeira}</em>
+          </button>
+        </nav>
+
         <div className="ad-side-foot">
           <button className="ad-btn-link" onClick={() => downloadCsv(filtered)} disabled={!filtered.length}>Exportar CSV</button>
           <button className="ad-btn-link" onClick={load}>Atualizar</button>
@@ -488,8 +642,8 @@ const Dashboard = ({onLogout}) => {
       <main className="ad-main">
         <header className="ad-main-head">
           <div>
-            <h1 className="ad-h1">Aplicações</h1>
-            <p className="ad-h1-sub">{filtered.length} {filtered.length === 1 ? 'aplicação' : 'aplicações'} {leads.length !== filtered.length ? `(de ${leads.length} no total)` : ''}</p>
+            <h1 className="ad-h1">{showLixeira ? 'Lixeira' : 'Aplicações'}</h1>
+            <p className="ad-h1-sub">{filtered.length} {filtered.length === 1 ? 'aplicação' : 'aplicações'} {sourceLeads.length !== filtered.length ? `(de ${sourceLeads.length} no total)` : ''}</p>
           </div>
           <input
             className="ad-search"
@@ -498,6 +652,36 @@ const Dashboard = ({onLogout}) => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </header>
+
+        {selectedIds.size > 0 && (
+          <div className="ad-bulk-bar">
+            <span className="ad-bulk-count">
+              <strong>{selectedIds.size}</strong> selecionada{selectedIds.size > 1 ? 's' : ''}
+            </span>
+            <div className="ad-bulk-actions">
+              <button className="ad-btn ad-btn-ghost-light ad-btn-sm" onClick={selectAllVisible} disabled={bulkBusy}>
+                Selecionar todas visíveis ({filtered.length})
+              </button>
+              {showLixeira ? (
+                <>
+                  <button className="ad-btn ad-btn-light ad-btn-sm" onClick={bulkRestore} disabled={bulkBusy}>
+                    {bulkBusy ? 'Restaurando…' : 'Restaurar'}
+                  </button>
+                  <button className="ad-btn ad-btn-danger ad-btn-sm" onClick={bulkHardDelete} disabled={bulkBusy}>
+                    {bulkBusy ? 'Apagando…' : 'Apagar definitivamente'}
+                  </button>
+                </>
+              ) : (
+                <button className="ad-btn ad-btn-danger ad-btn-sm" onClick={bulkSoftDelete} disabled={bulkBusy}>
+                  {bulkBusy ? 'Excluindo…' : 'Excluir selecionadas'}
+                </button>
+              )}
+              <button className="ad-btn ad-btn-ghost-light ad-btn-sm" onClick={clearSelection} disabled={bulkBusy}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {loading && <div className="ad-state">Carregando aplicações…</div>}
         {error && <div className="ad-state ad-state-err">{error}</div>}
@@ -513,8 +697,16 @@ const Dashboard = ({onLogout}) => {
             {filtered.map((l) => (
               <li
                 key={l.id}
-                className={'ad-list-item ' + (selected && selected.id === l.id ? 'is-on' : '')}
+                className={'ad-list-item ' + (selected && selected.id === l.id ? 'is-on' : '') + (selectedIds.has(l.id) ? ' is-checked' : '')}
                 onClick={() => setSelected(l)}>
+                <input
+                  type="checkbox"
+                  className="ad-list-check"
+                  checked={selectedIds.has(l.id)}
+                  onChange={() => toggleSelected(l.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Selecionar"
+                />
                 <span className={'ad-status-dot ad-status-' + (l.status || 'novo')} aria-hidden="true"></span>
                 <div className="ad-list-main">
                   <div className="ad-list-name">
@@ -543,6 +735,8 @@ const Dashboard = ({onLogout}) => {
           lead={selected}
           onClose={() => setSelected(null)}
           onUpdated={onUpdated}
+          onDeleted={onDeleted}
+          onHardDeleted={onHardDeleted}
           duplicates={duplicateMap.get(selected.id) || []}
           onSelectLead={setSelected}
         />
