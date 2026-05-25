@@ -8,7 +8,7 @@ export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
 };
 
-const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia']);
+const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional']);
 
 export default async (req) => {
   if (req.method !== 'POST') return json({error: 'Method not allowed'}, 405);
@@ -18,7 +18,7 @@ export default async (req) => {
 
   // Validação por tipo de formulário
   const origem = VALID_ORIGENS.has(body.origem) ? body.origem : 'mentoria';
-  const required = (origem === 'checklist' || origem === 'ebook-ia')
+  const required = (origem === 'checklist' || origem === 'ebook-ia' || origem === 'sindico-profissional')
     ? ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'instagram', 'atuacao']
     : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
 
@@ -36,7 +36,7 @@ export default async (req) => {
     createdAt: new Date().toISOString(),
     status: 'novo',  // novo | lido | respondido | convidado | recusado
     notes: '',
-    origem,          // mentoria | checklist | ebook-ia
+    origem,          // mentoria | checklist | ebook-ia | sindico-profissional
     ...body,
   };
 

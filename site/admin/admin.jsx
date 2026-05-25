@@ -16,8 +16,9 @@ const ORIGEM_LABELS = {
   mentoria: 'Aplicação Mentoria',
   checklist: 'Checklist Assembleias',
   'ebook-ia': 'E-book IA',
+  'sindico-profissional': 'E-book Síndico Profissional',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional'];
 
 /* ============================================================
    Helpers

@@ -1040,6 +1040,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(148, 182, 162, 0.22);
   color: #4F7A5D;
 }
+.ad-chip-origem-sindico-profissional {
+  background: rgba(184, 84, 59, 0.18);
+  color: #B8543B;
+}
 .ad-chip-status-novo {
   background: rgba(218, 189, 169, 0.22);
   color: var(--sand-deep, #B89579);

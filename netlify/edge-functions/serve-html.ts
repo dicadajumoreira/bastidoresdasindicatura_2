@@ -8,6 +8,7 @@ const MAP: Record<string, string> = {
   "/": "/index.html",
   "/checklist/": "/checklist/index.html",
   "/ebook-ia/": "/ebook-ia/index.html",
+  "/sindico-profissional/": "/sindico-profissional/index.html",
 };
 
 export default async (request: Request, context: Context) => {
@@ -37,5 +38,5 @@ export default async (request: Request, context: Context) => {
 };
 
 export const config = {
-  path: ["/", "/checklist/", "/ebook-ia/"],
+  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/"],
 };
