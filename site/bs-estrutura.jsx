@@ -26,7 +26,7 @@ const BsEstrutura = () => {
     {
       no: '05',
       titulo: 'Direcionamento prático',
-      descr: 'Saímos do encontro com decisões anotadas, próximos passos definidos e clareza sobre o que fazer até a próxima segunda.',
+      descr: 'Saímos do encontro com decisões anotadas, próximos passos definidos e clareza sobre o que fazer até a próxima terça.',
     },
   ];
 
@@ -41,7 +41,7 @@ const BsEstrutura = () => {
             <em>Um único compromisso.</em>
           </h2>
           <p className="bs-estrutura-lead">
-            Todas as segundas, das sete e meia às nove da manhã,
+            Todas as terças, das sete e meia às nove da manhã,
             via Microsoft Teams. Um encontro pensado para abrir a
             semana com clareza estratégica e fechar a anterior com
             aprendizado.
@@ -66,7 +66,7 @@ const BsEstrutura = () => {
           <ul className="bs-programa-grid">
             <li><span>Doze semanas</span><em>de mentoria</em></li>
             <li><span>Encontros</span><em>ao vivo</em></li>
-            <li><span>Segundas</span><em>07h30 às 09h00</em></li>
+            <li><span>Terças</span><em>07h30 às 09h00</em></li>
             <li><span>Microsoft</span><em>Teams</em></li>
             <li><span>Grupo</span><em>fechado</em></li>
             <li><span>Hot Seats</span><em>semanais</em></li>

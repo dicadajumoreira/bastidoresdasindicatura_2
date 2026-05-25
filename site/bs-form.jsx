@@ -376,7 +376,7 @@ const BsForm = () => {
             <legend className="bs-label">Comprometimento</legend>
             <p className="bs-commit-text">
               A mentoria acontece ao vivo durante doze semanas, com encontros
-              às segundas, das sete e meia às nove, via Microsoft Teams.
+              às terças, das sete e meia às nove, via Microsoft Teams.
             </p>
             <label className={'bs-commit-item ' + (data.compromisso ? 'is-selected' : '')}>
               <input type="checkbox" checked={data.compromisso} onChange={(e) => setField('compromisso', e.target.checked)} />

@@ -76,7 +76,7 @@ const BsHero = () => (
       </div>
       <div className="bs-strip-item">
         <span className="bs-strip-k">Encontros</span>
-        <span className="bs-strip-v">Toda segunda</span>
+        <span className="bs-strip-v">Toda terça</span>
       </div>
       <div className="bs-strip-item">
         <span className="bs-strip-k">Horário</span>

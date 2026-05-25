@@ -71,7 +71,7 @@ const BsCta = () => {
             </div>
             <div>
               <span className="bs-cta-k">Encontros</span>
-              <span className="bs-cta-v">Segundas, 07h30</span>
+              <span className="bs-cta-v">Terças, 07h30</span>
             </div>
             <div>
               <span className="bs-cta-k">Plataforma</span>
