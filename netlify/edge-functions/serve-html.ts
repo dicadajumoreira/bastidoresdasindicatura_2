@@ -9,6 +9,8 @@ const MAP: Record<string, string> = {
   "/checklist/": "/checklist/index.html",
   "/ebook-ia/": "/ebook-ia/index.html",
   "/sindico-profissional/": "/sindico-profissional/index.html",
+  "/sobrevivencia-whatsapp/": "/sobrevivencia-whatsapp/index.html",
+  "/50-frases/": "/50-frases/index.html",
 };
 
 export default async (request: Request, context: Context) => {
@@ -38,5 +40,5 @@ export default async (request: Request, context: Context) => {
 };
 
 export const config = {
-  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/"],
+  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/", "/sobrevivencia-whatsapp/", "/50-frases/"],
 };

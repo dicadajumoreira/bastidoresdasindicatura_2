@@ -17,8 +17,10 @@ const ORIGEM_LABELS = {
   checklist: 'Checklist Assembleias',
   'ebook-ia': 'E-book IA',
   'sindico-profissional': 'E-book Síndico Profissional',
+  'sobrevivencia-whatsapp': 'Manual WhatsApp',
+  '50-frases': 'Guia 50 Frases',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases'];
 
 /* ============================================================
    Helpers

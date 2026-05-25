@@ -1044,6 +1044,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(184, 84, 59, 0.18);
   color: #B8543B;
 }
+.ad-chip-origem-sobrevivencia-whatsapp {
+  background: rgba(78, 110, 140, 0.2);
+  color: #4E6E8C;
+}
+.ad-chip-origem-50-frases {
+  background: rgba(196, 154, 82, 0.22);
+  color: #9A7B33;
+}
 .ad-chip-status-novo {
   background: rgba(218, 189, 169, 0.22);
   color: var(--sand-deep, #B89579);

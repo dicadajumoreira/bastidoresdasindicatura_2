@@ -8,7 +8,10 @@ export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
 };
 
-const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional']);
+const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases']);
+
+// Origens de material gratuito (isca): exigem os 7 campos do formulário padrão.
+const MATERIAL_ORIGENS = new Set(['checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases']);
 
 export default async (req) => {
   if (req.method !== 'POST') return json({error: 'Method not allowed'}, 405);
@@ -18,7 +21,7 @@ export default async (req) => {
 
   // Validação por tipo de formulário
   const origem = VALID_ORIGENS.has(body.origem) ? body.origem : 'mentoria';
-  const required = (origem === 'checklist' || origem === 'ebook-ia' || origem === 'sindico-profissional')
+  const required = MATERIAL_ORIGENS.has(origem)
     ? ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'instagram', 'atuacao']
     : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
 
@@ -36,7 +39,7 @@ export default async (req) => {
     createdAt: new Date().toISOString(),
     status: 'novo',  // novo | lido | respondido | convidado | recusado
     notes: '',
-    origem,          // mentoria | checklist | ebook-ia | sindico-profissional
+    origem,          // mentoria | checklist | ebook-ia | sindico-profissional | sobrevivencia-whatsapp | 50-frases
     ...body,
   };
 
