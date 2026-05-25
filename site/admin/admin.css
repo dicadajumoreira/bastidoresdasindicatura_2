@@ -1127,3 +1127,156 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   .ad-td-name-text { white-space: normal; font-size: 15px; }
   .ad-td-date { text-align: left; }
 }
+
+/* ============================================================
+   MERGE MODAL — mescla manual de leads
+   ============================================================ */
+.ad-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 20, 32, 0.75);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: ad-fade-in 0.15s ease-out;
+}
+@keyframes ad-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ad-modal {
+  background: var(--offwhite, #F7F5F2);
+  border-radius: 6px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(218, 189, 169, 0.4);
+}
+.ad-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid rgba(26, 28, 41, 0.08);
+}
+.ad-modal-title {
+  font-family: var(--font-display, 'Bodoni Moda', serif);
+  font-style: italic;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--onix, #1A1C29);
+  margin: 0;
+}
+.ad-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  color: var(--graphite, #3B3F4A);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  line-height: 1;
+}
+.ad-modal-close:hover { background: rgba(26, 28, 41, 0.06); }
+.ad-modal-intro {
+  margin: 0;
+  padding: 16px 28px 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--graphite, #3B3F4A);
+  font-style: italic;
+  font-family: var(--font-display, 'Bodoni Moda', serif);
+}
+.ad-modal-intro strong { font-style: normal; font-weight: 600; color: var(--onix); }
+.ad-merge-list {
+  list-style: none;
+  padding: 0 28px;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ad-merge-item {
+  background: #fff;
+  border: 1px solid rgba(26, 28, 41, 0.1);
+  border-radius: 4px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ad-merge-item:hover { border-color: var(--sand, #DABDA9); }
+.ad-merge-item.is-primary {
+  border-color: var(--sand-deep, #B89579);
+  background: rgba(218, 189, 169, 0.1);
+}
+.ad-merge-item label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.ad-merge-item input[type="radio"] {
+  margin-top: 4px;
+  accent-color: var(--sand-deep, #B89579);
+  cursor: pointer;
+}
+.ad-merge-info { flex: 1; min-width: 0; }
+.ad-merge-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--onix, #1A1C29);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.ad-merge-badge {
+  background: var(--sand-deep, #B89579);
+  color: #fff;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+.ad-merge-meta {
+  font-size: 12px;
+  color: var(--graphite, #3B3F4A);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+.ad-merge-contact {
+  font-size: 11px;
+  color: var(--graphite-light, #5a5f6c);
+  word-break: break-word;
+}
+.ad-merge-contact span { margin-right: 2px; }
+.ad-modal-foot {
+  padding: 16px 28px 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(26, 28, 41, 0.08);
+}
+
+/* Dup item estático (sem hover, sem click) — usado em "leads mesclados aqui" */
+.ad-dup-item.is-static {
+  cursor: default;
+  background: rgba(26, 28, 41, 0.03);
+  opacity: 0.85;
+}
+.ad-dup-item.is-static:hover {
+  background: rgba(26, 28, 41, 0.03);
+  border-color: rgba(26, 28, 41, 0.08);
+}

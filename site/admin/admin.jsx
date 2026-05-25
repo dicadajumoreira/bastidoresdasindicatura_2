@@ -33,16 +33,19 @@ const fmtDate = (iso) => {
 // Normalização para detecção de duplicidade
 const normEmail = (e) => (e || '').trim().toLowerCase();
 const normPhone = (p) => (p || '').replace(/\D/g, '');
+const normHandle = (h) => (h || '').trim().toLowerCase().replace(/^@+/, '');
 
-// Retorna os outros leads que compartilham email OU whatsapp com este
+// Retorna os outros leads que compartilham email, WhatsApp OU @ redes sociais com este
 const findDuplicates = (lead, allLeads) => {
   const email = normEmail(lead.email);
   const phone = normPhone(lead.whatsapp);
-  if (!email && !phone) return [];
+  const handle = normHandle(lead.instagram);
+  if (!email && !phone && !handle) return [];
   return allLeads.filter((other) => {
     if (other.id === lead.id) return false;
     if (email && normEmail(other.email) === email) return true;
     if (phone && normPhone(other.whatsapp) === phone) return true;
+    if (handle && normHandle(other.instagram) === handle) return true;
     return false;
   });
 };
@@ -222,7 +225,9 @@ const Login = ({onSuccess}) => {
 /* ============================================================
    LEAD DETAIL (drawer lateral)
    ============================================================ */
-const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplicates = [], onSelectLead}) => {
+const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplicates = [], onSelectLead, allLeads = []}) => {
+  const mergedFromList = Array.isArray(lead.mergedFrom) ? lead.mergedFrom : [];
+  const mergedIntoLead = lead.mergedInto ? allLeads.find((l) => l.id === lead.mergedInto) : null;
   const [status, setStatus] = React.useState(lead.status || 'novo');
   const [notes, setNotes] = React.useState(lead.notes || '');
   const [saving, setSaving] = React.useState(false);
@@ -424,6 +429,60 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplica
         )}
       </div>
 
+      {/* Info de mescla */}
+      {mergedFromList.length > 0 && (
+        <div className="ad-dup-card">
+          <div className="ad-dup-head">
+            <span className="ad-dup-badge ad-dup-badge-lg">+{mergedFromList.length}</span>
+            <div>
+              <span className="ad-label">Leads mesclados aqui</span>
+              <p className="ad-dup-hint">
+                Estas aplicações foram identificadas como a mesma pessoa e mescladas neste lead.
+              </p>
+            </div>
+          </div>
+          <ul className="ad-dup-list">
+            {mergedFromList.map((m) => (
+              <li key={m.id} className="ad-dup-item is-static">
+                <span className="ad-status-dot ad-status-recusado" aria-hidden="true"></span>
+                <div className="ad-dup-item-main">
+                  <div className="ad-dup-item-meta">
+                    <span className="ad-dup-item-origem">{ORIGEM_LABELS[m.origem || 'mentoria']}</span>
+                    <span className="ad-dot">·</span>
+                    <span>Mesclado em {fmtDate(m.mergedAt)}</span>
+                  </div>
+                </div>
+                <div className="ad-dup-item-date">de {fmtDate(m.createdAt)}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {mergedIntoLead && (
+        <div className="ad-dup-card">
+          <div className="ad-dup-head">
+            <span className="ad-dup-badge ad-dup-badge-lg">→</span>
+            <div>
+              <span className="ad-label">Mesclado em outro lead</span>
+              <p className="ad-dup-hint">Esta aplicação foi mesclada como duplicata. Clique para abrir o lead principal.</p>
+            </div>
+          </div>
+          <ul className="ad-dup-list">
+            <li className="ad-dup-item" onClick={() => onSelectLead && onSelectLead(mergedIntoLead)}>
+              <span className={'ad-status-dot ad-status-' + (mergedIntoLead.status || 'novo')} aria-hidden="true"></span>
+              <div className="ad-dup-item-main">
+                <div className="ad-dup-item-meta">
+                  <span className="ad-dup-item-origem">{mergedIntoLead.nome}</span>
+                  <span className="ad-dot">·</span>
+                  <span>{ORIGEM_LABELS[mergedIntoLead.origem || 'mentoria']}</span>
+                </div>
+              </div>
+              <div className="ad-dup-item-date">{fmtDate(mergedIntoLead.createdAt)}</div>
+            </li>
+          </ul>
+        </div>
+      )}
+
       {/* Zona de exclusão */}
       <div className="ad-danger-zone">
         {lead.deleted ? (
@@ -621,6 +680,36 @@ const Dashboard = ({onLogout}) => {
     setSelectedIds(new Set(filtered.map((l) => l.id)));
   };
 
+  // Mesclar leads — abre modal de escolha do principal
+  const [mergeOpen, setMergeOpen] = React.useState(false);
+  const openMerge = () => setMergeOpen(true);
+  const closeMerge = () => setMergeOpen(false);
+
+  const doMerge = async (primaryId) => {
+    const secondaryIds = [...selectedIds].filter((id) => id !== primaryId);
+    if (!secondaryIds.length) return;
+    setBulkBusy(true);
+    try {
+      const res = await api('/api/merge-leads', {
+        method: 'POST',
+        body: JSON.stringify({primaryId, secondaryIds}),
+      });
+      const secondarySet = new Set(secondaryIds);
+      setLeads((all) => all.map((l) => {
+        if (l.id === primaryId) return res.primary;
+        if (secondarySet.has(l.id)) return {...l, deleted: true, deletedAt: new Date().toISOString(), mergedInto: primaryId};
+        return l;
+      }));
+      clearSelection();
+      closeMerge();
+      setSelected(res.primary);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const logout = () => {
     sessionStorage.removeItem(TOKEN_KEY);
     onLogout();
@@ -721,9 +810,16 @@ const Dashboard = ({onLogout}) => {
                   </button>
                 </>
               ) : (
-                <button className="ad-btn ad-btn-danger ad-btn-sm" onClick={bulkSoftDelete} disabled={bulkBusy}>
-                  {bulkBusy ? 'Excluindo…' : 'Excluir selecionadas'}
-                </button>
+                <>
+                  {selectedIds.size >= 2 && (
+                    <button className="ad-btn ad-btn-light ad-btn-sm" onClick={openMerge} disabled={bulkBusy}>
+                      Mesclar selecionadas
+                    </button>
+                  )}
+                  <button className="ad-btn ad-btn-danger ad-btn-sm" onClick={bulkSoftDelete} disabled={bulkBusy}>
+                    {bulkBusy ? 'Excluindo…' : 'Excluir selecionadas'}
+                  </button>
+                </>
               )}
               <button className="ad-btn ad-btn-ghost-light ad-btn-sm" onClick={clearSelection} disabled={bulkBusy}>
                 Cancelar
@@ -839,8 +935,86 @@ const Dashboard = ({onLogout}) => {
           onHardDeleted={onHardDeleted}
           duplicates={duplicateMap.get(selected.id) || []}
           onSelectLead={setSelected}
+          allLeads={leads}
         />
       )}
+
+      {mergeOpen && (
+        <MergeModal
+          leads={leads.filter((l) => selectedIds.has(l.id))}
+          onCancel={closeMerge}
+          onConfirm={doMerge}
+          busy={bulkBusy}
+        />
+      )}
+    </div>
+  );
+};
+
+/* ============================================================
+   MERGE MODAL — escolher lead principal pra mescla manual
+   ============================================================ */
+const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
+  // Default: lead mais recente como principal (preserva status atualizado)
+  const sorted = [...leads].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const [primaryId, setPrimaryId] = React.useState(sorted[0]?.id);
+
+  return (
+    <div className="ad-modal-backdrop" onClick={onCancel}>
+      <div className="ad-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="ad-modal-head">
+          <h2 className="ad-modal-title">Mesclar {leads.length} aplicações</h2>
+          <button className="ad-modal-close" onClick={onCancel} aria-label="Fechar">×</button>
+        </header>
+        <p className="ad-modal-intro">
+          Qual aplicação será o <strong>lead principal</strong>? Os outros vão pra Lixeira
+          marcados como mesclados. Campos vazios do principal são preenchidos com dados das
+          outras; notas são concatenadas.
+        </p>
+        <ul className="ad-merge-list">
+          {sorted.map((l) => {
+            const isPrimary = primaryId === l.id;
+            return (
+              <li key={l.id} className={'ad-merge-item ' + (isPrimary ? 'is-primary' : '')}>
+                <label>
+                  <input
+                    type="radio"
+                    name="primary"
+                    checked={isPrimary}
+                    onChange={() => setPrimaryId(l.id)}
+                  />
+                  <div className="ad-merge-info">
+                    <div className="ad-merge-name">
+                      {l.nome}
+                      {isPrimary && <span className="ad-merge-badge">PRINCIPAL</span>}
+                    </div>
+                    <div className="ad-merge-meta">
+                      <span>{ORIGEM_LABELS[l.origem || 'mentoria']}</span>
+                      <span className="ad-dot">·</span>
+                      <span>{fmtDate(l.createdAt)}</span>
+                      <span className="ad-dot">·</span>
+                      <span>{STATUS_LABELS[l.status || 'novo']}</span>
+                    </div>
+                    <div className="ad-merge-contact">
+                      {l.email && <span>{l.email}</span>}
+                      {l.whatsapp && <span>· {l.whatsapp}</span>}
+                      {l.instagram && <span>· @{String(l.instagram).replace(/^@/, '')}</span>}
+                    </div>
+                  </div>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <footer className="ad-modal-foot">
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onCancel} disabled={busy}>
+            Cancelar
+          </button>
+          <button className="ad-btn ad-btn-primary ad-btn-sm" onClick={() => onConfirm(primaryId)} disabled={busy || !primaryId}>
+            {busy ? 'Mesclando…' : 'Mesclar'}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 };
