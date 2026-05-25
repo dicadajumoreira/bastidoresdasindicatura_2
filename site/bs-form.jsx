@@ -3,25 +3,22 @@
 
 const BsForm = () => {
   const [step, setStep] = React.useState(0);
-  const [data, setData] = React.useState({
-    nome: '',
-    cidade: '',
-    whatsapp: '',
-    email: '',
-    instagram: '',
-    atuacao: '',
-    tempoMercado: '',
-    qtdCondominios: '',
-    maiorDesafio: '',
-    desgaste: '',
-    areas: [],
-    desenvolvimento: '',
-    objetivo: '',
-    onde2anos: '',
-    bastidor: '',
-    modalidade: '',
-    compromisso: false,
-    participacao: false,
+  const [data, setData] = React.useState(() => {
+    const defaults = {
+      nome: '', cidade: '', whatsapp: '', email: '', instagram: '', atuacao: '',
+      tempoMercado: '', qtdCondominios: '',
+      maiorDesafio: '', desgaste: '', areas: [],
+      desenvolvimento: '', objetivo: '', onde2anos: '',
+      bastidor: '', modalidade: '',
+      compromisso: false, participacao: false,
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem('bs-lead') || '{}');
+      // Só pré-preenche campos comuns (não areas/modalidade/compromisso/etc.)
+      const common = ['nome', 'cidade', 'whatsapp', 'email', 'instagram', 'atuacao', 'tempoMercado', 'qtdCondominios'];
+      const filtered = Object.fromEntries(common.map((k) => [k, saved[k] || '']).filter(([_, v]) => v));
+      return {...defaults, ...filtered};
+    } catch { return defaults; }
   });
 
   const total = 6;
@@ -99,6 +96,12 @@ const BsForm = () => {
     } catch (err) { /* ignora */ }
 
     if (backendOk) {
+      // Salva dados do lead pra pré-preencher em formulários futuros
+      try {
+        const toSave = ['nome', 'cidade', 'whatsapp', 'email', 'instagram', 'atuacao', 'tempoMercado', 'qtdCondominios']
+          .reduce((acc, k) => { if (data[k]) acc[k] = data[k]; return acc; }, {});
+        localStorage.setItem('bs-lead', JSON.stringify(toSave));
+      } catch {}
       // Dispara conversão pro Meta Pixel
       if (typeof window.fbq === 'function') {
         const valor = data.modalidade === 'Executive' ? 8997 : 4997;

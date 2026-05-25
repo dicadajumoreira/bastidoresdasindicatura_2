@@ -35,17 +35,43 @@ const normEmail = (e) => (e || '').trim().toLowerCase();
 const normPhone = (p) => (p || '').replace(/\D/g, '');
 const normHandle = (h) => (h || '').trim().toLowerCase().replace(/^@+/, '');
 
-// Retorna os outros leads que compartilham email, WhatsApp OU @ redes sociais com este
+// Retorna todos os emails / whatsapps / handles distintos de um lead
+// (campo principal + arrays *Extras). Já normalizados, sem vazios.
+const getAllEmails = (l) => {
+  const set = new Set();
+  if (l.email) set.add(normEmail(l.email));
+  for (const e of (l.emailsExtras || [])) if (e) set.add(normEmail(e));
+  set.delete('');
+  return [...set];
+};
+const getAllPhones = (l) => {
+  const set = new Set();
+  if (l.whatsapp) set.add(normPhone(l.whatsapp));
+  for (const p of (l.whatsappsExtras || [])) if (p) set.add(normPhone(p));
+  set.delete('');
+  return [...set];
+};
+const getAllHandles = (l) => {
+  const set = new Set();
+  if (l.instagram) set.add(normHandle(l.instagram));
+  for (const h of (l.instagramsExtras || [])) if (h) set.add(normHandle(h));
+  set.delete('');
+  return [...set];
+};
+
+const intersects = (a, b) => a.some((x) => b.includes(x));
+
+// Retorna os outros leads que compartilham QUALQUER email, WhatsApp ou @ com este
 const findDuplicates = (lead, allLeads) => {
-  const email = normEmail(lead.email);
-  const phone = normPhone(lead.whatsapp);
-  const handle = normHandle(lead.instagram);
-  if (!email && !phone && !handle) return [];
+  const emails = getAllEmails(lead);
+  const phones = getAllPhones(lead);
+  const handles = getAllHandles(lead);
+  if (!emails.length && !phones.length && !handles.length) return [];
   return allLeads.filter((other) => {
     if (other.id === lead.id) return false;
-    if (email && normEmail(other.email) === email) return true;
-    if (phone && normPhone(other.whatsapp) === phone) return true;
-    if (handle && normHandle(other.instagram) === handle) return true;
+    if (emails.length && intersects(emails, getAllEmails(other))) return true;
+    if (phones.length && intersects(phones, getAllPhones(other))) return true;
+    if (handles.length && intersects(handles, getAllHandles(other))) return true;
     return false;
   });
 };
@@ -232,6 +258,7 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplica
   const [notes, setNotes] = React.useState(lead.notes || '');
   const [saving, setSaving] = React.useState(false);
   const [savedAt, setSavedAt] = React.useState(null);
+  const [editOpen, setEditOpen] = React.useState(false);
 
   React.useEffect(() => {
     setStatus(lead.status || 'novo');
@@ -319,7 +346,16 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplica
              href={`https://instagram.com/${String(lead.instagram).replace(/^@/, '')}`}
              target="_blank" rel="noreferrer">Instagram</a>
         )}
+        <button className="ad-btn ad-btn-ghost" onClick={() => setEditOpen(true)}>Editar</button>
       </div>
+
+      {editOpen && (
+        <EditLeadModal
+          lead={lead}
+          onCancel={() => setEditOpen(false)}
+          onSaved={(updated) => { onUpdated(updated); setEditOpen(false); }}
+        />
+      )}
 
       {/* Duplicatas (mesmo e-mail ou WhatsApp) */}
       {duplicates.length > 0 && (
@@ -388,9 +424,9 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplica
               v={`${lead.cidade}${lead.estado ? ' / ' + lead.estado : ''}`}
             />
           )}
-          <Field k="WhatsApp" v={lead.whatsapp} />
-          <Field k="E-mail" v={lead.email} />
-          {lead.instagram && <Field k="Instagram" v={lead.instagram} />}
+          <MultiField k="WhatsApp" primary={lead.whatsapp} extras={lead.whatsappsExtras} />
+          <MultiField k="E-mail" primary={lead.email} extras={lead.emailsExtras} />
+          <MultiField k="Instagram" primary={lead.instagram} extras={lead.instagramsExtras} />
         </Section>
 
         <Section title="Atuação">
@@ -518,6 +554,32 @@ const Field = ({k, v, long}) => (
     <dd>{v && String(v).trim() ? v : <span className="ad-empty">—</span>}</dd>
   </div>
 );
+
+// Campo de contato que mostra principal + extras como lista vertical
+const MultiField = ({k, primary, extras = []}) => {
+  const all = [primary, ...(extras || [])].filter((v) => v && String(v).trim());
+  if (all.length === 0) return (
+    <div className="ad-field-row">
+      <dt>{k}</dt>
+      <dd><span className="ad-empty">—</span></dd>
+    </div>
+  );
+  return (
+    <div className="ad-field-row ad-field-multi">
+      <dt>
+        {k}
+        {all.length > 1 && <span className="ad-multi-count">+{all.length - 1}</span>}
+      </dt>
+      <dd>
+        {all.map((v, i) => (
+          <div key={i} className={'ad-multi-item' + (i === 0 ? ' is-primary' : '')}>
+            {v}
+          </div>
+        ))}
+      </dd>
+    </div>
+  );
+};
 
 /* ============================================================
    DASHBOARD
@@ -947,6 +1009,162 @@ const Dashboard = ({onLogout}) => {
           busy={bulkBusy}
         />
       )}
+    </div>
+  );
+};
+
+/* ============================================================
+   EDIT LEAD MODAL — editar campos do lead (incl. emails/whatsapps extras)
+   ============================================================ */
+const UFS_ADMIN = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+const EditLeadModal = ({lead, onCancel, onSaved}) => {
+  const [form, setForm] = React.useState({
+    nome: lead.nome || '',
+    cidade: lead.cidade || '',
+    estado: lead.estado || '',
+    whatsapp: lead.whatsapp || '',
+    whatsappsExtras: [...(lead.whatsappsExtras || [])],
+    email: lead.email || '',
+    emailsExtras: [...(lead.emailsExtras || [])],
+    instagram: lead.instagram || '',
+    instagramsExtras: [...(lead.instagramsExtras || [])],
+    atuacao: lead.atuacao || '',
+    modalidade: lead.modalidade || '',
+    status: lead.status || 'novo',
+  });
+  const [saving, setSaving] = React.useState(false);
+
+  const set = (k, v) => setForm((f) => ({...f, [k]: v}));
+  const addExtra = (arrKey) => setForm((f) => ({...f, [arrKey]: [...f[arrKey], '']}));
+  const setExtra = (arrKey, i, v) => setForm((f) => ({...f, [arrKey]: f[arrKey].map((x, j) => (j === i ? v : x))}));
+  const rmExtra = (arrKey, i) => setForm((f) => ({...f, [arrKey]: f[arrKey].filter((_, j) => j !== i)}));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await api('/api/update-lead', {
+        method: 'POST',
+        body: JSON.stringify({id: lead.id, fields: form}),
+      });
+      // Status mudou? Atualiza via update-status pra disparar lógica adequada
+      if (form.status !== (lead.status || 'novo')) {
+        await api('/api/update-status', {
+          method: 'POST',
+          body: JSON.stringify({id: lead.id, status: form.status}),
+        });
+      }
+      onSaved({...res.lead, status: form.status});
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderExtraList = (arrKey, label, placeholder, type = 'text') => (
+    <>
+      {form[arrKey].map((v, i) => (
+        <div className="ad-edit-extra-row" key={`${arrKey}-${i}`}>
+          <input
+            type={type}
+            value={v}
+            onChange={(e) => setExtra(arrKey, i, e.target.value)}
+            placeholder={placeholder}
+          />
+          <button type="button" className="ad-edit-extra-rm" onClick={() => rmExtra(arrKey, i)} aria-label="Remover">×</button>
+        </div>
+      ))}
+      <button type="button" className="ad-btn-link ad-edit-add" onClick={() => addExtra(arrKey)}>
+        + Adicionar outro {label.toLowerCase()}
+      </button>
+    </>
+  );
+
+  return (
+    <div className="ad-modal-backdrop" onClick={onCancel}>
+      <div className="ad-modal ad-modal-edit" onClick={(e) => e.stopPropagation()}>
+        <header className="ad-modal-head">
+          <h2 className="ad-modal-title">Editar aplicação</h2>
+          <button className="ad-modal-close" onClick={onCancel} aria-label="Fechar">×</button>
+        </header>
+        <div className="ad-edit-body">
+          <div className="ad-edit-grid">
+            <label className="ad-edit-field ad-edit-full">
+              <span>Nome</span>
+              <input type="text" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
+            </label>
+            <label className="ad-edit-field">
+              <span>Cidade</span>
+              <input type="text" value={form.cidade} onChange={(e) => set('cidade', e.target.value)} />
+            </label>
+            <label className="ad-edit-field ad-edit-narrow">
+              <span>Estado (UF)</span>
+              <select value={form.estado} onChange={(e) => set('estado', e.target.value)}>
+                <option value="">—</option>
+                {UFS_ADMIN.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+              </select>
+            </label>
+            <div className="ad-edit-field ad-edit-full">
+              <span>WhatsApp</span>
+              <input type="tel" value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} placeholder="Principal" />
+              {renderExtraList('whatsappsExtras', 'WhatsApp', '(11) 99999-9999', 'tel')}
+            </div>
+            <div className="ad-edit-field ad-edit-full">
+              <span>E-mail</span>
+              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="Principal" />
+              {renderExtraList('emailsExtras', 'e-mail', 'outro@email.com', 'email')}
+            </div>
+            <div className="ad-edit-field ad-edit-full">
+              <span>Instagram / @ redes sociais</span>
+              <input type="text" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} placeholder="@principal" />
+              {renderExtraList('instagramsExtras', '@', '@outro_user')}
+            </div>
+            <label className="ad-edit-field">
+              <span>Atuação</span>
+              <select value={form.atuacao} onChange={(e) => set('atuacao', e.target.value)}>
+                <option value="">—</option>
+                <option>Síndico profissional</option>
+                <option>Síndico morador</option>
+                <option>Gestor condominial</option>
+                <option>Administradora</option>
+                <option>Conselheiro</option>
+                <option>Outro</option>
+              </select>
+            </label>
+            <label className="ad-edit-field">
+              <span>Modalidade (mentoria)</span>
+              <select value={form.modalidade} onChange={(e) => set('modalidade', e.target.value)}>
+                <option value="">—</option>
+                <option>Experience</option>
+                <option>Executive</option>
+              </select>
+            </label>
+            <label className="ad-edit-field ad-edit-full">
+              <span>Status</span>
+              <div className="ad-edit-status">
+                {STATUS_ORDER.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={'ad-status-chip ' + (form.status === s ? 'is-on' : '')}
+                    onClick={() => set('status', s)}>
+                    {STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </label>
+          </div>
+        </div>
+        <footer className="ad-modal-foot">
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </button>
+          <button className="ad-btn ad-btn-primary ad-btn-sm" onClick={save} disabled={saving}>
+            {saving ? 'Salvando…' : 'Salvar'}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 };

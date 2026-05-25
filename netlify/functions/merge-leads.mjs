@@ -72,6 +72,39 @@ export default async (req) => {
     }
   }
 
+  // Agrega emails, whatsapps e instagrams distintos dos secundários nos arrays
+  // *Extras do principal (sem incluir o valor principal, sem duplicar).
+  const normE = (e) => (e || '').trim().toLowerCase();
+  const normP = (p) => (p || '').replace(/\D/g, '');
+  const normH = (h) => (h || '').trim().toLowerCase().replace(/^@+/, '');
+
+  const aggregateAlt = (primaryKey, extrasKey, normalize) => {
+    const principalNorm = normalize(filled[primaryKey]);
+    const existing = new Set(
+      (filled[extrasKey] || []).map(normalize).filter(Boolean)
+    );
+    if (principalNorm) existing.add(principalNorm);
+    const result = [...(filled[extrasKey] || [])];
+
+    for (const sec of secondaries) {
+      if (sec[primaryKey] && !existing.has(normalize(sec[primaryKey]))) {
+        result.push(sec[primaryKey]);
+        existing.add(normalize(sec[primaryKey]));
+      }
+      for (const v of (sec[extrasKey] || [])) {
+        if (v && !existing.has(normalize(v))) {
+          result.push(v);
+          existing.add(normalize(v));
+        }
+      }
+    }
+    if (result.length) filled[extrasKey] = result;
+  };
+
+  aggregateAlt('email', 'emailsExtras', normE);
+  aggregateAlt('whatsapp', 'whatsappsExtras', normP);
+  aggregateAlt('instagram', 'instagramsExtras', normH);
+
   // Concatena notas (se principal já tem nota, mantém em cima)
   const allNotes = [primary.notes, ...ordered.map((s) => s.notes)]
     .map((n) => (n || '').trim())

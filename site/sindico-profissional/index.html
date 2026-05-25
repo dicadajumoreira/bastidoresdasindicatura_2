@@ -507,7 +507,13 @@
 
   <script type="text/babel">
     const SindicoProfissionalLanding = () => {
-      const [data, setData] = React.useState({nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: ''});
+      const [data, setData] = React.useState(() => {
+        const defaults = {nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: ''};
+        try {
+          const saved = JSON.parse(localStorage.getItem('bs-lead') || '{}');
+          return {...defaults, ...Object.fromEntries(Object.entries(saved).filter(([k]) => k in defaults))};
+        } catch { return defaults; }
+      });
       const [submitting, setSubmitting] = React.useState(false);
       const [error, setError] = React.useState('');
 
@@ -551,6 +557,7 @@
         } catch (err) {}
 
         if (ok) {
+          try { localStorage.setItem('bs-lead', JSON.stringify(data)); } catch {}
           // Dispara conversão pro Meta Pixel antes de redirecionar
           if (typeof window.fbq === 'function') {
             window.fbq('track', 'Lead', {
