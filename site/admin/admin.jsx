@@ -78,6 +78,53 @@ const findDuplicates = (lead, allLeads) => {
   });
 };
 
+// Une todos os e-mails/WhatsApps/@ distintos de um conjunto de formulários (cadastro único)
+const unionContacts = (forms, getter) => {
+  const set = new Set();
+  forms.forEach((f) => getter(f).forEach((v) => set.add(v)));
+  set.delete('');
+  return [...set];
+};
+
+// Monta um "cadastro único" a partir das aplicações de uma mesma pessoa.
+const aggregateCluster = (forms) => {
+  const sorted = [...forms].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const rep = sorted[0]; // aplicação mais recente = representante do cadastro
+  const origens = [];
+  ORIGEM_ORDER.forEach((o) => { if (sorted.some((f) => (f.origem || 'mentoria') === o)) origens.push(o); });
+  sorted.forEach((f) => { const o = f.origem || 'mentoria'; if (!origens.includes(o)) origens.push(o); }); // defensivo
+  return {
+    id: rep.id,                 // id do representante (seleção / detalhe)
+    rep,
+    forms: sorted,              // todos os formulários, do mais recente ao mais antigo
+    ids: sorted.map((f) => f.id),
+    count: sorted.length,
+    origens,
+    status: rep.status || 'novo',
+    latestAt: sorted[0].createdAt,
+  };
+};
+
+// Agrupa leads que são a mesma pessoa — transitivamente — por e-mail OU WhatsApp OU @.
+// Ex.: A divide e-mail com B, B divide WhatsApp com C → {A, B, C} viram um cadastro.
+const buildClusters = (leads) => {
+  const parent = new Map();
+  leads.forEach((l) => parent.set(l.id, l.id));
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); };
+  const linkByKey = (getter) => {
+    const map = new Map();
+    leads.forEach((l) => getter(l).forEach((k) => { if (!map.has(k)) map.set(k, []); map.get(k).push(l.id); }));
+    map.forEach((ids) => { for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]); });
+  };
+  linkByKey(getAllEmails);
+  linkByKey(getAllPhones);
+  linkByKey(getAllHandles);
+  const groups = new Map();
+  leads.forEach((l) => { const r = find(l.id); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(l); });
+  return [...groups.values()].map(aggregateCluster);
+};
+
 const api = async (path, opts = {}) => {
   const token = sessionStorage.getItem(TOKEN_KEY) || '';
   // Chama a function diretamente (sem depender do redirect /api/*)
@@ -112,7 +159,29 @@ const splitLocation = (lead) => {
   return {cidade: raw, estado: ''};
 };
 
-const downloadXlsx = async (leads) => {
+// Linha de planilha a partir de uma aplicação isolada (usada na Lixeira)
+const leadToRow = (l) => {
+  const loc = splitLocation(l);
+  return {
+    nome: l.nome || '', whatsapp: l.whatsapp || '', email: l.email || '',
+    cidade: loc.cidade, estado: loc.estado, pagina: ORIGEM_LABELS[l.origem || 'mentoria'],
+  };
+};
+
+// Linha de planilha a partir de um cadastro único (todas as origens da pessoa juntas)
+const clusterToRow = (c) => {
+  const loc = splitLocation(c.rep);
+  return {
+    nome: c.rep.nome || '',
+    whatsapp: unionContacts(c.forms, getAllPhones).join(' · ') || (c.rep.whatsapp || ''),
+    email: unionContacts(c.forms, getAllEmails).join(' · ') || (c.rep.email || ''),
+    cidade: loc.cidade,
+    estado: loc.estado,
+    pagina: c.origens.map((o) => ORIGEM_LABELS[o] || o).join(', '),
+  };
+};
+
+const downloadXlsx = async (rows) => {
   if (typeof ExcelJS === 'undefined') {
     alert('Biblioteca de planilha ainda carregando. Aguarde e tente de novo.');
     return;
@@ -134,17 +203,7 @@ const downloadXlsx = async (leads) => {
     {header: 'Página de captação', key: 'pagina', width: 26},
   ];
 
-  leads.forEach((l) => {
-    const loc = splitLocation(l);
-    ws.addRow({
-      nome: l.nome || '',
-      whatsapp: l.whatsapp || '',
-      email: l.email || '',
-      cidade: loc.cidade,
-      estado: loc.estado,
-      pagina: ORIGEM_LABELS[l.origem || 'mentoria'],
-    });
-  });
+  rows.forEach((row) => ws.addRow(row));
 
   // Header destacado
   const header = ws.getRow(1);
@@ -253,9 +312,32 @@ const Login = ({onSuccess}) => {
 /* ============================================================
    LEAD DETAIL (drawer lateral)
    ============================================================ */
-const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplicates = [], onSelectLead, allLeads = []}) => {
+const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, clusterForms = [], onSelectLead, allLeads = []}) => {
   const mergedFromList = Array.isArray(lead.mergedFrom) ? lead.mergedFrom : [];
   const mergedIntoLead = lead.mergedInto ? allLeads.find((l) => l.id === lead.mergedInto) : null;
+
+  // Todos os formulários deste cadastro (mais recente primeiro) e os "outros"
+  const forms = clusterForms.length ? clusterForms : [lead];
+  const otherForms = forms.filter((f) => f.id !== lead.id);
+
+  // Junta os contatos distintos de TODAS as aplicações da pessoa (formatação original, sem repetir)
+  const collectContacts = (primaryKey, extrasKey, norm) => {
+    const seen = new Set();
+    const out = [];
+    forms.forEach((f) => {
+      [f[primaryKey], ...((f[extrasKey]) || [])].forEach((v) => {
+        if (!v || !String(v).trim()) return;
+        const k = norm(v);
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push(String(v).trim());
+      });
+    });
+    return out;
+  };
+  const allWhats = collectContacts('whatsapp', 'whatsappsExtras', normPhone);
+  const allEmails = collectContacts('email', 'emailsExtras', normEmail);
+  const allHandles = collectContacts('instagram', 'instagramsExtras', normHandle);
   const [status, setStatus] = React.useState(lead.status || 'novo');
   const [notes, setNotes] = React.useState(lead.notes || '');
   const [saving, setSaving] = React.useState(false);
@@ -359,31 +441,37 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplica
         />
       )}
 
-      {/* Duplicatas (mesmo e-mail ou WhatsApp) */}
-      {duplicates.length > 0 && (
+      {/* Formulários baixados por esta pessoa (cadastro único) */}
+      {forms.length > 1 && (
         <div className="ad-dup-card">
           <div className="ad-dup-head">
-            <span className="ad-dup-badge ad-dup-badge-lg">{duplicates.length + 1}x</span>
+            <span className="ad-dup-badge ad-dup-badge-lg">{forms.length}</span>
             <div>
-              <span className="ad-label">Outras aplicações desta pessoa</span>
-              <p className="ad-dup-hint">Mesmo e-mail ou WhatsApp. Clique para abrir.</p>
+              <span className="ad-label">Formulários baixados por esta pessoa</span>
+              <p className="ad-dup-hint">Mesmo e-mail, WhatsApp ou @. Clique em um para abrir os detalhes dele.</p>
             </div>
           </div>
           <ul className="ad-dup-list">
-            {duplicates.map((d) => (
-              <li key={d.id} className="ad-dup-item" onClick={() => onSelectLead && onSelectLead(d)}>
-                <span className={'ad-status-dot ad-status-' + (d.status || 'novo')} aria-hidden="true"></span>
-                <div className="ad-dup-item-main">
-                  <div className="ad-dup-item-meta">
-                    <span className="ad-dup-item-origem">{ORIGEM_LABELS[d.origem || 'mentoria']}</span>
-                    <span className="ad-dot">·</span>
-                    <span>{STATUS_LABELS[d.status || 'novo']}</span>
-                    {d.modalidade && <><span className="ad-dot">·</span><em>{d.modalidade}</em></>}
+            {forms.map((d) => {
+              const isCurrent = d.id === lead.id;
+              return (
+                <li key={d.id}
+                    className={'ad-dup-item' + (isCurrent ? ' is-current' : '')}
+                    onClick={() => { if (!isCurrent && onSelectLead) onSelectLead(d); }}>
+                  <span className={'ad-status-dot ad-status-' + (d.status || 'novo')} aria-hidden="true"></span>
+                  <div className="ad-dup-item-main">
+                    <div className="ad-dup-item-meta">
+                      <span className={'ad-chip ad-chip-origem ad-chip-origem-' + (d.origem || 'mentoria')}>{ORIGEM_LABELS[d.origem || 'mentoria']}</span>
+                      <span className="ad-dot">·</span>
+                      <span>{STATUS_LABELS[d.status || 'novo']}</span>
+                      {d.modalidade && <><span className="ad-dot">·</span><em>{d.modalidade}</em></>}
+                      {isCurrent && <span className="ad-dup-current-tag">aberto</span>}
+                    </div>
                   </div>
-                </div>
-                <div className="ad-dup-item-date">{fmtDate(d.createdAt)}</div>
-              </li>
-            ))}
+                  <div className="ad-dup-item-date">{fmtDate(d.createdAt)}</div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -426,9 +514,9 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, duplica
               v={`${lead.cidade}${lead.estado ? ' / ' + lead.estado : ''}`}
             />
           )}
-          <MultiField k="WhatsApp" primary={lead.whatsapp} extras={lead.whatsappsExtras} />
-          <MultiField k="E-mail" primary={lead.email} extras={lead.emailsExtras} />
-          <MultiField k="Instagram" primary={lead.instagram} extras={lead.instagramsExtras} />
+          <MultiField k="WhatsApp" primary={allWhats[0]} extras={allWhats.slice(1)} />
+          <MultiField k="E-mail" primary={allEmails[0]} extras={allEmails.slice(1)} />
+          <MultiField k="Instagram" primary={allHandles[0]} extras={allHandles.slice(1)} />
         </Section>
 
         <Section title="Atuação">
@@ -634,22 +722,20 @@ const Dashboard = ({onLogout}) => {
   const activeLeads = React.useMemo(() => leads.filter((l) => !l.deleted), [leads]);
   const deletedLeads = React.useMemo(() => leads.filter((l) => l.deleted), [leads]);
 
-  // Mapa de duplicatas, calculado SOMENTE entre leads ativos
-  const duplicateMap = React.useMemo(() => {
-    const map = new Map();
-    activeLeads.forEach((l) => map.set(l.id, findDuplicates(l, activeLeads)));
-    return map;
-  }, [activeLeads]);
+  // Cadastros únicos: agrupa as aplicações da mesma pessoa (e-mail OU WhatsApp OU @).
+  // Ordenados pela atividade mais recente.
+  const clusters = React.useMemo(
+    () => buildClusters(activeLeads).sort((a, b) => (a.latestAt < b.latestAt ? 1 : -1)),
+    [activeLeads]
+  );
+  const clusterById = React.useMemo(() => {
+    const m = new Map();
+    clusters.forEach((c) => c.ids.forEach((id) => m.set(id, c)));
+    return m;
+  }, [clusters]);
 
-  const sourceLeads = showLixeira ? deletedLeads : activeLeads;
-
-  const filtered = sourceLeads.filter((l) => {
-    if (!showLixeira) {
-      if (statusFilter !== 'todos' && l.status !== statusFilter) return false;
-      if (origemFilter !== 'todos' && (l.origem || 'mentoria') !== origemFilter) return false;
-      if (modFilter !== 'todos' && l.modalidade !== modFilter) return false;
-      if (dupFilter && (duplicateMap.get(l.id) || []).length === 0) return false;
-    }
+  // Lixeira: continua por aplicação (não agrupa).
+  const filteredDeleted = deletedLeads.filter((l) => {
     if (search) {
       const q = search.toLowerCase();
       const hay = [l.nome, l.cidade, l.email, l.whatsapp, l.instagram].filter(Boolean).join(' ').toLowerCase();
@@ -658,17 +744,47 @@ const Dashboard = ({onLogout}) => {
     return true;
   });
 
+  // Ativos: filtra cadastros únicos.
+  const filteredClusters = clusters.filter((c) => {
+    if (statusFilter !== 'todos' && c.status !== statusFilter) return false;
+    if (origemFilter !== 'todos' && !c.origens.includes(origemFilter)) return false;
+    if (modFilter !== 'todos' && !c.forms.some((f) => f.modalidade === modFilter)) return false;
+    if (dupFilter && c.count < 2) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const hay = c.forms.flatMap((l) => [
+        l.nome, l.cidade, l.email, l.whatsapp, l.instagram,
+        ...(l.emailsExtras || []), ...(l.whatsappsExtras || []), ...(l.instagramsExtras || []),
+      ]).filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
   const counts = React.useMemo(() => {
-    const c = {todos: activeLeads.length, duplicates: 0, lixeira: deletedLeads.length};
+    const c = {todos: clusters.length, duplicates: 0, lixeira: deletedLeads.length};
     STATUS_ORDER.forEach((s) => c[s] = 0);
     ORIGEM_ORDER.forEach((o) => c['origem_' + o] = 0);
-    activeLeads.forEach((l) => {
-      c[l.status || 'novo'] = (c[l.status || 'novo'] || 0) + 1;
-      c['origem_' + (l.origem || 'mentoria')] = (c['origem_' + (l.origem || 'mentoria')] || 0) + 1;
-      if ((duplicateMap.get(l.id) || []).length > 0) c.duplicates += 1;
+    clusters.forEach((cl) => {
+      c[cl.status] = (c[cl.status] || 0) + 1;
+      cl.origens.forEach((o) => { c['origem_' + o] = (c['origem_' + o] || 0) + 1; });
+      if (cl.count > 1) c.duplicates += 1;
     });
     return c;
-  }, [activeLeads, deletedLeads, duplicateMap]);
+  }, [clusters, deletedLeads]);
+
+  // Contagem/topo e exportação dependem da visão (cadastros únicos vs lixeira)
+  const visibleCount = showLixeira ? filteredDeleted.length : filteredClusters.length;
+  const totalCount = showLixeira ? deletedLeads.length : clusters.length;
+
+  // Seleção por cadastro (marca/desmarca todas as aplicações da pessoa)
+  const clusterChecked = (c) => c.ids.length > 0 && c.ids.every((id) => selectedIds.has(id));
+  const toggleCluster = (c) => setSelectedIds((s) => {
+    const next = new Set(s);
+    const all = c.ids.every((id) => next.has(id));
+    if (all) c.ids.forEach((id) => next.delete(id)); else c.ids.forEach((id) => next.add(id));
+    return next;
+  });
 
   const onUpdated = (updated) => {
     setLeads((all) => all.map((l) => (l.id === updated.id ? updated : l)));
@@ -741,7 +857,10 @@ const Dashboard = ({onLogout}) => {
   };
 
   const selectAllVisible = () => {
-    setSelectedIds(new Set(filtered.map((l) => l.id)));
+    const ids = showLixeira
+      ? filteredDeleted.map((l) => l.id)
+      : filteredClusters.flatMap((c) => c.ids);
+    setSelectedIds(new Set(ids));
   };
 
   // Mesclar leads — abre modal de escolha do principal
@@ -834,7 +953,7 @@ const Dashboard = ({onLogout}) => {
         </nav>
 
         <div className="ad-side-foot">
-          <button className="ad-btn-link" onClick={() => downloadXlsx(filtered)} disabled={!filtered.length}>Exportar planilha</button>
+          <button className="ad-btn-link" onClick={() => downloadXlsx(showLixeira ? filteredDeleted.map(leadToRow) : filteredClusters.map(clusterToRow))} disabled={!visibleCount}>Exportar planilha</button>
           <button className="ad-btn-link" onClick={load}>Atualizar</button>
           <button className="ad-btn-link ad-btn-logout" onClick={logout}>Sair</button>
         </div>
@@ -844,8 +963,13 @@ const Dashboard = ({onLogout}) => {
       <main className="ad-main">
         <header className="ad-main-head">
           <div>
-            <h1 className="ad-h1">{showLixeira ? 'Lixeira' : 'Aplicações'}</h1>
-            <p className="ad-h1-sub">{filtered.length} {filtered.length === 1 ? 'aplicação' : 'aplicações'} {sourceLeads.length !== filtered.length ? `(de ${sourceLeads.length} no total)` : ''}</p>
+            <h1 className="ad-h1">{showLixeira ? 'Lixeira' : 'Cadastros'}</h1>
+            <p className="ad-h1-sub">
+              {visibleCount} {showLixeira
+                ? (visibleCount === 1 ? 'aplicação' : 'aplicações')
+                : (visibleCount === 1 ? 'cadastro' : 'cadastros')}
+              {totalCount !== visibleCount ? ` (de ${totalCount} no total)` : ''}
+            </p>
           </div>
           <input
             className="ad-search"
@@ -862,7 +986,7 @@ const Dashboard = ({onLogout}) => {
             </span>
             <div className="ad-bulk-actions">
               <button className="ad-btn ad-btn-ghost-light ad-btn-sm" onClick={selectAllVisible} disabled={bulkBusy}>
-                Selecionar todas visíveis ({filtered.length})
+                Selecionar todas visíveis ({visibleCount})
               </button>
               {showLixeira ? (
                 <>
@@ -894,14 +1018,14 @@ const Dashboard = ({onLogout}) => {
 
         {loading && <div className="ad-state">Carregando aplicações…</div>}
         {error && <div className="ad-state ad-state-err">{error}</div>}
-        {!loading && !error && filtered.length === 0 && (
+        {!loading && !error && visibleCount === 0 && (
           <div className="ad-empty-state">
-            <h2>Sem aplicações por aqui ainda.</h2>
+            <h2>{showLixeira ? 'Lixeira vazia.' : 'Sem cadastros por aqui ainda.'}</h2>
             <p>Quando alguém preencher o formulário, aparece aqui.</p>
           </div>
         )}
 
-        {!loading && filtered.length > 0 && (
+        {!loading && visibleCount > 0 && (
           <div className="ad-table-wrap">
           <table className="ad-table">
             <thead>
@@ -912,78 +1036,99 @@ const Dashboard = ({onLogout}) => {
                 <th>E-mail</th>
                 <th>Cidade / UF</th>
                 <th>Atuação</th>
-                <th>Origem</th>
+                <th>{showLixeira ? 'Origem' : 'Materiais'}</th>
                 <th>Status</th>
                 <th className="ad-th-date">Data</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((l) => {
-                const loc = splitLocation(l);
-                const locStr = loc.cidade ? `${loc.cidade}${loc.estado ? ' / ' + loc.estado : ''}` : '';
-                const waDigits = String(l.whatsapp || '').replace(/\D/g, '');
-                const dupN = (duplicateMap.get(l.id) || []).length;
-                const stopProp = (e) => e.stopPropagation();
-                return (
-                  <tr
-                    key={l.id}
-                    className={'ad-tr ' + (selected && selected.id === l.id ? 'is-on ' : '') + (selectedIds.has(l.id) ? 'is-checked' : '')}
-                    onClick={() => setSelected(l)}>
-                    <td className="ad-td-check" data-label="">
-                      <input
-                        type="checkbox"
-                        className="ad-list-check"
-                        checked={selectedIds.has(l.id)}
-                        onChange={() => toggleSelected(l.id)}
-                        onClick={stopProp}
-                        aria-label="Selecionar"
-                      />
-                    </td>
-                    <td className="ad-td-name" data-label="Nome">
-                      <div className="ad-td-name-row">
-                        <span className={'ad-status-dot ad-status-' + (l.status || 'novo')} aria-hidden="true"></span>
-                        <span className="ad-td-name-text">{l.nome}</span>
-                        {dupN > 0 && (
-                          <span className="ad-dup-badge" title="Outras aplicações com mesmo e-mail ou WhatsApp">{dupN + 1}x</span>
-                        )}
-                      </div>
-                    </td>
-                    <td data-label="WhatsApp">
-                      {l.whatsapp ? (
-                        <a className="ad-td-link" href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer" onClick={stopProp}>
-                          {l.whatsapp}
-                        </a>
-                      ) : <span className="ad-td-empty">—</span>}
-                    </td>
-                    <td data-label="E-mail">
-                      {l.email ? (
-                        <a className="ad-td-link" href={`mailto:${l.email}`} onClick={stopProp}>
-                          {l.email}
-                        </a>
-                      ) : <span className="ad-td-empty">—</span>}
-                    </td>
-                    <td data-label="Cidade / UF">
-                      {locStr || <span className="ad-td-empty">—</span>}
-                    </td>
-                    <td data-label="Atuação">
-                      {l.atuacao || <span className="ad-td-empty">—</span>}
-                    </td>
-                    <td data-label="Origem">
-                      <span className={'ad-chip ad-chip-origem ad-chip-origem-' + (l.origem || 'mentoria')}>
-                        {ORIGEM_LABELS[l.origem || 'mentoria']}
-                      </span>
-                    </td>
-                    <td data-label="Status">
-                      <span className={'ad-chip ad-chip-status ad-chip-status-' + (l.status || 'novo')}>
-                        {STATUS_LABELS[l.status || 'novo']}
-                      </span>
-                    </td>
-                    <td className="ad-td-date" data-label="Data">
-                      {fmtDate(l.createdAt).split(' · ')[0]}
-                    </td>
-                  </tr>
-                );
-              })}
+              {showLixeira
+                ? filteredDeleted.map((l) => {
+                  const loc = splitLocation(l);
+                  const locStr = loc.cidade ? `${loc.cidade}${loc.estado ? ' / ' + loc.estado : ''}` : '';
+                  const waDigits = String(l.whatsapp || '').replace(/\D/g, '');
+                  const stopProp = (e) => e.stopPropagation();
+                  return (
+                    <tr
+                      key={l.id}
+                      className={'ad-tr ' + (selected && selected.id === l.id ? 'is-on ' : '') + (selectedIds.has(l.id) ? 'is-checked' : '')}
+                      onClick={() => setSelected(l)}>
+                      <td className="ad-td-check" data-label="">
+                        <input type="checkbox" className="ad-list-check" checked={selectedIds.has(l.id)} onChange={() => toggleSelected(l.id)} onClick={stopProp} aria-label="Selecionar" />
+                      </td>
+                      <td className="ad-td-name" data-label="Nome">
+                        <div className="ad-td-name-row">
+                          <span className={'ad-status-dot ad-status-' + (l.status || 'novo')} aria-hidden="true"></span>
+                          <span className="ad-td-name-text">{l.nome}</span>
+                        </div>
+                      </td>
+                      <td data-label="WhatsApp">
+                        {l.whatsapp ? (
+                          <a className="ad-td-link" href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer" onClick={stopProp}>{l.whatsapp}</a>
+                        ) : <span className="ad-td-empty">—</span>}
+                      </td>
+                      <td data-label="E-mail">
+                        {l.email ? <a className="ad-td-link" href={`mailto:${l.email}`} onClick={stopProp}>{l.email}</a> : <span className="ad-td-empty">—</span>}
+                      </td>
+                      <td data-label="Cidade / UF">{locStr || <span className="ad-td-empty">—</span>}</td>
+                      <td data-label="Atuação">{l.atuacao || <span className="ad-td-empty">—</span>}</td>
+                      <td data-label="Origem">
+                        <span className={'ad-chip ad-chip-origem ad-chip-origem-' + (l.origem || 'mentoria')}>{ORIGEM_LABELS[l.origem || 'mentoria']}</span>
+                      </td>
+                      <td data-label="Status">
+                        <span className={'ad-chip ad-chip-status ad-chip-status-' + (l.status || 'novo')}>{STATUS_LABELS[l.status || 'novo']}</span>
+                      </td>
+                      <td className="ad-td-date" data-label="Data">{fmtDate(l.createdAt).split(' · ')[0]}</td>
+                    </tr>
+                  );
+                })
+                : filteredClusters.map((c) => {
+                  const l = c.rep;
+                  const loc = splitLocation(l);
+                  const locStr = loc.cidade ? `${loc.cidade}${loc.estado ? ' / ' + loc.estado : ''}` : '';
+                  const waDigits = String(l.whatsapp || '').replace(/\D/g, '');
+                  const stopProp = (e) => e.stopPropagation();
+                  return (
+                    <tr
+                      key={c.id}
+                      className={'ad-tr ' + (selected && c.ids.includes(selected.id) ? 'is-on ' : '') + (clusterChecked(c) ? 'is-checked' : '')}
+                      onClick={() => setSelected(l)}>
+                      <td className="ad-td-check" data-label="">
+                        <input type="checkbox" className="ad-list-check" checked={clusterChecked(c)} onChange={() => toggleCluster(c)} onClick={stopProp} aria-label="Selecionar" />
+                      </td>
+                      <td className="ad-td-name" data-label="Nome">
+                        <div className="ad-td-name-row">
+                          <span className={'ad-status-dot ad-status-' + c.status} aria-hidden="true"></span>
+                          <span className="ad-td-name-text">{l.nome}</span>
+                          {c.count > 1 && (
+                            <span className="ad-dup-badge" title={`${c.count} formulários desta pessoa`}>{c.count}x</span>
+                          )}
+                        </div>
+                      </td>
+                      <td data-label="WhatsApp">
+                        {l.whatsapp ? (
+                          <a className="ad-td-link" href={`https://wa.me/${waDigits}`} target="_blank" rel="noreferrer" onClick={stopProp}>{l.whatsapp}</a>
+                        ) : <span className="ad-td-empty">—</span>}
+                      </td>
+                      <td data-label="E-mail">
+                        {l.email ? <a className="ad-td-link" href={`mailto:${l.email}`} onClick={stopProp}>{l.email}</a> : <span className="ad-td-empty">—</span>}
+                      </td>
+                      <td data-label="Cidade / UF">{locStr || <span className="ad-td-empty">—</span>}</td>
+                      <td data-label="Atuação">{l.atuacao || <span className="ad-td-empty">—</span>}</td>
+                      <td data-label="Materiais">
+                        <div className="ad-chip-group">
+                          {c.origens.map((o) => (
+                            <span key={o} className={'ad-chip ad-chip-origem ad-chip-origem-' + o}>{ORIGEM_LABELS[o] || o}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td data-label="Status">
+                        <span className={'ad-chip ad-chip-status ad-chip-status-' + c.status}>{STATUS_LABELS[c.status]}</span>
+                      </td>
+                      <td className="ad-td-date" data-label="Data">{fmtDate(c.latestAt).split(' · ')[0]}</td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
           </div>
@@ -997,7 +1142,7 @@ const Dashboard = ({onLogout}) => {
           onUpdated={onUpdated}
           onDeleted={onDeleted}
           onHardDeleted={onHardDeleted}
-          duplicates={duplicateMap.get(selected.id) || []}
+          clusterForms={(clusterById.get(selected.id) || {forms: [selected]}).forms}
           onSelectLead={setSelected}
           allLeads={leads}
         />

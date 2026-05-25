@@ -776,6 +776,33 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   color: var(--graphite-light, #5a5f6c);
   white-space: nowrap;
 }
+.ad-dup-item.is-current {
+  background: rgba(218, 189, 169, 0.18);
+  border-color: rgba(218, 189, 169, 0.65);
+  cursor: default;
+}
+.ad-dup-item.is-current:hover {
+  background: rgba(218, 189, 169, 0.18);
+  border-color: rgba(218, 189, 169, 0.65);
+}
+.ad-dup-current-tag {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--sand-deep, #B89579);
+  border: 1px solid rgba(184, 149, 121, 0.5);
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 2px;
+}
+
+/* Coluna "Materiais": múltiplos chips de origem por cadastro */
+.ad-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
 
 /* ============================================================
    EXCLUSÃO — checkbox, barra bulk, botão danger, zona de exclusão
