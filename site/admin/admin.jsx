@@ -23,6 +23,43 @@ const ORIGEM_LABELS = {
 const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases'];
 
 /* ============================================================
+   Helpers — gênero (inferido pelo primeiro nome)
+   ============================================================ */
+// Lista de exceções comuns que escapam à regra de terminação "a/o"
+const NOMES_MASCULINOS = new Set([
+  'andre','andré','tomas','tomás','lucas','jonas','elias','mateus','matheus',
+  'vinicius','vinícius','marcus','silas','tobias','barnabas','barnabás','isaias','isaías',
+  'jeremias','tales','thales','luca','noah','iuri','yuri','daniel','rafael','gabriel',
+  'miguel','manoel','manuel','samuel','jose','josé','joaquim','joaquin','enzo',
+  'kauã','kauan','enzo','heitor','arthur','artur','antonio','antônio','ezequiel',
+  'lucca','ravi','davi','levi','liam','noah','benicio','benício','aaron','aarão',
+]);
+const NOMES_FEMININOS = new Set([
+  'jaqueline','jacqueline','isis','íris','iris','beatris','beatriz','ines','inês','lais','laís',
+  'tais','taís','jasmin','jazmin','carmem','carmen','helen','dolores','mercedes',
+  'mirtes','iolanda','ester','esther','rute','ruth','raquel','isabel','mabel',
+  'soraya','catherine','katherine','jennifer','heather','margareth','elizabeth',
+  'meredith','judith','aparecida','astrid','ingrid','consuelo',
+]);
+
+const inferGender = (nome) => {
+  if (!nome) return 'desconhecido';
+  // Pega o primeiro nome, sem acentos e em minúsculas pra comparar com listas
+  const first = String(nome).trim().split(/\s+/)[0].toLowerCase();
+  if (!first) return 'desconhecido';
+  if (NOMES_MASCULINOS.has(first)) return 'masculino';
+  if (NOMES_FEMININOS.has(first)) return 'feminino';
+  // Heurística por terminação (cobre ~85% dos nomes brasileiros)
+  const last = first.slice(-1);
+  if (last === 'a') return 'feminino';
+  if (last === 'o') return 'masculino';
+  if (last === 'e') return 'masculino'; // "Felipe", "Vicente", etc. (a maioria)
+  // Outras terminações comuns
+  if (/(son|ton|der|var|niel|rael|riel|riel|bel|nael|fael)$/.test(first)) return 'masculino';
+  return 'desconhecido';
+};
+
+/* ============================================================
    Helpers
    ============================================================ */
 const fmtDate = (iso) => {
@@ -586,7 +623,7 @@ const MultiField = ({k, primary, extras = []}) => {
 /* ============================================================
    DASHBOARD
    ============================================================ */
-const Dashboard = ({onLogout}) => {
+const LeadsPanel = ({onLogout, onBackToOverview}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -834,6 +871,9 @@ const Dashboard = ({onLogout}) => {
         </nav>
 
         <div className="ad-side-foot">
+          {onBackToOverview && (
+            <button className="ad-btn-link" onClick={onBackToOverview}>← Dashboard</button>
+          )}
           <button className="ad-btn-link" onClick={() => downloadXlsx(filtered)} disabled={!filtered.length}>Exportar planilha</button>
           <button className="ad-btn-link" onClick={load}>Atualizar</button>
           <button className="ad-btn-link ad-btn-logout" onClick={logout}>Sair</button>
@@ -1240,13 +1280,228 @@ const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
 };
 
 /* ============================================================
+   OVERVIEW — Dashboard com estatísticas, tela inicial do admin
+   ============================================================ */
+const Overview = ({onLogout, onOpenLeads}) => {
+  const [leads, setLeads] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await api('/api/leads');
+        setLeads(res.leads || []);
+      } catch (err) {
+        if (err.status === 401) {
+          sessionStorage.removeItem(TOKEN_KEY);
+          onLogout();
+          return;
+        }
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Considera só leads ativos (não-excluídos) pras estatísticas
+  const active = React.useMemo(() => leads.filter((l) => !l.deleted), [leads]);
+
+  const stats = React.useMemo(() => {
+    const ufCount = {};
+    const cidadeCount = {};
+    const atuacaoCount = {};
+    const origemCount = {};
+    let masc = 0, fem = 0, indef = 0;
+
+    active.forEach((l) => {
+      const loc = splitLocation(l);
+      if (loc.estado) ufCount[loc.estado] = (ufCount[loc.estado] || 0) + 1;
+      if (loc.cidade) {
+        const key = loc.estado ? `${loc.cidade} / ${loc.estado}` : loc.cidade;
+        cidadeCount[key] = (cidadeCount[key] || 0) + 1;
+      }
+      const a = (l.atuacao || '').trim();
+      if (a) atuacaoCount[a] = (atuacaoCount[a] || 0) + 1;
+      const o = l.origem || 'mentoria';
+      origemCount[o] = (origemCount[o] || 0) + 1;
+
+      const g = inferGender(l.nome);
+      if (g === 'masculino') masc++;
+      else if (g === 'feminino') fem++;
+      else indef++;
+    });
+
+    const sortDesc = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+
+    return {
+      ufs: sortDesc(ufCount),
+      cidades: sortDesc(cidadeCount),
+      atuacoes: sortDesc(atuacaoCount),
+      origens: sortDesc(origemCount),
+      genero: {masculino: masc, feminino: fem, desconhecido: indef},
+      total: active.length,
+    };
+  }, [active]);
+
+  const logout = () => {
+    sessionStorage.removeItem(TOKEN_KEY);
+    onLogout();
+  };
+
+  const pct = (n) => stats.total ? Math.round((n / stats.total) * 100) : 0;
+  const maxOf = (arr) => arr.length ? arr[0][1] : 1;
+
+  if (loading) return <div className="ad-overview-loading">Carregando dashboard…</div>;
+  if (error) return <div className="ad-overview-error">{error}</div>;
+
+  return (
+    <div className="ad-overview">
+      <header className="ad-overview-head">
+        <div>
+          <span className="ad-tag-sm">Painel · {fmtDate(new Date().toISOString()).split(' · ')[0]}</span>
+          <h1 className="ad-overview-title">
+            Visão geral<em> · {stats.total} {stats.total === 1 ? 'lead' : 'leads'}</em>
+          </h1>
+        </div>
+        <div className="ad-overview-actions">
+          <button className="ad-btn ad-btn-primary" onClick={onOpenLeads}>Ver aplicações</button>
+          <button className="ad-btn ad-btn-ghost" onClick={logout}>Sair</button>
+        </div>
+      </header>
+
+      {stats.total === 0 ? (
+        <div className="ad-empty-state">
+          <h2>Sem leads cadastrados ainda.</h2>
+          <p>Quando alguém preencher um formulário, as estatísticas aparecem aqui.</p>
+        </div>
+      ) : (
+        <div className="ad-overview-grid">
+
+          {/* Origem — ranking de páginas que mais geram cadastro */}
+          <section className="ad-widget ad-widget-wide">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Ranking</span>
+              <h2 className="ad-widget-title">Origens que mais geram cadastro</h2>
+            </header>
+            <ul className="ad-rank-list">
+              {stats.origens.map(([key, n], i) => (
+                <li key={key} className="ad-rank-item">
+                  <span className="ad-rank-pos">{String(i + 1).padStart(2, '0')}</span>
+                  <div className="ad-rank-main">
+                    <div className="ad-rank-name">{ORIGEM_LABELS[key] || key}</div>
+                    <div className="ad-rank-bar">
+                      <span className="ad-rank-bar-fill" style={{width: `${(n / maxOf(stats.origens)) * 100}%`}}></span>
+                    </div>
+                  </div>
+                  <span className="ad-rank-value">{n} <em>· {pct(n)}%</em></span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Sexo */}
+          <section className="ad-widget">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Público</span>
+              <h2 className="ad-widget-title">Sexo <small>(inferido)</small></h2>
+            </header>
+            <div className="ad-gender">
+              <div className="ad-gender-bar" aria-hidden="true">
+                <span className="ad-gender-seg ad-gender-fem" style={{width: pct(stats.genero.feminino) + '%'}}></span>
+                <span className="ad-gender-seg ad-gender-masc" style={{width: pct(stats.genero.masculino) + '%'}}></span>
+                <span className="ad-gender-seg ad-gender-indef" style={{width: pct(stats.genero.desconhecido) + '%'}}></span>
+              </div>
+              <ul className="ad-gender-legend">
+                <li><span className="ad-gender-dot ad-gender-fem"></span>Feminino<em>{stats.genero.feminino} · {pct(stats.genero.feminino)}%</em></li>
+                <li><span className="ad-gender-dot ad-gender-masc"></span>Masculino<em>{stats.genero.masculino} · {pct(stats.genero.masculino)}%</em></li>
+                {stats.genero.desconhecido > 0 && (
+                  <li><span className="ad-gender-dot ad-gender-indef"></span>Indefinido<em>{stats.genero.desconhecido} · {pct(stats.genero.desconhecido)}%</em></li>
+                )}
+              </ul>
+            </div>
+          </section>
+
+          {/* Localização — estados + cidades */}
+          <section className="ad-widget ad-widget-wide">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Público</span>
+              <h2 className="ad-widget-title">Localização</h2>
+            </header>
+            <div className="ad-loc-grid">
+              <div>
+                <h3 className="ad-loc-sub">Top estados</h3>
+                <ul className="ad-rank-list ad-rank-list-compact">
+                  {stats.ufs.slice(0, 10).map(([uf, n]) => (
+                    <li key={uf} className="ad-rank-item">
+                      <span className="ad-rank-uf">{uf}</span>
+                      <div className="ad-rank-bar">
+                        <span className="ad-rank-bar-fill" style={{width: `${(n / maxOf(stats.ufs)) * 100}%`}}></span>
+                      </div>
+                      <span className="ad-rank-value">{n}</span>
+                    </li>
+                  ))}
+                  {stats.ufs.length === 0 && <li className="ad-empty">Sem dados</li>}
+                </ul>
+              </div>
+              <div>
+                <h3 className="ad-loc-sub">Top cidades</h3>
+                <ul className="ad-rank-list ad-rank-list-compact">
+                  {stats.cidades.slice(0, 10).map(([cid, n]) => (
+                    <li key={cid} className="ad-rank-item">
+                      <span className="ad-rank-cid">{cid}</span>
+                      <div className="ad-rank-bar">
+                        <span className="ad-rank-bar-fill" style={{width: `${(n / maxOf(stats.cidades)) * 100}%`}}></span>
+                      </div>
+                      <span className="ad-rank-value">{n}</span>
+                    </li>
+                  ))}
+                  {stats.cidades.length === 0 && <li className="ad-empty">Sem dados</li>}
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* Atuação */}
+          <section className="ad-widget">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Público</span>
+              <h2 className="ad-widget-title">Atuação</h2>
+            </header>
+            <ul className="ad-rank-list ad-rank-list-compact">
+              {stats.atuacoes.map(([a, n]) => (
+                <li key={a} className="ad-rank-item">
+                  <span className="ad-rank-cid">{a}</span>
+                  <div className="ad-rank-bar">
+                    <span className="ad-rank-bar-fill" style={{width: `${(n / maxOf(stats.atuacoes)) * 100}%`}}></span>
+                  </div>
+                  <span className="ad-rank-value">{n}</span>
+                </li>
+              ))}
+              {stats.atuacoes.length === 0 && <li className="ad-empty">Sem dados</li>}
+            </ul>
+          </section>
+
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ============================================================
    APP
    ============================================================ */
 const App = () => {
   const [authed, setAuthed] = React.useState(!!sessionStorage.getItem(TOKEN_KEY));
+  // view inicial após login: 'overview' (dashboard) | 'leads' (lista completa)
+  const [view, setView] = React.useState('overview');
 
-  if (!authed) return <Login onSuccess={() => setAuthed(true)} />;
-  return <Dashboard onLogout={() => setAuthed(false)} />;
+  if (!authed) return <Login onSuccess={() => { setAuthed(true); setView('overview'); }} />;
+  if (view === 'overview') {
+    return <Overview onLogout={() => setAuthed(false)} onOpenLeads={() => setView('leads')} />;
+  }
+  return <LeadsPanel onLogout={() => setAuthed(false)} onBackToOverview={() => setView('overview')} />;
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
