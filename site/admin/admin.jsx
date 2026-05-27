@@ -716,6 +716,7 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [progress, setProgress] = React.useState(null);
   const [statusFilter, setStatusFilter] = React.useState('todos');
   const [modFilter, setModFilter] = React.useState('todos');
   const [origemFilter, setOrigemFilter] = React.useState('todos');
@@ -740,17 +741,13 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
     setLoading(true);
     setError('');
     try {
-      let res = await api('/api/leads');
-      setLeads(res.leads || []);
-      setLoading(false);
-      // O índice pode vir incompleto na 1ª leitura (muitos cadastros). O
-      // servidor sinaliza `truncated`; recarrega em segundo plano até completar.
-      let attempts = 1;
-      while (res && res.truncated && attempts < 8) {
-        await new Promise((r) => setTimeout(r, 300));
-        try { res = await api('/api/leads'); setLeads(res.leads || []); }
-        catch { break; }
-        attempts++;
+      // Recarrega até TODOS os blobs entrarem no índice (leads.length >= total).
+      for (let attempts = 0; attempts < 15; attempts++) {
+        const res = await api('/api/leads');
+        setLeads(res.leads || []);
+        setProgress({loaded: (res.leads || []).length, total: res.total || 0});
+        if (!res.total || (res.leads || []).length >= res.total) break;
+        await new Promise((r) => setTimeout(r, 400));
       }
     } catch (err) {
       if (err.status === 401) {
@@ -759,6 +756,7 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
         return;
       }
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -1066,7 +1064,7 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
           </div>
         )}
 
-        {loading && <div className="ad-state">Carregando aplicações…</div>}
+        {loading && <div className="ad-state">Carregando cadastros…{progress && progress.total ? ` ${progress.loaded}/${progress.total}` : ''}</div>}
         {error && (
           <div className="ad-state ad-state-err">
             <p>{error}</p>
@@ -1446,22 +1444,21 @@ const Overview = ({onLogout, onOpenLeads}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [progress, setProgress] = React.useState(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      let res = await api('/api/leads');
-      setLeads(res.leads || []);
-      setLoading(false);
-      // O índice pode vir incompleto na 1ª leitura (muitos cadastros). O
-      // servidor sinaliza `truncated`; recarrega em segundo plano até completar.
-      let attempts = 1;
-      while (res && res.truncated && attempts < 8) {
-        await new Promise((r) => setTimeout(r, 300));
-        try { res = await api('/api/leads'); setLeads(res.leads || []); }
-        catch { break; }
-        attempts++;
+      // O índice pode vir incompleto nas primeiras leituras (muitos cadastros
+      // + rate-limit). Recarrega até TODOS os blobs entrarem no índice
+      // (leads.length >= total), não só enquanto o tempo estoura.
+      for (let attempts = 0; attempts < 15; attempts++) {
+        const res = await api('/api/leads');
+        setLeads(res.leads || []);
+        setProgress({loaded: (res.leads || []).length, total: res.total || 0});
+        if (!res.total || (res.leads || []).length >= res.total) break;
+        await new Promise((r) => setTimeout(r, 400));
       }
     } catch (err) {
       if (err.status === 401) {
@@ -1470,6 +1467,7 @@ const Overview = ({onLogout, onOpenLeads}) => {
         return;
       }
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   }, [onLogout]);
@@ -1524,7 +1522,7 @@ const Overview = ({onLogout, onOpenLeads}) => {
   const pct = (n) => stats.total ? Math.round((n / stats.total) * 100) : 0;
   const maxOf = (arr) => arr.length ? arr[0][1] : 1;
 
-  if (loading) return <div className="ad-overview-loading">Carregando dashboard…</div>;
+  if (loading) return <div className="ad-overview-loading">Carregando dashboard…{progress && progress.total ? ` · ${progress.loaded}/${progress.total}` : ''}</div>;
   if (error) return (
     <div className="ad-overview-error">
       <p className="ad-overview-error-msg">{error}</p>
