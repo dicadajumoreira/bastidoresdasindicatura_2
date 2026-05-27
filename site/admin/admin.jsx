@@ -740,8 +740,18 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/leads');
+      let res = await api('/api/leads');
       setLeads(res.leads || []);
+      setLoading(false);
+      // O índice pode vir incompleto na 1ª leitura (muitos cadastros). O
+      // servidor sinaliza `truncated`; recarrega em segundo plano até completar.
+      let attempts = 1;
+      while (res && res.truncated && attempts < 8) {
+        await new Promise((r) => setTimeout(r, 300));
+        try { res = await api('/api/leads'); setLeads(res.leads || []); }
+        catch { break; }
+        attempts++;
+      }
     } catch (err) {
       if (err.status === 401) {
         sessionStorage.removeItem(TOKEN_KEY);
@@ -749,7 +759,6 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
         return;
       }
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -1442,8 +1451,18 @@ const Overview = ({onLogout, onOpenLeads}) => {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/leads');
+      let res = await api('/api/leads');
       setLeads(res.leads || []);
+      setLoading(false);
+      // O índice pode vir incompleto na 1ª leitura (muitos cadastros). O
+      // servidor sinaliza `truncated`; recarrega em segundo plano até completar.
+      let attempts = 1;
+      while (res && res.truncated && attempts < 8) {
+        await new Promise((r) => setTimeout(r, 300));
+        try { res = await api('/api/leads'); setLeads(res.leads || []); }
+        catch { break; }
+        attempts++;
+      }
     } catch (err) {
       if (err.status === 401) {
         sessionStorage.removeItem(TOKEN_KEY);
@@ -1451,7 +1470,6 @@ const Overview = ({onLogout, onOpenLeads}) => {
         return;
       }
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   }, [onLogout]);

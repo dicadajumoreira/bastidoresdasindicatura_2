@@ -8,7 +8,7 @@
 // store.list()). É um cache derivado: não altera os blobs por lead.
 
 export const INDEX_KEY = '__leads_index__';
-const DEFAULT_CONCURRENCY = 10;
+const DEFAULT_CONCURRENCY = 20;
 const DEFAULT_BUDGET_MS = 8000;
 
 async function refreshStale(store, stale, entries, concurrency, deadline) {
