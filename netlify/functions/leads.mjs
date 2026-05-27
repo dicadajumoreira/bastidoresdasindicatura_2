@@ -1,41 +1,19 @@
 // Netlify Function v2 · GET /api/leads
 // Lista todas as aplicações. Exige token Bearer válido.
+//
+// A leitura usa um índice persistido (ver netlify/lib/leads-index.mjs): a
+// leitura pesada de todos os blobs acontece no máximo uma vez (protegida por
+// orçamento de tempo) e fica salva; depois cada abertura lê basicamente 1
+// arquivo, relendo do banco só o que mudou (etag). Resolve o "Resposta
+// inválida" / lista zerada com centenas/milhares de leads.
 
 import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
+import { buildLeads } from '../lib/leads-index.mjs';
 
 export const config = {
   path: ['/api/leads', '/.netlify/functions/leads'],
 };
-
-// Lê os blobs com concorrência limitada. Disparar centenas (ou mesmo 50)
-// store.get() ao mesmo tempo dispara o rate-limit do Netlify Blobs: as leituras
-// voltam vazias (0 leads) ou estouram o timeout da function ("Resposta inválida"
-// no admin). Um lote pequeno (CONCURRENCY) lê tudo de forma estável e rápida —
-// centenas de leads levam só alguns segundos.
-const CONCURRENCY = 10;
-// Orçamento de tempo: se a leitura passar disso, devolvemos o que já temos em
-// vez de deixar a function estourar o timeout (~10s) e cair em "Resposta inválida".
-const TIME_BUDGET_MS = 8000;
-
-async function readAll(store, blobs) {
-  const out = new Array(blobs.length);
-  let cursor = 0;
-  let truncated = false;
-  const deadline = Date.now() + TIME_BUDGET_MS;
-  const worker = async () => {
-    while (cursor < blobs.length) {
-      if (Date.now() > deadline) { truncated = true; return; }
-      const i = cursor++;
-      try { out[i] = await store.get(blobs[i].key, {type: 'json'}); }
-      catch { out[i] = null; }
-    }
-  };
-  await Promise.all(
-    Array.from({length: Math.min(CONCURRENCY, blobs.length)}, worker)
-  );
-  return {out, truncated};
-}
 
 export default async (req) => {
   const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
@@ -48,16 +26,8 @@ export default async (req) => {
 
   try {
     const store = getStore({name: 'leads', consistency: 'strong'});
-    const { blobs } = await store.list();
-
-    const {out, truncated} = await readAll(store, blobs);
-
-    const leads = out
-      .filter(Boolean)
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-
-    // total = quantos blobs existem; leads.length = quantos deram pra ler no tempo.
-    return json({ok: true, leads, total: blobs.length, truncated});
+    const {leads, total, truncated} = await buildLeads(store);
+    return json({ok: true, leads, total, truncated});
   } catch (err) {
     // Nunca devolve corpo não-JSON: o admin mostra a causa em vez de "Resposta inválida".
     return json({error: 'Falha ao carregar os leads: ' + ((err && err.message) || 'erro desconhecido')}, 500);
@@ -67,6 +37,6 @@ export default async (req) => {
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json; charset=utf-8'},
   });
 }
