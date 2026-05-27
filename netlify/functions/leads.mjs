@@ -17,21 +17,26 @@ export default async (req) => {
     return json({error: 'Não autorizado'}, 401);
   }
 
-  const store = getStore({name: 'leads', consistency: 'strong'});
-  const { blobs } = await store.list();
+  try {
+    const store = getStore({name: 'leads', consistency: 'strong'});
+    const { blobs } = await store.list();
 
-  const raw = await Promise.all(
-    blobs.map(async (b) => {
-      try { return await store.get(b.key, {type: 'json'}); }
-      catch { return null; }
-    })
-  );
+    const raw = await Promise.all(
+      blobs.map(async (b) => {
+        try { return await store.get(b.key, {type: 'json'}); }
+        catch { return null; }
+      })
+    );
 
-  const leads = raw
-    .filter(Boolean)
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const leads = raw
+      .filter(Boolean)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
-  return json({ok: true, leads});
+    return json({ok: true, leads});
+  } catch (err) {
+    // Nunca devolve corpo não-JSON: o admin mostra a causa em vez de "Resposta inválida".
+    return json({error: 'Falha ao carregar os leads: ' + ((err && err.message) || 'erro desconhecido')}, 500);
+  }
 };
 
 function json(obj, status = 200) {

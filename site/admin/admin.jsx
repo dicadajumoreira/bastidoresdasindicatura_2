@@ -1058,7 +1058,12 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
         )}
 
         {loading && <div className="ad-state">Carregando aplicações…</div>}
-        {error && <div className="ad-state ad-state-err">{error}</div>}
+        {error && (
+          <div className="ad-state ad-state-err">
+            <p>{error}</p>
+            <button className="ad-btn ad-btn-primary ad-btn-sm" onClick={load} style={{marginTop: '14px'}}>Tentar de novo</button>
+          </div>
+        )}
         {!loading && !error && visibleCount === 0 && (
           <div className="ad-empty-state">
             <h2>{showLixeira ? 'Lixeira vazia.' : 'Sem cadastros por aqui ainda.'}</h2>
@@ -1433,23 +1438,25 @@ const Overview = ({onLogout, onOpenLeads}) => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
 
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const res = await api('/api/leads');
-        setLeads(res.leads || []);
-      } catch (err) {
-        if (err.status === 401) {
-          sessionStorage.removeItem(TOKEN_KEY);
-          onLogout();
-          return;
-        }
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api('/api/leads');
+      setLeads(res.leads || []);
+    } catch (err) {
+      if (err.status === 401) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        onLogout();
+        return;
       }
-    })();
-  }, []);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [onLogout]);
+
+  React.useEffect(() => { load(); }, [load]);
 
   // Considera só leads ativos (não-excluídos) pras estatísticas
   const active = React.useMemo(() => leads.filter((l) => !l.deleted), [leads]);
@@ -1500,7 +1507,16 @@ const Overview = ({onLogout, onOpenLeads}) => {
   const maxOf = (arr) => arr.length ? arr[0][1] : 1;
 
   if (loading) return <div className="ad-overview-loading">Carregando dashboard…</div>;
-  if (error) return <div className="ad-overview-error">{error}</div>;
+  if (error) return (
+    <div className="ad-overview-error">
+      <p className="ad-overview-error-msg">{error}</p>
+      <div className="ad-overview-error-actions">
+        <button className="ad-btn ad-btn-primary ad-btn-sm" onClick={load}>Tentar de novo</button>
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onOpenLeads}>Ver aplicações</button>
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={logout}>Sair</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="ad-overview">
