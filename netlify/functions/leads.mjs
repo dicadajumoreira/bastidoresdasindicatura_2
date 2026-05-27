@@ -8,17 +8,24 @@ export const config = {
   path: ['/api/leads', '/.netlify/functions/leads'],
 };
 
-// Lê os blobs com concorrência limitada. Disparar centenas de store.get() de
-// uma vez congestiona o pool de conexões / dispara rate-limit do Blobs (com
-// retries em backoff), o que estourava o timeout da function ("Resposta
-// inválida" no admin). Em lotes de CONCURRENCY a leitura fica rápida e estável.
-const CONCURRENCY = 50;
+// Lê os blobs com concorrência limitada. Disparar centenas (ou mesmo 50)
+// store.get() ao mesmo tempo dispara o rate-limit do Netlify Blobs: as leituras
+// voltam vazias (0 leads) ou estouram o timeout da function ("Resposta inválida"
+// no admin). Um lote pequeno (CONCURRENCY) lê tudo de forma estável e rápida —
+// centenas de leads levam só alguns segundos.
+const CONCURRENCY = 10;
+// Orçamento de tempo: se a leitura passar disso, devolvemos o que já temos em
+// vez de deixar a function estourar o timeout (~10s) e cair em "Resposta inválida".
+const TIME_BUDGET_MS = 8000;
 
 async function readAll(store, blobs) {
   const out = new Array(blobs.length);
   let cursor = 0;
+  let truncated = false;
+  const deadline = Date.now() + TIME_BUDGET_MS;
   const worker = async () => {
     while (cursor < blobs.length) {
+      if (Date.now() > deadline) { truncated = true; return; }
       const i = cursor++;
       try { out[i] = await store.get(blobs[i].key, {type: 'json'}); }
       catch { out[i] = null; }
@@ -27,7 +34,7 @@ async function readAll(store, blobs) {
   await Promise.all(
     Array.from({length: Math.min(CONCURRENCY, blobs.length)}, worker)
   );
-  return out;
+  return {out, truncated};
 }
 
 export default async (req) => {
@@ -43,13 +50,14 @@ export default async (req) => {
     const store = getStore({name: 'leads', consistency: 'strong'});
     const { blobs } = await store.list();
 
-    const raw = await readAll(store, blobs);
+    const {out, truncated} = await readAll(store, blobs);
 
-    const leads = raw
+    const leads = out
       .filter(Boolean)
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
-    return json({ok: true, leads});
+    // total = quantos blobs existem; leads.length = quantos deram pra ler no tempo.
+    return json({ok: true, leads, total: blobs.length, truncated});
   } catch (err) {
     // Nunca devolve corpo não-JSON: o admin mostra a causa em vez de "Resposta inválida".
     return json({error: 'Falha ao carregar os leads: ' + ((err && err.message) || 'erro desconhecido')}, 500);
