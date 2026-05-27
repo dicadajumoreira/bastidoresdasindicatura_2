@@ -1016,7 +1016,9 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
               {visibleCount} {showLixeira
                 ? (visibleCount === 1 ? 'aplicação' : 'aplicações')
                 : (visibleCount === 1 ? 'cadastro' : 'cadastros')}
-              {totalCount !== visibleCount ? ` (de ${totalCount} no total)` : ''}
+              {totalCount !== visibleCount ? ` (de ${totalCount})` : ''}
+              {!showLixeira && progress && progress.total ? ` · ${progress.total} formulários` : ''}
+              {loading && progress && progress.total && progress.loaded < progress.total ? ` · carregando ${progress.loaded}/${progress.total}…` : ''}
             </p>
           </div>
           <input
