@@ -1479,6 +1479,10 @@ const Overview = ({onLogout, onOpenLeads}) => {
   // Considera só leads ativos (não-excluídos) pras estatísticas
   const active = React.useMemo(() => leads.filter((l) => !l.deleted), [leads]);
 
+  // Agrupa em CADASTROS ÚNICOS (mesmo critério da lista) — pra Visão geral
+  // bater com a lista interna: contagem por pessoa, não por envio.
+  const clusters = React.useMemo(() => buildClusters(active), [active]);
+
   const stats = React.useMemo(() => {
     const ufCount = {};
     const cidadeCount = {};
@@ -1486,19 +1490,21 @@ const Overview = ({onLogout, onOpenLeads}) => {
     const origemCount = {};
     let masc = 0, fem = 0, indef = 0;
 
-    active.forEach((l) => {
-      const loc = splitLocation(l);
+    clusters.forEach((c) => {
+      const rep = c.rep;
+      const loc = splitLocation(rep);
       if (loc.estado) ufCount[loc.estado] = (ufCount[loc.estado] || 0) + 1;
       if (loc.cidade) {
         const key = loc.estado ? `${loc.cidade} / ${loc.estado}` : loc.cidade;
         cidadeCount[key] = (cidadeCount[key] || 0) + 1;
       }
-      const a = (l.atuacao || '').trim();
+      const a = (rep.atuacao || '').trim();
       if (a) atuacaoCount[a] = (atuacaoCount[a] || 0) + 1;
-      const o = l.origem || 'mentoria';
-      origemCount[o] = (origemCount[o] || 0) + 1;
+      // Origens: conta 1 por material que a pessoa baixou (uma pessoa que
+      // pegou 3 materiais aparece em cada um dos 3, mas conta 1x no total).
+      c.origens.forEach((o) => { origemCount[o] = (origemCount[o] || 0) + 1; });
 
-      const g = inferGender(l.nome);
+      const g = inferGender(rep.nome);
       if (g === 'masculino') masc++;
       else if (g === 'feminino') fem++;
       else indef++;
@@ -1512,9 +1518,10 @@ const Overview = ({onLogout, onOpenLeads}) => {
       atuacoes: sortDesc(atuacaoCount),
       origens: sortDesc(origemCount),
       genero: {masculino: masc, feminino: fem, desconhecido: indef},
-      total: active.length,
+      total: clusters.length,        // cadastros únicos (pessoas)
+      formularios: active.length,    // total bruto de envios
     };
-  }, [active]);
+  }, [clusters, active]);
 
   const logout = () => {
     sessionStorage.removeItem(TOKEN_KEY);
@@ -1542,7 +1549,7 @@ const Overview = ({onLogout, onOpenLeads}) => {
         <div>
           <span className="ad-tag-sm">Painel · {fmtDate(new Date().toISOString()).split(' · ')[0]}</span>
           <h1 className="ad-overview-title">
-            Visão geral<em> · {stats.total} {stats.total === 1 ? 'lead' : 'leads'}</em>
+            Visão geral<em> · {stats.total} {stats.total === 1 ? 'cadastro' : 'cadastros'}{stats.formularios > stats.total ? ` · ${stats.formularios} formulários` : ''}</em>
           </h1>
         </div>
         <div className="ad-overview-actions">
@@ -1553,7 +1560,7 @@ const Overview = ({onLogout, onOpenLeads}) => {
 
       {stats.total === 0 ? (
         <div className="ad-empty-state">
-          <h2>Sem leads cadastrados ainda.</h2>
+          <h2>Sem cadastros ainda.</h2>
           <p>Quando alguém preencher um formulário, as estatísticas aparecem aqui.</p>
         </div>
       ) : (
