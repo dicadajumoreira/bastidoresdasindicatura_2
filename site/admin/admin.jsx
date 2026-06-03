@@ -20,8 +20,9 @@ const ORIGEM_LABELS = {
   'sobrevivencia-whatsapp': 'Manual WhatsApp',
   '50-frases': 'Guia 50 Frases',
   'nr1': 'Guia NR-1',
+  'conflitos': 'Guia Conflitos',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)

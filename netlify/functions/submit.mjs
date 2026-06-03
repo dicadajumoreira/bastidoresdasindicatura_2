@@ -18,10 +18,10 @@ export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
 };
 
-const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1']);
+const VALID_ORIGENS = new Set(['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos']);
 
 // Origens de material gratuito (isca): exigem os 7 campos do formulário padrão.
-const MATERIAL_ORIGENS = new Set(['checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1']);
+const MATERIAL_ORIGENS = new Set(['checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos']);
 
 async function saveWithRetry(store, id, lead, tries = 4) {
   let lastErr;
