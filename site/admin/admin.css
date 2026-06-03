@@ -1087,6 +1087,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(78, 126, 126, 0.22);
   color: #4E7E7E;
 }
+.ad-chip-origem-saude-mental {
+  background: rgba(129, 148, 112, 0.22);
+  color: #819470;
+}
 .ad-chip-status-novo {
   background: rgba(218, 189, 169, 0.22);
   color: var(--sand-deep, #B89579);
