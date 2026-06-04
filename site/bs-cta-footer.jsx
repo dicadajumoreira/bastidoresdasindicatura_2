@@ -58,10 +58,10 @@ const BsCta = () => {
             <em>da Turma 01.</em>
           </h2>
           <p className="bs-cta-lead">
-            A Bastidores da Sindicatura foi criada para profissionais que
-            desejam viver a sindicatura de forma mais estratégica,
-            profissional e consciente. As vagas são limitadas e cada
-            aplicação passa por uma leitura cuidadosa antes da resposta.
+            Criei a Bastidores da Sindicatura pra quem quer viver
+            essa profissão de um jeito mais estratégico,
+            profissional e consciente. As vagas são limitadas e
+            eu leio cada aplicação com atenção antes de responder.
           </p>
 
           <div className="bs-cta-info">

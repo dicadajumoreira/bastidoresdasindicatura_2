@@ -25,30 +25,30 @@ const BsSobre = () => (
 
         <div className="bs-sobre-text">
           <p className="bs-sobre-lead">
-            Um dos principais nomes do mercado condominial brasileiro.
-            CEO da <strong>Sindicompany</strong> e da
-            <strong> Condo Academy</strong>, professora de
-            <strong> gestão condominial no IBMEC</strong>,
-            formada em Finanças pela USP e certificada como Perita
-            Judicial. Mais de
-            <strong> trinta anos</strong> no mercado imobiliário
-            e condominial.
+            <strong>Trinta anos</strong> dentro do mercado
+            imobiliário e condominial. CEO da
+            <strong> Sindicompany</strong> e da
+            <strong> Condo Academy</strong>, dou aula de
+            <strong> gestão condominial no IBMEC</strong>, sou
+            formada em Finanças pela USP e atuo como Perita
+            Judicial.
           </p>
 
           <div className="bs-sobre-body">
             <p>
-              Começou cedo. Aos quinze anos, deu os primeiros
-              passos no setor ao trabalhar com o pai em sua
-              construtora. Aos vinte, fundou um <em>family office</em>
-              {' '}que, com o tempo, a levou ao universo da
-              administração condominial e da sindicatura profissional.
+              Comecei cedo. Aos quinze, batendo perna em obra com
+              o meu pai na construtora dele. Aos vinte, montei um
+              {' '}<em>family office</em> que foi o que me empurrou
+              pro mundo da administração condominial e da sindicatura
+              profissional.
             </p>
             <p>
-              Hoje lidera a Sindicompany, empresa de médio porte
-              em crescimento acelerado, com 91 profissionais entre
-              backoffice e síndicos. A necessidade de manter o alto
-              padrão em escala deu origem à Condo Academy, escola
-              para todo o ecossistema condominial.
+              Hoje toco a Sindicompany ao lado de 91 pessoas, entre
+              backoffice e síndicos profissionais, cuidando de mais
+              de 300 condomínios. A Condo Academy nasceu por
+              necessidade: pra manter padrão alto quando a operação
+              cresce, alguém precisa formar gente. Hoje ela atende o
+              ecossistema condominial inteiro.
             </p>
           </div>
 

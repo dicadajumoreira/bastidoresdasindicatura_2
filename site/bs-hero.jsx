@@ -41,10 +41,10 @@ const BsHero = () => (
       </h1>
 
       <p className="bs-hero-lead">
-        Existe uma parte da sindicatura que quase ninguém vê.
-        Uma mentoria executiva de doze semanas para síndicos e
-        profissionais do mercado condominial que querem viver a
-        profissão de forma mais estratégica, profissional e humana.
+        Tem uma parte da sindicatura que quase ninguém vê. Doze
+        semanas de mentoria executiva pra síndicos e profissionais
+        do mercado condominial que querem viver essa profissão de
+        um jeito mais estratégico, profissional e humano.
       </p>
 
       <div className="bs-hero-ctas">

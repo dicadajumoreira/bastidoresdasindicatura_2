@@ -12,10 +12,10 @@ const BsVagas = () => (
           <em>bastidores.</em>
         </h2>
         <p className="bs-vagas-lead">
-          Trinta lugares ao todo. Vinte e cinco no formato em grupo,
-          cinco no formato com conselhos individuais. A escolha depende
-          do nível de proximidade que você precisa neste momento da
-          carreira.
+          São trinta lugares ao todo. Vinte e cinco no formato em
+          grupo, cinco com conselhos individuais comigo. A escolha
+          depende do quanto de proximidade você precisa nesse
+          momento da sua carreira.
         </p>
       </div>
 
@@ -25,7 +25,7 @@ const BsVagas = () => (
           <header className="bs-tier-head">
             <span className="bs-tier-tag">Categoria I</span>
             <h3 className="bs-tier-name">Experience</h3>
-            <p className="bs-tier-sub">A experiência coletiva da Bastidores da Sindicatura.</p>
+            <p className="bs-tier-sub">A experiência coletiva dos Bastidores.</p>
           </header>
 
           <div className="bs-tier-vagas">
@@ -65,9 +65,9 @@ const BsVagas = () => (
             <span className="bs-tier-tag">Categoria II</span>
             <h3 className="bs-tier-name">Executive</h3>
             <p className="bs-tier-sub">
-              Uma experiência mais próxima, estratégica e personalizada
-              para profissionais que desejam aprofundar decisões,
-              posicionamento e crescimento.
+              Pra quem quer proximidade. Estratégia e plano sob
+              medida pra aprofundar decisão, posicionamento e
+              crescimento.
             </p>
           </header>
 
@@ -86,9 +86,9 @@ const BsVagas = () => (
           <div className="bs-tier-detail">
             <span className="bs-eyebrow" style={{color: 'var(--lavender)'}}>O que é o Conselho Executivo</span>
             <p>
-              Um encontro privado, estratégico, voltado a posicionamento,
-              crescimento, conflitos, expansão e decisões difíceis. É onde
-              a mentoria se torna sob medida.
+              Um encontro privado comigo. Posicionamento,
+              crescimento, conflito, expansão, decisão difícil.
+              É onde a mentoria vira sob medida.
             </p>
           </div>
 
@@ -108,8 +108,9 @@ const BsVagas = () => (
       </div>
 
       <p className="bs-vagas-note">
-        As inscrições passam por uma breve conversa antes da confirmação,
-        para garantir alinhamento com o grupo.
+        Toda inscrição passa por uma conversa rápida antes de
+        confirmar. É pra garantir que o grupo faz sentido pra você
+        (e o contrário também).
       </p>
     </div>
   </section>

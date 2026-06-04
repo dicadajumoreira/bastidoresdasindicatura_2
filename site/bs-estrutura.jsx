@@ -6,27 +6,27 @@ const BsEstrutura = () => {
     {
       no: '01',
       titulo: 'Bastidor da semana',
-      descr: 'Abrimos o encontro com uma situação real vivida na semana. O que aconteceu, como conduzi, o que poderia ter sido diferente.',
+      descr: 'A gente abre com um caso real da semana. O que aconteceu, como eu conduzi, o que dava pra ter feito diferente.',
     },
     {
       no: '02',
       titulo: 'Tema estratégico',
-      descr: 'Um conteúdo central por semana, escolhido para construir o repertório executivo que sustenta a carreira na profissão.',
+      descr: 'Um conteúdo central a cada semana, escolhido pra construir o repertório que sustenta uma carreira de verdade na profissão.',
     },
     {
       no: '03',
       titulo: 'Estudo de caso real',
-      descr: 'Mergulho em um caso vivido por mim ou por outro síndico do grupo. Decisões, consequências e o que se aprende com elas.',
+      descr: 'A gente mergulha num caso vivido por mim ou por alguém do grupo. Decisões, consequências e o que dá pra aprender com cada uma.',
     },
     {
       no: '04',
       titulo: 'Hot Seat',
-      descr: 'Uma cadeira aberta para o caso da sua semana. Você traz o desafio, o grupo discute, eu dou o direcionamento.',
+      descr: 'Cadeira aberta pro caso da sua semana. Você traz o desafio, o grupo discute, eu direciono.',
     },
     {
       no: '05',
       titulo: 'Direcionamento prático',
-      descr: 'Saímos do encontro com decisões anotadas, próximos passos definidos e clareza sobre o que fazer até a próxima terça.',
+      descr: 'A gente sai do encontro com decisão anotada, próximo passo definido e clareza do que fazer até terça que vem.',
     },
   ];
 
@@ -41,10 +41,9 @@ const BsEstrutura = () => {
             <em>Um único compromisso.</em>
           </h2>
           <p className="bs-estrutura-lead">
-            Todas as terças, das sete e meia às nove da manhã,
-            via Microsoft Teams. Um encontro pensado para abrir a
-            semana com clareza estratégica e fechar a anterior com
-            aprendizado.
+            Toda terça, das sete e meia às nove da manhã, no Teams.
+            Um encontro pra abrir a semana com clareza estratégica
+            e fechar a anterior com aprendizado.
           </p>
         </div>
 

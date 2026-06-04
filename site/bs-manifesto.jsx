@@ -49,11 +49,12 @@ const BsManifesto = () => (
         </figure>
 
         <p className="bs-manifest-closing">
-          Foi por isso que nasceu a <strong>Bastidores da Sindicatura.</strong>
-          Aqui, não falamos apenas sobre administração. Falamos sobre
-          liderança, crises, conflitos, comunicação, pressão emocional,
-          posicionamento, crescimento, decisões difíceis e os bastidores
-          reais da vida condominial.
+          Foi pra dar nome a essa parte invisível que nasceu a
+          <strong> Bastidores da Sindicatura.</strong> Aqui a gente
+          não fica em administração. A gente fala de liderança,
+          crise, conflito, comunicação, pressão, posicionamento,
+          crescimento, decisão difícil. A vida real de quem está na
+          cadeira do síndico.
         </p>
       </div>
     </div>
