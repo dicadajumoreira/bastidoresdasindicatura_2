@@ -67,7 +67,7 @@ const BsCta = () => {
           <div className="bs-cta-info">
             <div>
               <span className="bs-cta-k">Início</span>
-              <span className="bs-cta-v">Agosto · 2026</span>
+              <span className="bs-cta-v">Setembro · 2026</span>
             </div>
             <div>
               <span className="bs-cta-k">Encontros</span>
