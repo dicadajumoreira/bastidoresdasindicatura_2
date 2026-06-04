@@ -60,7 +60,7 @@ const BsHero = () => (
 
     {/* Coluna retrato */}
     <div className="bs-hero-portrait">
-      <img src="assets/ju-onix.png" alt="Juliana Moreira" />
+      <img src="assets/ju-hero.jpg" alt="Juliana Moreira" />
       <div className="bs-portrait-frame"></div>
       <div className="bs-portrait-stamp">
         <span className="bs-stamp-line">JM</span>
