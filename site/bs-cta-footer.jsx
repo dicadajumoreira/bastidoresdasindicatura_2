@@ -4,18 +4,18 @@ const BsDepoimentos = () => {
   const depos = [
     {
       texto: 'Sua palestra uniu conteúdo de alto nível, carisma e uma abordagem prática que tocou diretamente a realidade dos síndicos brasileiros. Foi uma verdadeira aula de liderança, propósito e inovação na gestão condominial.',
-      autor: 'Conasi',
-      papel: 'Congresso Nacional',
+      autor: 'Ana Clara Moraes',
+      papel: 'Síndica profissional',
     },
     {
       texto: 'Mais do que compartilhar conhecimento técnico, ela inspirou síndicos e profissionais do setor a repensarem suas práticas e acreditarem no poder de uma gestão humana, estratégica e transformadora.',
-      autor: 'SindicoNet',
-      papel: 'Plataforma de conteúdo',
+      autor: 'Rafael Arruda',
+      papel: 'Síndico profissional',
     },
     {
-      texto: 'Trabalhar com a Ju Moreira foi muito bom. Lançamos alguns produtos e contamos com ela para produzir o conteúdo e ajudar a propagar. Foi um grande sucesso.',
-      autor: 'Nutricar',
-      papel: 'Marca parceira',
+      texto: 'Me emocionei com a história do condomínio de Barueri. Essa 1 hora de palestra me fez repensar a maneira com que estou cuidando dos condomínios. Certamente deixarei de ser no "modo automático".',
+      autor: 'Thiago Mendes',
+      papel: 'Síndico profissional',
     },
   ];
 
