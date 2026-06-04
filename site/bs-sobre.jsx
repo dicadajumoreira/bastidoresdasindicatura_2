@@ -94,6 +94,24 @@ const BsSobre = () => (
           <span>Eletromidia</span>
           <span className="bs-press-sep">·</span>
           <span>Conasi</span>
+          <span className="bs-press-sep">·</span>
+          <span>RedeTV</span>
+          <span className="bs-press-sep">·</span>
+          <span>Record</span>
+          <span className="bs-press-sep">·</span>
+          <span>Globo</span>
+          <span className="bs-press-sep">·</span>
+          <span>Expo Síndicos</span>
+          <span className="bs-press-sep">·</span>
+          <span>SindoExpo</span>
+          <span className="bs-press-sep">·</span>
+          <span>FeSindico</span>
+          <span className="bs-press-sep">·</span>
+          <span>Folha de São Paulo</span>
+          <span className="bs-press-sep">·</span>
+          <span>Exame</span>
+          <span className="bs-press-sep">·</span>
+          <span>Estadão</span>
         </div>
       </div>
     </div>
