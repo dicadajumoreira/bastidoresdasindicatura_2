@@ -86,9 +86,9 @@ const BsVagas = () => (
           <div className="bs-tier-detail">
             <span className="bs-eyebrow" style={{color: 'var(--lavender)'}}>O que é o Conselho Executivo</span>
             <p>
-              Um encontro privado comigo. Posicionamento,
-              crescimento, conflito, expansão, decisão difícil.
-              É onde a mentoria vira sob medida.
+              Dois encontros privados comigo de 1:30hr. Falaremos
+              sobre posicionamento, crescimento, conflito, expansão,
+              decisão difícil. É onde a mentoria vira sob medida.
             </p>
           </div>
 
