@@ -482,8 +482,9 @@
 .bs-sobre-tag span:first-child {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--lavender);
+  white-space: nowrap;
 }
 .bs-sobre-tag span:last-child {
   font-size: 10px;

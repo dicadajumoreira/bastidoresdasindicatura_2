@@ -18,7 +18,7 @@ const BsSobre = () => (
         <div className="bs-sobre-media">
           <img src="assets/ju-sobre.jpg" alt="Juliana Moreira" />
           <div className="bs-sobre-tag">
-            <span>JM · CEO</span>
+            <span>Juliana Moreira · CEO</span>
             <span>Sindicompany</span>
           </div>
         </div>
