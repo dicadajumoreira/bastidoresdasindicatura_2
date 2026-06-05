@@ -1375,6 +1375,71 @@ const EditLeadModal = ({lead, onCancel, onSaved}) => {
 };
 
 /* ============================================================
+   BRAZIL MAP — choropleth de cadastros por UF
+   ============================================================ */
+const BrazilMap = ({ufCount = {}}) => {
+  const states = window.BR_STATES || [];
+  const vb = window.BR_VB || {w: 1000, h: 938};
+  const max = Math.max(1, ...Object.values(ufCount));
+  // 5 cores em escala (mais frio → mais quente), no tom da marca (sand → lavender → ataque)
+  const palette = ['#23263a', '#3a3a55', '#5c5174', '#896a86', '#b26a3d'];
+  const colorFor = (n) => {
+    if (!n) return palette[0];
+    const t = n / max;
+    if (t <= 0.20) return palette[1];
+    if (t <= 0.45) return palette[2];
+    if (t <= 0.75) return palette[3];
+    return palette[4];
+  };
+  const [hover, setHover] = React.useState(null);
+
+  return (
+    <div className="ad-br-map">
+      <svg viewBox={`0 0 ${vb.w} ${vb.h}`} className="ad-br-map-svg" role="img" aria-label="Mapa do Brasil com cadastros por estado">
+        {states.map((s) => {
+          const n = ufCount[s.uf] || 0;
+          return (
+            <path
+              key={s.uf}
+              d={s.d}
+              fill={colorFor(n)}
+              stroke="rgba(247,245,242,0.18)"
+              strokeWidth="0.8"
+              className={'ad-br-map-state' + (hover === s.uf ? ' is-hover' : '')}
+              onMouseEnter={() => setHover(s.uf)}
+              onMouseLeave={() => setHover(null)}
+            >
+              <title>{`${s.name} (${s.uf}): ${n} ${n === 1 ? 'cadastro' : 'cadastros'}`}</title>
+            </path>
+          );
+        })}
+        {states.map((s) => {
+          const n = ufCount[s.uf] || 0;
+          const showCount = n > 0;
+          return (
+            <g key={s.uf + '-l'} className="ad-br-map-label" pointerEvents="none">
+              <text x={s.cx} y={s.cy - 4} textAnchor="middle" className="ad-br-map-uf">{s.uf}</text>
+              {showCount && (
+                <text x={s.cx} y={s.cy + 14} textAnchor="middle" className="ad-br-map-n">{n}</text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <div className="ad-br-map-legend">
+        <span className="ad-br-map-legend-k">Cadastros por UF</span>
+        <div className="ad-br-map-scale">
+          {palette.map((c, i) => (
+            <span key={i} className="ad-br-map-scale-sw" style={{background: c}}></span>
+          ))}
+        </div>
+        <span className="ad-br-map-legend-v">0 a {max}</span>
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================
    MERGE MODAL — escolher lead principal pra mescla manual
    ============================================================ */
 const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
@@ -1620,20 +1685,9 @@ const Overview = ({onLogout, onOpenLeads}) => {
               <h2 className="ad-widget-title">Localização</h2>
             </header>
             <div className="ad-loc-grid">
-              <div>
-                <h3 className="ad-loc-sub">Top estados</h3>
-                <ul className="ad-rank-list ad-rank-list-compact">
-                  {stats.ufs.slice(0, 10).map(([uf, n]) => (
-                    <li key={uf} className="ad-rank-item">
-                      <span className="ad-rank-uf">{uf}</span>
-                      <div className="ad-rank-bar">
-                        <span className="ad-rank-bar-fill" style={{width: `${(n / maxOf(stats.ufs)) * 100}%`}}></span>
-                      </div>
-                      <span className="ad-rank-value">{n}</span>
-                    </li>
-                  ))}
-                  {stats.ufs.length === 0 && <li className="ad-empty">Sem dados</li>}
-                </ul>
+              <div className="ad-loc-mapcol">
+                <h3 className="ad-loc-sub">Cadastros por estado</h3>
+                <BrazilMap ufCount={Object.fromEntries(stats.ufs)} />
               </div>
               <div>
                 <h3 className="ad-loc-sub">Top cidades</h3>

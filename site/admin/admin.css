@@ -1679,8 +1679,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
 /* Localização — dois lados */
 .ad-loc-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 32px;
+  align-items: start;
 }
 .ad-loc-sub {
   font-size: 10px;
@@ -1690,6 +1691,52 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   margin: 0 0 14px;
   font-weight: 600;
 }
+
+/* Mapa do Brasil — choropleth de cadastros por UF */
+.ad-br-map { display: flex; flex-direction: column; gap: 14px; }
+.ad-br-map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: transparent;
+}
+.ad-br-map-state {
+  transition: fill 120ms ease, stroke 120ms ease;
+}
+.ad-br-map-state.is-hover {
+  stroke: var(--sand, #DABDA9);
+  stroke-width: 1.4;
+}
+.ad-br-map-uf {
+  fill: rgba(247, 245, 242, 0.88);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans, system-ui);
+}
+.ad-br-map-n {
+  fill: var(--sand, #DABDA9);
+  font-size: 26px;
+  font-weight: 700;
+  font-family: var(--font-sans, system-ui);
+}
+.ad-br-map-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(247, 245, 242, 0.08);
+}
+.ad-br-map-legend-k,
+.ad-br-map-legend-v {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(247, 245, 242, 0.5);
+  font-weight: 600;
+}
+.ad-br-map-scale { display: flex; flex: 1; height: 6px; border-radius: 3px; overflow: hidden; }
+.ad-br-map-scale-sw { flex: 1; }
 
 /* Responsivo */
 @media (max-width: 900px) {
