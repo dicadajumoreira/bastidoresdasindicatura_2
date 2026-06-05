@@ -1091,6 +1091,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(129, 148, 112, 0.22);
   color: #819470;
 }
+.ad-chip-origem-gestao-sob-ataque {
+  background: rgba(178, 106, 61, 0.22);
+  color: #b26a3d;
+}
 .ad-chip-status-novo {
   background: rgba(218, 189, 169, 0.22);
   color: var(--sand-deep, #B89579);

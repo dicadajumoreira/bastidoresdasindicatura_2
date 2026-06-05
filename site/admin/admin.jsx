@@ -22,8 +22,9 @@ const ORIGEM_LABELS = {
   'nr1': 'Guia NR-1',
   'conflitos': 'Guia Conflitos',
   'saude-mental': 'Saúde Mental',
+  'gestao-sob-ataque': 'Gestão sob Ataque',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
