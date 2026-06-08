@@ -25,8 +25,9 @@ const ORIGEM_LABELS = {
   'gestao-sob-ataque': 'Gestão sob Ataque',
   'bombeiro': 'Arquétipo · Bombeiro',
   'politico': 'Arquétipo · Político',
+  'solitario': 'Arquétipo · Solitário',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'bombeiro', 'politico'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'bombeiro', 'politico', 'solitario'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
