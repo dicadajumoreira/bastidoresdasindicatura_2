@@ -308,6 +308,45 @@
     .ck-cta:disabled { opacity: 0.5; cursor: not-allowed; }
     .ck-cta:disabled:hover { background: var(--onix); gap: 14px; }
 
+    /* === CARD DE DOWNLOAD DIRETO (sem formulário) === */
+    .ck-direct-list {
+      list-style: none;
+      margin: 22px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ck-direct-list li {
+      position: relative;
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--graphite-light);
+      line-height: 1.5;
+    }
+    .ck-direct-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sand);
+    }
+
+    /* === Nome do arquétipo antes do título === */
+    .ck-arquetipo {
+      display: block;
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 22px;
+      color: var(--sand);
+      letter-spacing: -0.005em;
+      margin: 0 0 8px;
+      line-height: 1;
+    }
+
     .ck-micro {
       font-size: 11px;
       font-style: italic;
@@ -508,69 +547,12 @@
 
   <script type="text/babel">
     const BombeiroLanding = () => {
-      const [data, setData] = React.useState(() => {
-        const defaults = {nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: ''};
-        try {
-          const saved = JSON.parse(localStorage.getItem('bs-lead') || '{}');
-          return {...defaults, ...Object.fromEntries(Object.entries(saved).filter(([k]) => k in defaults))};
-        } catch { return defaults; }
-      });
-      const [submitting, setSubmitting] = React.useState(false);
-      const [error, setError] = React.useState('');
-
-      const setField = (k, v) => setData((d) => ({...d, [k]: v}));
-
-      const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-
-      const canSend = data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.instagram && data.atuacao && !submitting;
-
-      const submit = async (e) => {
-        e.preventDefault();
-        if (!canSend) return;
-        setSubmitting(true);
-        setError('');
-
-        const payload = {
-          ...data,
-          origem: 'bombeiro',
-        };
-
-        let ok = false;
-        try {
-          const res = await fetch('/.netlify/functions/submit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload),
+      const onDownload = () => {
+        if (typeof window.fbq === 'function') {
+          window.fbq('track', 'ViewContent', {
+            content_name: 'O Bombeiro',
+            content_category: 'Material gratuito',
           });
-          ok = res.ok;
-        } catch (err) { /* trata abaixo */ }
-
-        // Envia também para Netlify Forms (notificação por e-mail)
-        try {
-          const fd = new URLSearchParams();
-          fd.append('form-name', 'bombeiro-aplicacao');
-          Object.entries(payload).forEach(([k, v]) => fd.append(k, v == null ? '' : String(v)));
-          await fetch('/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: fd.toString(),
-          });
-        } catch (err) {}
-
-        if (ok) {
-          try { localStorage.setItem('bs-lead', JSON.stringify(data)); } catch {}
-          // Dispara conversão pro Meta Pixel antes de redirecionar
-          if (typeof window.fbq === 'function') {
-            window.fbq('track', 'Lead', {
-              content_name: 'O Bombeiro',
-              content_category: 'Material gratuito',
-            });
-          }
-          // Redireciona para o material (PDF)
-          window.location.href = '/bombeiro/material.pdf';
-        } else {
-          setError('Não conseguimos registrar agora. Tente novamente em instantes, por favor.');
-          setSubmitting(false);
         }
       };
 
@@ -599,6 +581,7 @@
                   <span className="bs-eyebrow">Material gratuito · Volume 12 · Série Arquétipos</span>
                 </div>
 
+                <span className="ck-arquetipo">O Bombeiro</span>
                 <h1 className="ck-hero-title">
                   <span className="l1">Apagando</span>
                   <span className="l2">incêndios.</span>
@@ -628,74 +611,31 @@
                 </div>
               </div>
 
-              <div className="ck-form-wrap">
+              <div className="ck-form-wrap ck-direct">
                 <div className="ck-form-head">
-                  <span className="ck-form-tag">Receba o guia</span>
-                  <h2 className="ck-form-title">Acesso imediato.</h2>
+                  <span className="ck-form-tag">Acesso direto</span>
+                  <h2 className="ck-form-title">Pegue o guia.</h2>
                   <p className="ck-form-sub">
-                    Preencha rapidamente. O guia em PDF aparece na próxima tela,
-                    pronto para leitura.
+                    PDF pronto pra leitura.{' '}<em>Sem cadastro, sem espera.</em>
                   </p>
                 </div>
 
-                <form onSubmit={submit}>
-                  <label className="ck-field">
-                    <span className="ck-label">Nome completo</span>
-                    <input type="text" required value={data.nome} onChange={(e) => setField('nome', e.target.value)} placeholder="Como devo te chamar?" />
-                  </label>
-                  <div className="ck-row">
-                    <label className="ck-field">
-                      <span className="ck-label">Cidade</span>
-                      <input type="text" required value={data.cidade} onChange={(e) => setField('cidade', e.target.value)} placeholder="Sua cidade" />
-                    </label>
-                    <label className="ck-field">
-                      <span className="ck-label">Estado</span>
-                      <select required value={data.estado} onChange={(e) => setField('estado', e.target.value)}>
-                        <option value="" disabled>UF</option>
-                        {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-                      </select>
-                    </label>
-                  </div>
-                  <label className="ck-field">
-                    <span className="ck-label">WhatsApp</span>
-                    <input type="tel" required value={data.whatsapp} onChange={(e) => setField('whatsapp', e.target.value)} placeholder="(11) 99999-9999" />
-                  </label>
-                  <label className="ck-field">
-                    <span className="ck-label">E-mail</span>
-                    <input type="email" required value={data.email} onChange={(e) => setField('email', e.target.value)} placeholder="seu@email.com" />
-                  </label>
-                  <label className="ck-field">
-                    <span className="ck-label">@ nas redes sociais</span>
-                    <input type="text" required value={data.instagram} onChange={(e) => setField('instagram', e.target.value)} placeholder="@seuuser" />
-                  </label>
-                  <label className="ck-field">
-                    <span className="ck-label">Atua hoje como</span>
-                    <select required value={data.atuacao} onChange={(e) => setField('atuacao', e.target.value)}>
-                      <option value="" disabled>Selecione</option>
-                      <option>Síndico profissional</option>
-                      <option>Síndico morador</option>
-                      <option>Gestor condominial</option>
-                      <option>Administradora</option>
-                      <option>Conselheiro</option>
-                      <option>Outro</option>
-                    </select>
-                  </label>
+                <a href="material.pdf" target="_blank" rel="noreferrer" className="ck-cta" onClick={onDownload}>
+                  <span>Baixar o guia em PDF</span>
+                  <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+                    <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </a>
 
-                  <button type="submit" className="ck-cta" disabled={!canSend}>
-                    <span>{submitting ? 'Abrindo o guia…' : 'Quero o Guia'}</span>
-                    {!submitting && (
-                      <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
-                        <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </button>
+                <ul className="ck-direct-list">
+                  <li>Leitura no celular ou desktop</li>
+                  <li>Pronto pra imprimir em A4</li>
+                  <li>Compartilhe com a sua equipe</li>
+                </ul>
 
-                  {error && <p className="ck-error">{error}</p>}
-
-                  <p className="ck-micro">
-                    Guia entregue na próxima tela. Você também receberá no e-mail informado.
-                  </p>
-                </form>
+                <p className="ck-micro">
+                  Material por Juliana Moreira · Bastidores da Sindicatura
+                </p>
               </div>
             </section>
 
@@ -719,17 +659,5 @@
     ReactDOM.createRoot(document.getElementById('root')).render(<BombeiroLanding />);
   </script>
 
-  <!-- Form HTML estático para Netlify Forms detectar -->
-  <form name="bombeiro-aplicacao" data-netlify="true" netlify-honeypot="bot-field" hidden>
-    <input type="text" name="bot-field" />
-    <input type="text" name="nome" />
-    <input type="text" name="cidade" />
-    <input type="text" name="estado" />
-    <input type="tel" name="whatsapp" />
-    <input type="email" name="email" />
-    <input type="text" name="instagram" />
-    <input type="text" name="atuacao" />
-    <input type="text" name="origem" />
-  </form>
 </body>
 </html>
