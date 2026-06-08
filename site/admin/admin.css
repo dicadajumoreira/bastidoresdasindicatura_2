@@ -1111,6 +1111,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(94, 124, 168, 0.22);
   color: #5e7ca8;
 }
+.ad-chip-origem-estrategista {
+  background: rgba(184, 144, 72, 0.22);
+  color: #b89048;
+}
 .ad-chip-status-novo {
   background: rgba(218, 189, 169, 0.22);
   color: var(--sand-deep, #B89579);
