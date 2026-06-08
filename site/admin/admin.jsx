@@ -23,8 +23,9 @@ const ORIGEM_LABELS = {
   'conflitos': 'Guia Conflitos',
   'saude-mental': 'Saúde Mental',
   'gestao-sob-ataque': 'Gestão sob Ataque',
+  'bombeiro': 'Arquétipo · Bombeiro',
 };
-const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque'];
+const ORIGEM_ORDER = ['mentoria', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'bombeiro'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
