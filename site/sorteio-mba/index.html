@@ -334,16 +334,30 @@
 
     /* === LINHA DE PATROCÍNIO === */
     .ck-mba-patrocinio {
-      font-family: var(--font-display);
-      font-size: 16px;
-      color: rgba(247, 245, 242, 0.72);
+      display: flex;
+      align-items: center;
+      gap: 18px;
       margin: 0 0 32px;
-      padding: 12px 16px;
+      padding: 14px 18px;
       border-left: 2px solid var(--sand);
-      max-width: 560px;
+      background: rgba(247, 245, 242, 0.04);
+      max-width: 580px;
     }
-    .ck-mba-patrocinio strong { color: var(--offwhite); font-weight: 600; font-style: normal; }
-    .ck-mba-patrocinio em { font-style: italic; }
+    .ck-mba-patrocinio-logo {
+      height: 42px;
+      width: auto;
+      flex-shrink: 0;
+      display: block;
+    }
+    .ck-mba-patrocinio-text {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 15px;
+      line-height: 1.4;
+      color: rgba(247, 245, 242, 0.72);
+    }
+    .ck-mba-patrocinio-text strong { color: var(--offwhite); font-weight: 600; font-style: normal; }
+    .ck-mba-patrocinio-text em { font-style: italic; }
 
     /* === CHECKBOX === */
     .ck-checkbox {
@@ -665,7 +679,9 @@
       .ck-footer-brand { text-align: left; }
       .ck-footer-brand-l1 { font-size: 18px; }
       .ck-footer-brand-l2 { font-size: 10px; letter-spacing: 0.24em; }
-      .ck-mba-patrocinio { font-size: 13px; padding: 10px 12px; }
+      .ck-mba-patrocinio { padding: 12px 14px; gap: 14px; flex-wrap: wrap; }
+      .ck-mba-patrocinio-logo { height: 32px; }
+      .ck-mba-patrocinio-text { font-size: 13px; }
       .ck-mba-grade { padding: 56px 22px 32px; }
       .ck-mba-grade-head { margin-bottom: 40px; }
       .ck-mba-grade-title { font-size: 38px; }
@@ -795,10 +811,17 @@
                   <span className="l3">MBA pela IBMEC.</span>
                 </h1>
 
-                <p className="ck-mba-patrocinio">
-                  <em>Um patrocínio</em> <strong>Condo Academy</strong>{' '}
-                  <em>em parceria com a</em> <strong>IBMEC</strong>
-                </p>
+                <div className="ck-mba-patrocinio">
+                  <img
+                    src="https://condo.academy/wp-content/uploads/2025/01/condo-academy-definitive-logo.svg"
+                    alt="Condo Academy"
+                    className="ck-mba-patrocinio-logo"
+                  />
+                  <p className="ck-mba-patrocinio-text">
+                    <em>Um patrocínio</em> <strong>Condo Academy</strong>{' '}
+                    <em>em parceria com a</em> <strong>IBMEC</strong>
+                  </p>
+                </div>
 
                 <p className="ck-hero-lead">
                   A Condo Academy sorteia uma <strong>bolsa integral</strong>{' '}
