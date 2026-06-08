@@ -514,6 +514,67 @@
       background: var(--sand);
     }
 
+    /* === SELO DE PARCERIA === */
+    .ck-mba-parceria {
+      padding: 56px 96px 64px;
+      border-top: 1px solid rgba(247, 245, 242, 0.15);
+      text-align: center;
+    }
+    .ck-mba-parceria .bs-eyebrow {
+      display: inline-block;
+      margin-bottom: 28px;
+    }
+    .ck-mba-parceria-marks {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 56px;
+      margin-bottom: 28px;
+    }
+    .ck-mba-parceria-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-width: 180px;
+    }
+    .ck-mba-parceria-logo {
+      height: 72px;
+      width: auto;
+      display: block;
+    }
+    .ck-mba-parceria-ibmec {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 56px;
+      line-height: 1;
+      color: var(--offwhite);
+      letter-spacing: -0.025em;
+    }
+    .ck-mba-parceria-tag {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--sand);
+      font-weight: 600;
+    }
+    .ck-mba-parceria-x {
+      font-family: var(--font-display);
+      font-size: 32px;
+      color: rgba(247, 245, 242, 0.35);
+      font-style: italic;
+    }
+    .ck-mba-parceria-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(247, 245, 242, 0.6);
+      margin: 0;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .ck-mba-parceria-text em { color: var(--sand); font-style: italic; }
+
     /* === BLOCO DE AUTORIA NO FOOTER === */
     .ck-footer-block {
       border-top: 1px solid rgba(247, 245, 242, 0.15);
@@ -682,6 +743,11 @@
       .ck-mba-patrocinio { padding: 12px 14px; gap: 14px; flex-wrap: wrap; }
       .ck-mba-patrocinio-logo { height: 32px; }
       .ck-mba-patrocinio-text { font-size: 13px; }
+      .ck-mba-parceria { padding: 48px 22px 56px; }
+      .ck-mba-parceria-marks { gap: 28px; flex-direction: column; }
+      .ck-mba-parceria-logo { height: 56px; }
+      .ck-mba-parceria-ibmec { font-size: 44px; }
+      .ck-mba-parceria-x { transform: rotate(90deg); }
       .ck-mba-grade { padding: 56px 22px 32px; }
       .ck-mba-grade-head { margin-bottom: 40px; }
       .ck-mba-grade-title { font-size: 38px; }
@@ -1041,6 +1107,29 @@
                   </ul>
                 </article>
               </div>
+            </section>
+
+            {/* Selo de parceria */}
+            <section className="ck-mba-parceria">
+              <span className="bs-eyebrow" style={{color: 'var(--sand)'}}>Patrocínio · Parceria educacional</span>
+              <div className="ck-mba-parceria-marks">
+                <div className="ck-mba-parceria-item">
+                  <img
+                    src="https://condo.academy/wp-content/uploads/2025/01/condo-academy-definitive-logo.svg"
+                    alt="Condo Academy"
+                    className="ck-mba-parceria-logo"
+                  />
+                  <span className="ck-mba-parceria-tag">Patrocinador</span>
+                </div>
+                <span className="ck-mba-parceria-x" aria-hidden="true">×</span>
+                <div className="ck-mba-parceria-item">
+                  <span className="ck-mba-parceria-ibmec">ibmec</span>
+                  <span className="ck-mba-parceria-tag">Certificação</span>
+                </div>
+              </div>
+              <p className="ck-mba-parceria-text">
+                MBA Executivo em Gestão Condominial. <em>Patrocínio Condo Academy, certificação IBMEC.</em>
+              </p>
             </section>
 
             {/* Footer block */}
