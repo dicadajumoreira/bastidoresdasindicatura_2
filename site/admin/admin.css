@@ -1115,6 +1115,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(184, 144, 72, 0.22);
   color: #b89048;
 }
+.ad-chip-origem-sargento {
+  background: rgba(146, 54, 76, 0.22);
+  color: #b15a72;
+}
 .ad-chip-status-novo {
   background: rgba(218, 189, 169, 0.22);
   color: var(--sand-deep, #B89579);
