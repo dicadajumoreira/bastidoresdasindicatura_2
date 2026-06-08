@@ -88,6 +88,9 @@
   <meta name="twitter:description" content="A Condo Academy sorteia uma bolsa integral do MBA Executivo em Gestão Condominial certificado pela IBMEC. Inscrições até 12/06/2026. Sorteio em 13/06/2026." />
   <meta name="twitter:image" content="https://bastidoresdasindicatura.com.br/assets/og/og-sorteio-mba.png" />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap" />
   <link rel="stylesheet" href="../tokens.css" />
   <link rel="stylesheet" href="../bastidores.css" />
 
@@ -349,6 +352,56 @@
       flex-shrink: 0;
       display: block;
     }
+
+    /* === LOGO CONDO ACADEMY (inline) === */
+    .ck-condo-logo {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 0.95;
+      position: relative;
+    }
+    .ck-condo-1 {
+      color: var(--offwhite);
+    }
+    .ck-condo-2 {
+      background: linear-gradient(135deg, #FF7A1A 0%, #FF2D7A 50%, #9B2DFF 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-top: -0.04em;
+    }
+    .ck-condo-cap {
+      position: absolute;
+      display: inline-flex;
+      transform: rotate(-12deg);
+      transform-origin: center;
+    }
+    .ck-condo-logo-sm {
+      gap: 2px;
+    }
+    .ck-condo-logo-sm .ck-condo-1 { font-size: 24px; }
+    .ck-condo-logo-sm .ck-condo-2 { font-size: 20px; }
+    .ck-condo-logo-sm .ck-condo-cap {
+      width: 22px;
+      height: 22px;
+      top: -6px;
+      right: -18px;
+    }
+    .ck-condo-logo-lg {
+      gap: 4px;
+    }
+    .ck-condo-logo-lg .ck-condo-1 { font-size: 56px; }
+    .ck-condo-logo-lg .ck-condo-2 { font-size: 44px; }
+    .ck-condo-logo-lg .ck-condo-cap {
+      width: 48px;
+      height: 48px;
+      top: -14px;
+      right: -38px;
+    }
     .ck-mba-patrocinio-text {
       margin: 0;
       font-family: var(--font-display);
@@ -543,14 +596,25 @@
       width: auto;
       display: block;
     }
-    .ck-mba-parceria-ibmec {
-      font-family: var(--font-display);
-      font-style: italic;
-      font-size: 56px;
-      line-height: 1;
-      color: var(--offwhite);
-      letter-spacing: -0.025em;
+    .ck-mba-parceria-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 40px;
+      min-width: 240px;
+      min-height: 120px;
     }
+    .ck-mba-parceria-mark-light {
+      background: var(--offwhite);
+    }
+    .ck-mba-parceria-mark-light img {
+      max-height: 110px;
+      max-width: 240px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
+    .ck-condo-1-dark { color: #1A1C29; }
     .ck-mba-parceria-tag {
       font-size: 10px;
       letter-spacing: 0.3em;
@@ -878,11 +942,24 @@
                 </h1>
 
                 <div className="ck-mba-patrocinio">
-                  <img
-                    src="https://condo.academy/wp-content/uploads/2025/01/condo-academy-definitive-logo.svg"
-                    alt="Condo Academy"
-                    className="ck-mba-patrocinio-logo"
-                  />
+                  <div className="ck-condo-logo ck-condo-logo-sm" aria-label="Condo Academy">
+                    <span className="ck-condo-1">condo</span>
+                    <span className="ck-condo-cap" aria-hidden="true">
+                      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 18 L20 8 L38 18 L20 28 Z" fill="url(#ca-grad-sm)"/>
+                        <path d="M32 22 L32 32" stroke="url(#ca-grad-sm)" strokeWidth="2.4" strokeLinecap="round"/>
+                        <circle cx="32" cy="34" r="2.6" fill="url(#ca-grad-sm)"/>
+                        <defs>
+                          <linearGradient id="ca-grad-sm" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#FF7A1A"/>
+                            <stop offset="55%" stopColor="#FF2D7A"/>
+                            <stop offset="100%" stopColor="#9B2DFF"/>
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                    </span>
+                    <span className="ck-condo-2">academy</span>
+                  </div>
                   <p className="ck-mba-patrocinio-text">
                     <em>Um patrocínio</em> <strong>Condo Academy</strong>{' '}
                     <em>em parceria com a</em> <strong>IBMEC</strong>
@@ -1114,16 +1191,33 @@
               <span className="bs-eyebrow" style={{color: 'var(--sand)'}}>Patrocínio · Parceria educacional</span>
               <div className="ck-mba-parceria-marks">
                 <div className="ck-mba-parceria-item">
-                  <img
-                    src="https://condo.academy/wp-content/uploads/2025/01/condo-academy-definitive-logo.svg"
-                    alt="Condo Academy"
-                    className="ck-mba-parceria-logo"
-                  />
+                  <div className="ck-mba-parceria-mark ck-mba-parceria-mark-light">
+                    <div className="ck-condo-logo ck-condo-logo-lg" aria-label="Condo Academy">
+                      <span className="ck-condo-1 ck-condo-1-dark">condo</span>
+                      <span className="ck-condo-cap" aria-hidden="true">
+                        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M2 18 L20 8 L38 18 L20 28 Z" fill="url(#ca-grad-lg)"/>
+                          <path d="M32 22 L32 32" stroke="url(#ca-grad-lg)" strokeWidth="2.4" strokeLinecap="round"/>
+                          <circle cx="32" cy="34" r="2.6" fill="url(#ca-grad-lg)"/>
+                          <defs>
+                            <linearGradient id="ca-grad-lg" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#FF7A1A"/>
+                              <stop offset="55%" stopColor="#FF2D7A"/>
+                              <stop offset="100%" stopColor="#9B2DFF"/>
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      </span>
+                      <span className="ck-condo-2">academy</span>
+                    </div>
+                  </div>
                   <span className="ck-mba-parceria-tag">Patrocinador</span>
                 </div>
                 <span className="ck-mba-parceria-x" aria-hidden="true">×</span>
                 <div className="ck-mba-parceria-item">
-                  <span className="ck-mba-parceria-ibmec">ibmec</span>
+                  <div className="ck-mba-parceria-mark ck-mba-parceria-mark-light">
+                    <img src="/assets/ibmec-logo.png" alt="IBMEC" />
+                  </div>
                   <span className="ck-mba-parceria-tag">Certificação</span>
                 </div>
               </div>
