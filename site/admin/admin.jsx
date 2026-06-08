@@ -210,21 +210,43 @@ const splitLocation = (lead) => {
 const leadToRow = (l) => {
   const loc = splitLocation(l);
   return {
-    nome: l.nome || '', whatsapp: l.whatsapp || '', email: l.email || '',
-    cidade: loc.cidade, estado: loc.estado, pagina: ORIGEM_LABELS[l.origem || 'mentoria'],
+    nome: l.nome || '',
+    whatsapp: l.whatsapp || '',
+    email: l.email || '',
+    instagram: l.instagram || '',
+    cidade: loc.cidade,
+    estado: loc.estado,
+    atuacao: l.atuacao || '',
+    modalidade: l.modalidade || '',
+    pagina: ORIGEM_LABELS[l.origem || 'mentoria'] || l.origem || '',
+    perfil: l.perfil_nome ? `${l.perfil_nome} (${l.perfil || ''})` : '',
+    status: STATUS_LABELS[l.status || 'novo'] || l.status || '',
+    data: fmtDate(l.createdAt),
+    notas: l.notes || '',
   };
 };
 
 // Linha de planilha a partir de um cadastro único (todas as origens da pessoa juntas)
 const clusterToRow = (c) => {
   const loc = splitLocation(c.rep);
+  // Coleta perfil do quiz se a pessoa tiver passado por ele em qualquer cadastro
+  const formComPerfil = c.forms.find((f) => f.perfil_nome);
+  // Modalidades vindas de aplicações de mentoria (qualquer cadastro)
+  const modalidades = [...new Set(c.forms.map((f) => f.modalidade).filter(Boolean))];
   return {
     nome: c.rep.nome || '',
     whatsapp: unionContacts(c.forms, getAllPhones).join(' · ') || (c.rep.whatsapp || ''),
     email: unionContacts(c.forms, getAllEmails).join(' · ') || (c.rep.email || ''),
+    instagram: c.rep.instagram || c.forms.map((f) => f.instagram).find(Boolean) || '',
     cidade: loc.cidade,
     estado: loc.estado,
+    atuacao: c.rep.atuacao || c.forms.map((f) => f.atuacao).find(Boolean) || '',
+    modalidade: modalidades.join(' · '),
     pagina: c.origens.map((o) => ORIGEM_LABELS[o] || o).join(', '),
+    perfil: formComPerfil ? `${formComPerfil.perfil_nome} (${formComPerfil.perfil || ''})` : '',
+    status: STATUS_LABELS[c.status || 'novo'] || c.status || '',
+    data: fmtDate(c.rep.createdAt),
+    notas: c.rep.notes || '',
   };
 };
 
@@ -243,11 +265,18 @@ const downloadXlsx = async (rows) => {
 
   ws.columns = [
     {header: 'Nome', key: 'nome', width: 32},
-    {header: 'WhatsApp', key: 'whatsapp', width: 20},
+    {header: 'WhatsApp', key: 'whatsapp', width: 22},
     {header: 'E-mail', key: 'email', width: 36},
-    {header: 'Cidade', key: 'cidade', width: 24},
-    {header: 'Estado', key: 'estado', width: 10},
-    {header: 'Página de captação', key: 'pagina', width: 26},
+    {header: 'Instagram', key: 'instagram', width: 22},
+    {header: 'Cidade', key: 'cidade', width: 22},
+    {header: 'Estado', key: 'estado', width: 8},
+    {header: 'Atuação', key: 'atuacao', width: 22},
+    {header: 'Modalidade', key: 'modalidade', width: 18},
+    {header: 'Origem', key: 'pagina', width: 28},
+    {header: 'Perfil (Quiz)', key: 'perfil', width: 22},
+    {header: 'Status', key: 'status', width: 14},
+    {header: 'Data do cadastro', key: 'data', width: 22},
+    {header: 'Anotações', key: 'notas', width: 40},
   ];
 
   rows.forEach((row) => ws.addRow(row));
