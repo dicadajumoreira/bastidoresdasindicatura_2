@@ -21,6 +21,7 @@ const MAP: Record<string, string> = {
   "/burocrata/": "/burocrata/index.html",
   "/estrategista/": "/estrategista/index.html",
   "/sargento/": "/sargento/index.html",
+  "/quiz/": "/quiz/index.html",
 };
 
 export default async (request: Request, context: Context) => {
@@ -50,5 +51,5 @@ export default async (request: Request, context: Context) => {
 };
 
 export const config = {
-  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/", "/sobrevivencia-whatsapp/", "/50-frases/", "/nr1/", "/conflitos/", "/saude-mental/", "/gestao-sob-ataque/", "/bombeiro/", "/politico/", "/solitario/", "/burocrata/", "/estrategista/", "/sargento/"],
+  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/", "/sobrevivencia-whatsapp/", "/50-frases/", "/nr1/", "/conflitos/", "/saude-mental/", "/gestao-sob-ataque/", "/bombeiro/", "/politico/", "/solitario/", "/burocrata/", "/estrategista/", "/sargento/", "/quiz/"],
 };
