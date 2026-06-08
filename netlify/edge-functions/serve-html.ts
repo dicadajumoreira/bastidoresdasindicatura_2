@@ -16,6 +16,7 @@ const MAP: Record<string, string> = {
   "/saude-mental/": "/saude-mental/index.html",
   "/gestao-sob-ataque/": "/gestao-sob-ataque/index.html",
   "/bombeiro/": "/bombeiro/index.html",
+  "/politico/": "/politico/index.html",
 };
 
 export default async (request: Request, context: Context) => {
@@ -45,5 +46,5 @@ export default async (request: Request, context: Context) => {
 };
 
 export const config = {
-  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/", "/sobrevivencia-whatsapp/", "/50-frases/", "/nr1/", "/conflitos/", "/saude-mental/", "/gestao-sob-ataque/", "/bombeiro/"],
+  path: ["/", "/checklist/", "/ebook-ia/", "/sindico-profissional/", "/sobrevivencia-whatsapp/", "/50-frases/", "/nr1/", "/conflitos/", "/saude-mental/", "/gestao-sob-ataque/", "/bombeiro/", "/politico/"],
 };

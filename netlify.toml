@@ -66,6 +66,10 @@
   function = "serve-html"
   path = "/bombeiro/"
 
+[[edge_functions]]
+  function = "serve-html"
+  path = "/politico/"
+
 # As rotas /api/* agora são declaradas via `export const config = { path: ... }`
 # em cada function. Mantemos esses redirects como FALLBACK (não-force) caso
 # o declarative routing falhe por algum motivo.
