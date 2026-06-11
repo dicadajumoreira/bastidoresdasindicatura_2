@@ -13,6 +13,7 @@
 // pelo /admin/.
 
 import { getStore } from '@netlify/blobs';
+import { sendEmails } from '../lib/email-resend.mjs';
 
 export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
@@ -76,6 +77,15 @@ export default async (req) => {
     const backup = getStore({name: 'leads-backup', consistency: 'strong'});
     await backup.setJSON(id, lead);
   } catch { /* o principal já está salvo */ }
+
+  // 3) Disparo de e-mails via Resend (best-effort, em paralelo, com
+  //    timeout próprio dentro do módulo). Se falhar, NÃO derruba o
+  //    cadastro nem atrasa demais a resposta pro front.
+  try {
+    await sendEmails(lead);
+  } catch (err) {
+    console.error('[submit] sendEmails failed:', err.message);
+  }
 
   return json({ok: true, id});
 };
