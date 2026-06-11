@@ -1546,7 +1546,7 @@ const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
 /* ============================================================
    OVERVIEW — Dashboard com estatísticas, tela inicial do admin
    ============================================================ */
-const Overview = ({onLogout, onOpenLeads}) => {
+const Overview = ({onLogout, onOpenLeads, onOpenBroadcast}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -1658,6 +1658,9 @@ const Overview = ({onLogout, onOpenLeads}) => {
         </div>
         <div className="ad-overview-actions">
           <button className="ad-btn ad-btn-primary" onClick={onOpenLeads}>Ver aplicações</button>
+          {onOpenBroadcast && (
+            <button className="ad-btn ad-btn-ghost" onClick={onOpenBroadcast}>Disparar e-mail</button>
+          )}
           <button className="ad-btn ad-btn-ghost" onClick={logout}>Sair</button>
         </div>
       </header>
@@ -1770,16 +1773,316 @@ const Overview = ({onLogout, onOpenLeads}) => {
 };
 
 /* ============================================================
+   BROADCAST PANEL — disparo de e-mail pros leads
+   ============================================================ */
+const MBA_DEFAULT_SUBJECT = 'Uma bolsa integral do MBA Executivo IBMEC vai ser sorteada amanhã.';
+const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:32px 16px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
+      <tr><td style="padding:32px 40px 18px;border-bottom:1px solid #E8E2D8">
+        <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;letter-spacing:-.01em">Bastidores da Sindicatura</p>
+        <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">por Juliana Moreira</p>
+      </td></tr>
+      <tr><td style="padding:40px">
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Concurso · Patrocínio Condo Academy</p>
+        <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">Olá, {{nome}}.</h1>
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          Tenho uma notícia importante e o tempo é curto.
+        </p>
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          A <strong>Condo Academy</strong>, em parceria com a <strong>IBMEC</strong>, vai sortear <strong>uma bolsa integral de 100%</strong> do MBA Executivo em Gestão Condominial. 360 horas de aula, 12 meses, certificação IBMEC.
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
+          <tr><td style="padding:18px 22px">
+            <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Inscrições até</p>
+            <p style="margin:0 0 14px;font-family:'Bodoni Moda',Georgia,serif;font-size:24px;color:#1A1C29">12 de junho de 2026</p>
+            <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Sorteio</p>
+            <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-size:24px;color:#1A1C29">13 de junho de 2026</p>
+          </td></tr>
+        </table>
+        <p style="text-align:center;margin:0 0 28px">
+          <a href="https://bastidoresdasindicatura.com.br/sorteio-mba/" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 28px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero concorrer à bolsa</a>
+        </p>
+        <p style="font-size:14px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          A inscrição leva 2 minutos. A turma começa semana que vem.
+        </p>
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:16px;color:#B89579;margin:24px 0 0">
+          Boa sorte.
+        </p>
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
+          <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
+
+const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
+  const [subject, setSubject] = React.useState(MBA_DEFAULT_SUBJECT);
+  const [html, setHtml] = React.useState(MBA_DEFAULT_HTML);
+  const [excludeOrigens, setExcludeOrigens] = React.useState(() => new Set(['sorteio-mba']));
+  const [statusFilter, setStatusFilter] = React.useState(() => new Set()); // vazio = todos
+  const [testEmail, setTestEmail] = React.useState('contato@dicadajumoreira.com.br');
+  const [busy, setBusy] = React.useState(false);
+  const [result, setResult] = React.useState(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  // Cálculo de destinatários no front (mesma lógica do backend)
+  const targets = React.useMemo(() => {
+    if (!leadsAll || !leadsAll.length) return {count: 0, list: []};
+    const byEmail = new Map();
+    for (const l of leadsAll) {
+      if (l.deletedAt) continue;
+      const email = String(l.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});
+      const e = byEmail.get(email);
+      e.leads.push(l);
+      e.origens.add(l.origem || 'mentoria');
+    }
+    const list = [];
+    for (const [email, entry] of byEmail) {
+      let skip = false;
+      for (const o of entry.origens) if (excludeOrigens.has(o)) { skip = true; break; }
+      if (skip) continue;
+      const rep = entry.leads.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+      if (statusFilter.size && !statusFilter.has(rep.status || 'novo')) continue;
+      list.push({email, rep, origens: [...entry.origens]});
+    }
+    return {count: list.length, list};
+  }, [leadsAll, excludeOrigens, statusFilter]);
+
+  const toggleOrigem = (o) => setExcludeOrigens((prev) => {
+    const next = new Set(prev);
+    if (next.has(o)) next.delete(o); else next.add(o);
+    return next;
+  });
+  const toggleStatus = (s) => setStatusFilter((prev) => {
+    const next = new Set(prev);
+    if (next.has(s)) next.delete(s); else next.add(s);
+    return next;
+  });
+
+  const sendTest = async () => {
+    if (!testEmail || !testEmail.includes('@')) { alert('Informe um e-mail válido pro teste.'); return; }
+    setBusy(true); setResult(null);
+    try {
+      const res = await api('/api/broadcast', {
+        method: 'POST',
+        body: JSON.stringify({subject, html, test: {email: testEmail}}),
+      });
+      setResult({type: 'test', ok: true, ...res});
+    } catch (e) {
+      setResult({type: 'test', ok: false, error: e.message});
+    } finally { setBusy(false); }
+  };
+
+  const sendReal = async () => {
+    setConfirmOpen(false);
+    setBusy(true); setResult(null);
+    try {
+      const filter = {
+        excludeOrigens: [...excludeOrigens],
+        statuses: statusFilter.size ? [...statusFilter] : undefined,
+      };
+      const res = await api('/api/broadcast', {
+        method: 'POST',
+        body: JSON.stringify({subject, html, filter}),
+      });
+      setResult({type: 'real', ok: !!res.ok, ...res});
+    } catch (e) {
+      setResult({type: 'real', ok: false, error: e.message});
+    } finally { setBusy(false); }
+  };
+
+  const previewHtml = html
+    .replace(/\{\{nome\}\}/g, 'Maria')
+    .replace(/\{\{material\}\}/g, 'o seu material');
+
+  return (
+    <div className="ad-broadcast">
+      <header className="ad-broadcast-head">
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onBackToOverview}>← Voltar à visão geral</button>
+        <h1 className="ad-broadcast-title">Disparo de e-mail</h1>
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+      </header>
+
+      <div className="ad-broadcast-grid">
+        <div className="ad-broadcast-compose">
+          <section className="ad-widget">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Mensagem</span>
+              <h2 className="ad-widget-title">Composição</h2>
+            </header>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Assunto</span>
+              <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Assunto do e-mail" />
+            </label>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Corpo do e-mail (HTML)</span>
+              <textarea value={html} onChange={(e) => setHtml(e.target.value)} rows={18} spellCheck={false} />
+              <span className="ad-bc-hint">Use <code>{'{{nome}}'}</code> e <code>{'{{material}}'}</code> pra personalizar.</span>
+            </label>
+          </section>
+
+          <section className="ad-widget">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Quem recebe</span>
+              <h2 className="ad-widget-title">Filtros</h2>
+            </header>
+            <div className="ad-bc-section">
+              <p className="ad-bc-section-title">Excluir quem já se cadastrou em:</p>
+              <div className="ad-bc-checks">
+                {ORIGEM_ORDER.map((o) => (
+                  <label key={o} className={'ad-bc-check' + (excludeOrigens.has(o) ? ' is-on' : '')}>
+                    <input type="checkbox" checked={excludeOrigens.has(o)} onChange={() => toggleOrigem(o)} />
+                    <span>{ORIGEM_LABELS[o] || o}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="ad-bc-section">
+              <p className="ad-bc-section-title">Status (opcional · vazio = todos):</p>
+              <div className="ad-bc-checks">
+                {STATUS_ORDER.map((s) => (
+                  <label key={s} className={'ad-bc-check' + (statusFilter.has(s) ? ' is-on' : '')}>
+                    <input type="checkbox" checked={statusFilter.has(s)} onChange={() => toggleStatus(s)} />
+                    <span>{STATUS_LABELS[s] || s}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="ad-bc-count">
+              <span className="ad-bc-count-n">{targets.count}</span>
+              <span className="ad-bc-count-lbl">{targets.count === 1 ? 'pessoa vai receber' : 'pessoas vão receber'}</span>
+            </div>
+          </section>
+
+          <section className="ad-widget">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Enviar</span>
+              <h2 className="ad-widget-title">Disparo</h2>
+            </header>
+            <div className="ad-bc-test">
+              <label className="ad-bc-field">
+                <span className="ad-bc-label">Enviar teste pra:</span>
+                <input type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="seu@email.com" />
+              </label>
+              <button className="ad-btn ad-btn-ghost" onClick={sendTest} disabled={busy}>
+                {busy && result?.type === 'test' ? 'Enviando teste…' : 'Enviar teste'}
+              </button>
+            </div>
+            <hr className="ad-bc-divider" />
+            <button
+              className="ad-btn ad-btn-primary ad-btn-lg"
+              disabled={busy || targets.count === 0}
+              onClick={() => setConfirmOpen(true)}
+            >
+              Disparar pros {targets.count} cadastros
+            </button>
+            {result && (
+              <div className={'ad-bc-result ' + (result.ok ? 'is-ok' : 'is-err')}>
+                {result.type === 'test' && result.ok && <p>✓ Teste enviado pra <strong>{testEmail}</strong>. Confere a caixa de entrada (ou spam).</p>}
+                {result.type === 'real' && result.ok && (
+                  <>
+                    <p><strong>{result.sent}</strong> e-mails enviados com sucesso.</p>
+                    {result.failed > 0 && <p>{result.failed} falharam.</p>}
+                    {result.partial && <p style={{color: '#d97757'}}>Parcial: processados {result.processed} de {result.total}. Repita o disparo (os já-enviados não voltam, mas a função não tem dedupe entre runs — use filtro pra evitar duplicar).</p>}
+                  </>
+                )}
+                {!result.ok && <p>Erro: {result.error || 'desconhecido'}</p>}
+                {result.errors && result.errors.length > 0 && (
+                  <details><summary>Primeiros erros</summary><ul>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></details>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="ad-broadcast-preview">
+          <section className="ad-widget">
+            <header className="ad-widget-head">
+              <span className="ad-widget-eyebrow">Como vai aparecer</span>
+              <h2 className="ad-widget-title">Pré-visualização</h2>
+            </header>
+            <div className="ad-bc-preview">
+              <p className="ad-bc-preview-subject"><strong>Assunto:</strong> {subject.replace(/\{\{nome\}\}/g, 'Maria').replace(/\{\{material\}\}/g, 'o seu material')}</p>
+              <iframe className="ad-bc-preview-frame" srcDoc={previewHtml} title="Pré-visualização" />
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {confirmOpen && (
+        <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}>
+          <div className="ad-modal-card">
+            <h3>Confirmar disparo</h3>
+            <p>Você vai enviar este e-mail pra <strong>{targets.count} pessoas</strong>. Essa ação é definitiva e não dá pra desfazer.</p>
+            <p>Assunto: <em>{subject}</em></p>
+            <div className="ad-modal-actions">
+              <button className="ad-btn ad-btn-ghost" onClick={() => setConfirmOpen(false)}>Cancelar</button>
+              <button className="ad-btn ad-btn-primary" onClick={sendReal}>Disparar agora</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ============================================================
    APP
    ============================================================ */
 const App = () => {
   const [authed, setAuthed] = React.useState(!!sessionStorage.getItem(TOKEN_KEY));
-  // view inicial após login: 'overview' (dashboard) | 'leads' (lista completa)
+  // view: 'overview' (dashboard) | 'leads' (lista) | 'broadcast' (disparo de email)
   const [view, setView] = React.useState('overview');
+  // Cache de leads compartilhado (usado pelo broadcast pra computar destinatários)
+  const [leadsAll, setLeadsAll] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!authed || view !== 'broadcast' || leadsAll) return;
+    (async () => {
+      try {
+        // Loop de paginação curto: pega todos os leads até total ser atingido
+        let merged = [];
+        let total = 0;
+        for (let i = 0; i < 10; i++) {
+          const res = await api('/api/leads');
+          if (!res.leads) break;
+          merged = res.leads;
+          total = res.total || merged.length;
+          if (merged.length >= total || !res.truncated) break;
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        setLeadsAll(merged);
+      } catch (e) {
+        console.error('falha ao carregar leads pro disparo:', e);
+        setLeadsAll([]);
+      }
+    })();
+  }, [authed, view, leadsAll]);
 
   if (!authed) return <Login onSuccess={() => { setAuthed(true); setView('overview'); }} />;
   if (view === 'overview') {
-    return <Overview onLogout={() => setAuthed(false)} onOpenLeads={() => setView('leads')} />;
+    return <Overview
+      onLogout={() => setAuthed(false)}
+      onOpenLeads={() => setView('leads')}
+      onOpenBroadcast={() => setView('broadcast')}
+    />;
+  }
+  if (view === 'broadcast') {
+    return <BroadcastPanel
+      onLogout={() => setAuthed(false)}
+      onBackToOverview={() => setView('overview')}
+      leadsAll={leadsAll}
+    />;
   }
   return <LeadsPanel onLogout={() => setAuthed(false)} onBackToOverview={() => setView('overview')} />;
 };
