@@ -1795,9 +1795,10 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
           <tr><td style="padding:18px 22px">
             <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Inscrições até</p>
-            <p style="margin:0 0 14px;font-family:'Bodoni Moda',Georgia,serif;font-size:24px;color:#1A1C29">12 de junho de 2026</p>
-            <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Sorteio</p>
-            <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-size:24px;color:#1A1C29">13 de junho de 2026</p>
+            <p style="margin:0 0 16px;font-family:'Bodoni Moda',Georgia,serif;font-size:24px;color:#1A1C29">12 de junho de 2026</p>
+            <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Sorteio · ao vivo</p>
+            <p style="margin:0 0 4px;font-family:'Bodoni Moda',Georgia,serif;font-size:24px;color:#1A1C29">Sábado, 13 de junho · 12h</p>
+            <p style="margin:0;font-size:13px;color:#1A1C29">No Instagram <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;font-weight:600;text-decoration:none">@dicadajumoreira</a></p>
           </td></tr>
         </table>
         <p style="text-align:center;margin:0 0 28px">
