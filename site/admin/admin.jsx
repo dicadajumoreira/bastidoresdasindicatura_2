@@ -1775,7 +1775,7 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast}) => {
 /* ============================================================
    BROADCAST PANEL — disparo de e-mail pros leads
    ============================================================ */
-const MBA_DEFAULT_SUBJECT = 'Uma bolsa integral do MBA Executivo IBMEC vai ser sorteada amanhã.';
+const MBA_DEFAULT_SUBJECT = 'Uma bolsa integral do MBA Executivo IBMEC vai ser sorteada no sábado.';
 const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
   <tr><td align="center" style="padding:32px 16px">
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
