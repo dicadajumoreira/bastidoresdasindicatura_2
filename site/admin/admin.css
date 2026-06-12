@@ -2581,3 +2581,23 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
 .ad-bc-history-table tr.is-selected td {
   background: rgba(218, 189, 169, 0.10);
 }
+
+/* Tabela de leads frios — origem com nome de arquivo longo precisa
+   truncar pra coluna de ações ficar visível. */
+.ad-bc-history-table .ad-bc-history-filter {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ad-bc-history-table .ad-bc-history-subject {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Wrapper que permite scroll horizontal em telas estreitas e mantém
+   o botão Editar/Remover sempre alcançável. */
+.ad-bc-history {
+  overflow-x: auto;
+}
