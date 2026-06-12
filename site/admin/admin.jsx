@@ -2697,6 +2697,9 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
         <p style="font-size:14px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
           A inscrição leva 2 minutos. A turma começa semana que vem.
         </p>
+        <p style="font-size:12px;line-height:1.5;color:#8a8881;margin:0 0 16px">
+          Veja o <a href="https://bastidoresdasindicatura.com.br/regulamento-mba/" style="color:#B89579">regulamento completo do sorteio</a>.
+        </p>
         <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:16px;color:#B89579;margin:24px 0 0">
           Boa sorte.
         </p>

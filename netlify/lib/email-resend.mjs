@@ -248,6 +248,9 @@ function leadEmail(lead, info, unsubscribeUrl) {
       <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
         O resultado sai no seu WhatsApp.
       </p>
+      <p style="font-size:12px;line-height:1.5;color:#8a8881;margin:18px 0 0">
+        Confira o <a href="${SITE}/regulamento-mba/" style="color:#B89579">regulamento completo do sorteio</a>.
+      </p>
       ${signature()}
     `, unsubscribeUrl);
   }
