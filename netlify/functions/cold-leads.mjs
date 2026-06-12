@@ -158,6 +158,151 @@ export default async (req) => {
   }
 
   // ============================================================
+  // PATCH (editar campos de 1 lead) e MERGE (mesclar 2+ leads)
+  // ============================================================
+  if (req.method === 'PATCH') {
+    let body;
+    try { body = await req.json(); } catch { return json({error: 'JSON inválido'}, 400); }
+
+    // Modo MERGE: ?action=merge no querystring, body { leadIds: [...], primaryId: '...' }
+    const url = new URL(req.url);
+    if (url.searchParams.get('action') === 'merge') {
+      const leadIds = Array.isArray(body.leadIds) ? body.leadIds.filter(Boolean) : [];
+      const primaryId = body.primaryId || leadIds[0];
+      if (leadIds.length < 2) return json({error: 'Selecione pelo menos 2 leads pra mesclar'}, 400);
+      if (!leadIds.includes(primaryId)) return json({error: 'primaryId deve estar em leadIds'}, 400);
+
+      try {
+        const leads = [];
+        for (const id of leadIds) {
+          let lead = await safeGet(store, `${KEY_LEAD}${id}`);
+          // Suporta também id no formato antigo (cold:e:foo ou cold:p:bar)
+          if (!lead && (id.startsWith('cold:e:') || id.startsWith('cold:p:'))) {
+            const old = await safeGet(store, id);
+            if (old) lead = migrateOldLead(old);
+          }
+          if (lead) leads.push({lead, id});
+        }
+        if (leads.length < 2) return json({error: 'Pelo menos 2 leads não foram encontrados'}, 404);
+
+        const primary = leads.find((l) => l.id === primaryId)?.lead || leads[0].lead;
+        const others = leads.filter((l) => l.lead.id !== primary.id).map((l) => l.lead);
+
+        // Mescla: junta arrays + preserva primary como base
+        const mergedEmails = [...new Set([...(primary.emails || []), ...others.flatMap((o) => o.emails || [])])];
+        const mergedPhones = [...new Set([...(primary.whatsapps || []), ...others.flatMap((o) => o.whatsapps || [])])];
+        const mergedSources = [...new Set([...(primary.sources || []), ...others.flatMap((o) => o.sources || [])])];
+
+        const out = {
+          ...primary,
+          emails: mergedEmails,
+          whatsapps: mergedPhones,
+          sources: mergedSources,
+          nome: primary.nome || others.find((o) => o.nome)?.nome || '',
+          instagram: primary.instagram || others.find((o) => o.instagram)?.instagram || '',
+          cidade: primary.cidade || others.find((o) => o.cidade)?.cidade || '',
+          estado: primary.estado || others.find((o) => o.estado)?.estado || '',
+          atuacao: primary.atuacao || others.find((o) => o.atuacao)?.atuacao || '',
+          notes: [primary.notes, ...others.map((o) => o.notes)].filter(Boolean).join('\n---\n'),
+          canal: mergedEmails.length && mergedPhones.length ? 'both' : (mergedEmails.length ? 'email' : 'whatsapp'),
+          updatedAt: new Date().toISOString(),
+          mergedFrom: others.map((o) => o.id),
+        };
+        // Salva o primary atualizado
+        await store.setJSON(`${KEY_LEAD}${primary.id}`, out);
+        // Re-aponta TODOS os índices pros e-mails/telefones pro primary
+        for (const e of mergedEmails) await store.setJSON(`${KEY_IDXE}${e}`, {leadId: primary.id});
+        for (const p of mergedPhones) await store.setJSON(`${KEY_IDXP}${p}`, {leadId: primary.id});
+        // Apaga os outros leads (sem deletar os índices, já apontamos pro novo)
+        for (const o of others) {
+          try { await store.delete(`${KEY_LEAD}${o.id}`); } catch {}
+        }
+        return json({ok: true, mergedInto: primary.id, removed: others.length});
+      } catch (err) {
+        return json({error: err.message}, 500);
+      }
+    }
+
+    // Modo EDIT: body { leadId, ...campos a atualizar }
+    const leadId = body.leadId;
+    if (!leadId) return json({error: 'Falta o leadId'}, 400);
+
+    try {
+      let existing = await safeGet(store, `${KEY_LEAD}${leadId}`);
+      let isOldFormat = false;
+      if (!existing && (leadId.startsWith('cold:e:') || leadId.startsWith('cold:p:'))) {
+        const old = await safeGet(store, leadId);
+        if (old) {
+          existing = migrateOldLead(old);
+          isOldFormat = true;
+        }
+      }
+      if (!existing) return json({error: 'Lead não encontrado'}, 404);
+
+      // Sanitiza arrays
+      const cleanEmails = Array.isArray(body.emails)
+        ? [...new Set(body.emails.map(normEmail).filter(isValidEmail))]
+        : (existing.emails || []);
+      const cleanPhones = Array.isArray(body.whatsapps)
+        ? [...new Set(body.whatsapps.map(normPhone).filter(isValidPhone))]
+        : (existing.whatsapps || []);
+
+      const updated = {
+        ...existing,
+        emails: cleanEmails,
+        whatsapps: cleanPhones,
+        nome: body.nome !== undefined ? String(body.nome || '').trim() : existing.nome,
+        instagram: body.instagram !== undefined ? String(body.instagram || '').trim().replace(/^@+/, '') : existing.instagram,
+        cidade: body.cidade !== undefined ? String(body.cidade || '').trim() : existing.cidade,
+        estado: body.estado !== undefined ? String(body.estado || '').trim().toUpperCase().slice(0, 2) : existing.estado,
+        atuacao: body.atuacao !== undefined ? String(body.atuacao || '').trim() : existing.atuacao,
+        notes: body.notes !== undefined ? String(body.notes || '') : existing.notes,
+        unsubscribed: body.unsubscribed !== undefined ? !!body.unsubscribed : existing.unsubscribed,
+        frequencia: body.frequencia !== undefined ? (body.frequencia === 'menor' ? 'menor' : 'normal') : existing.frequencia,
+        updatedAt: new Date().toISOString(),
+      };
+      updated.canal = cleanEmails.length && cleanPhones.length ? 'both' : (cleanEmails.length ? 'email' : 'whatsapp');
+
+      // Detecta diff em emails/phones pra atualizar índices
+      const oldEmails = new Set(existing.emails || []);
+      const oldPhones = new Set(existing.whatsapps || []);
+      const newEmails = new Set(cleanEmails);
+      const newPhones = new Set(cleanPhones);
+
+      // Apaga índices removidos
+      for (const e of oldEmails) {
+        if (!newEmails.has(e)) {
+          try { await store.delete(`${KEY_IDXE}${e}`); } catch {}
+        }
+      }
+      for (const p of oldPhones) {
+        if (!newPhones.has(p)) {
+          try { await store.delete(`${KEY_IDXP}${p}`); } catch {}
+        }
+      }
+      // Cria índices novos
+      for (const e of newEmails) {
+        if (!oldEmails.has(e)) {
+          await store.setJSON(`${KEY_IDXE}${e}`, {leadId: updated.id});
+        }
+      }
+      for (const p of newPhones) {
+        if (!oldPhones.has(p)) {
+          await store.setJSON(`${KEY_IDXP}${p}`, {leadId: updated.id});
+        }
+      }
+
+      await store.setJSON(`${KEY_LEAD}${updated.id}`, updated);
+      // Se era formato antigo, remove a chave antiga
+      if (isOldFormat) try { await store.delete(leadId); } catch {}
+
+      return json({ok: true, lead: updated});
+    } catch (err) {
+      return json({error: 'Falha ao atualizar: ' + err.message}, 500);
+    }
+  }
+
+  // ============================================================
   // DELETE
   // ============================================================
   if (req.method === 'DELETE') {

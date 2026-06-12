@@ -1802,17 +1802,162 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads}) => 
 };
 
 /* ============================================================
+   COLD LEAD EDIT MODAL — edita um cadastro frio individualmente
+   ============================================================ */
+const COLD_UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const COLD_ATUACOES = ['Síndico profissional', 'Síndico morador', 'Gestor condominial', 'Administradora', 'Conselheiro', 'Outro'];
+
+const ColdLeadEditModal = ({lead, onClose, onSave}) => {
+  const [form, setForm] = React.useState(() => ({
+    emails: lead.emails && lead.emails.length ? [...lead.emails] : (lead.email ? [lead.email] : ['']),
+    whatsapps: lead.whatsapps && lead.whatsapps.length ? [...lead.whatsapps] : (lead.whatsapp ? [lead.whatsapp] : ['']),
+    nome: lead.nome || '',
+    instagram: lead.instagram || '',
+    cidade: lead.cidade || '',
+    estado: lead.estado || '',
+    atuacao: lead.atuacao || '',
+    notes: lead.notes || '',
+    unsubscribed: !!lead.unsubscribed,
+    frequencia: lead.frequencia || 'normal',
+  }));
+  const [busy, setBusy] = React.useState(false);
+
+  const setField = (k, v) => setForm((s) => ({...s, [k]: v}));
+  const setArrayItem = (k, i, v) => setForm((s) => {
+    const arr = [...s[k]];
+    arr[i] = v;
+    return {...s, [k]: arr};
+  });
+  const removeArrayItem = (k, i) => setForm((s) => {
+    const arr = s[k].filter((_, idx) => idx !== i);
+    return {...s, [k]: arr.length ? arr : ['']};
+  });
+  const addArrayItem = (k) => setForm((s) => ({...s, [k]: [...s[k], '']}));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await onSave({
+        ...form,
+        emails: form.emails.map((x) => x.trim()).filter(Boolean),
+        whatsapps: form.whatsapps.map((x) => x.replace(/\D/g, '')).filter(Boolean),
+      });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="ad-modal-card ad-modal-card-wide">
+        <header className="ad-rec-head">
+          <span className="ad-widget-eyebrow">Editar lead frio</span>
+          <h3>{lead.nome || lead.emails?.[0] || lead.whatsapps?.[0] || 'sem nome'}</h3>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onClose}>Fechar</button>
+        </header>
+        <form onSubmit={submit} className="ad-cold-edit-form">
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">Nome</span>
+            <input type="text" value={form.nome} onChange={(e) => setField('nome', e.target.value)} />
+          </label>
+
+          <div className="ad-bc-field">
+            <span className="ad-bc-label">E-mails</span>
+            {form.emails.map((em, i) => (
+              <div key={i} className="ad-cold-arr-row">
+                <input type="email" value={em} onChange={(e) => setArrayItem('emails', i, e.target.value)} placeholder="email@exemplo.com" />
+                <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => removeArrayItem('emails', i)}>×</button>
+              </div>
+            ))}
+            <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => addArrayItem('emails')}>+ E-mail</button>
+          </div>
+
+          <div className="ad-bc-field">
+            <span className="ad-bc-label">WhatsApp / Telefones</span>
+            {form.whatsapps.map((ph, i) => (
+              <div key={i} className="ad-cold-arr-row">
+                <input type="tel" value={ph} onChange={(e) => setArrayItem('whatsapps', i, e.target.value)} placeholder="11999999999" />
+                <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => removeArrayItem('whatsapps', i)}>×</button>
+              </div>
+            ))}
+            <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => addArrayItem('whatsapps')}>+ Telefone</button>
+          </div>
+
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">@ Instagram</span>
+            <input type="text" value={form.instagram} onChange={(e) => setField('instagram', e.target.value.replace(/^@+/, ''))} placeholder="usuario (sem @)" />
+          </label>
+
+          <div className="ad-cold-edit-row">
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Cidade</span>
+              <input type="text" value={form.cidade} onChange={(e) => setField('cidade', e.target.value)} />
+            </label>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">UF</span>
+              <select value={form.estado} onChange={(e) => setField('estado', e.target.value)}>
+                <option value="">—</option>
+                {COLD_UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">Atuação</span>
+            <select value={form.atuacao} onChange={(e) => setField('atuacao', e.target.value)}>
+              <option value="">—</option>
+              {COLD_ATUACOES.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </label>
+
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">Notas internas</span>
+            <textarea value={form.notes} onChange={(e) => setField('notes', e.target.value)} rows={3} />
+          </label>
+
+          <div className="ad-cold-edit-row">
+            <label className="ad-cold-check">
+              <input type="checkbox" checked={form.unsubscribed} onChange={(e) => setField('unsubscribed', e.target.checked)} />
+              <span>Descadastrado (não recebe mais e-mails)</span>
+            </label>
+          </div>
+          <div className="ad-cold-edit-row">
+            <label className="ad-cold-check">
+              <input type="radio" name="freq" checked={form.frequencia === 'normal'} onChange={() => setField('frequencia', 'normal')} />
+              <span>Frequência normal</span>
+            </label>
+            <label className="ad-cold-check">
+              <input type="radio" name="freq" checked={form.frequencia === 'menor'} onChange={() => setField('frequencia', 'menor')} />
+              <span>Frequência menor (1 a cada 4 disparos)</span>
+            </label>
+          </div>
+
+          <div className="ad-modal-actions">
+            <button type="button" className="ad-btn ad-btn-ghost" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="ad-btn ad-btn-primary" disabled={busy}>{busy ? 'Salvando…' : 'Salvar alterações'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================
    COLD LEADS PANEL — importação e gestão de bases frias
    ============================================================ */
 const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
   const [fileName, setFileName] = React.useState('');
-  const [parsed, setParsed] = React.useState(null); // {rows: [...], headers: [...], emailCol, nameCol, phoneCol, statusCol}
+  const [parsed, setParsed] = React.useState(null);
   const [importing, setImporting] = React.useState(false);
   const [importProgress, setImportProgress] = React.useState(null);
   const [importResult, setImportResult] = React.useState(null);
   const [coldList, setColdList] = React.useState(null);
   const [search, setSearch] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  // Edição inline
+  const [editing, setEditing] = React.useState(null); // lead em edição (modal)
+  // Seleção pra mesclagem
+  const [selectedIds, setSelectedIds] = React.useState(() => new Set());
+  const [mergeBusy, setMergeBusy] = React.useState(false);
 
   const loadCold = React.useCallback(async (q = '') => {
     setLoading(true);
@@ -2006,6 +2151,67 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     } catch (e) { alert('Falha: ' + e.message); }
   };
 
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const startMerge = () => {
+    if (selectedIds.size < 2) { alert('Selecione 2 ou mais cadastros pra mesclar.'); return; }
+    if (!coldList) return;
+    const leads = coldList.leads.filter((l) => selectedIds.has(l.id));
+    if (leads.length < 2) { alert('Cadastros selecionados não estão na visão atual.'); return; }
+    // Primary: o que tem mais dado preenchido
+    const score = (l) => (l.emails?.length || 0) + (l.whatsapps?.length || 0) + (l.nome ? 1 : 0) + (l.instagram ? 1 : 0);
+    const sorted = [...leads].sort((a, b) => score(b) - score(a));
+    const primaryId = prompt(
+      'Qual cadastro mantemos como base?\n\n' + sorted.map((l, i) => `${i + 1}. ${l.nome || l.emails?.[0] || l.whatsapps?.[0]} (${l.emails?.length || 0} e-mails · ${l.whatsapps?.length || 0} tel)`).join('\n') + '\n\nDigite o número (Enter pra usar o 1):',
+      '1'
+    );
+    if (!primaryId) return;
+    const idx = (parseInt(primaryId, 10) || 1) - 1;
+    const primary = sorted[idx];
+    if (!primary) { alert('Opção inválida.'); return; }
+    doMerge([...selectedIds], primary.id);
+  };
+
+  const doMerge = async (leadIds, primaryId) => {
+    setMergeBusy(true);
+    try {
+      const res = await api('/api/cold-leads?action=merge', {
+        method: 'PATCH',
+        body: JSON.stringify({leadIds, primaryId}),
+      });
+      if (res.ok) {
+        alert(`Mesclados ${leadIds.length} cadastros em um. ${res.removed || 0} removidos.`);
+        setSelectedIds(new Set());
+        loadCold(search);
+      } else {
+        alert('Falha: ' + (res.error || 'erro'));
+      }
+    } catch (e) { alert('Falha: ' + e.message); }
+    finally { setMergeBusy(false); }
+  };
+
+  const saveEdit = async (form) => {
+    try {
+      const res = await api('/api/cold-leads', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          leadId: editing.id,
+          ...form,
+        }),
+      });
+      if (res.ok) {
+        setEditing(null);
+        loadCold(search);
+      } else {
+        alert('Falha: ' + (res.error || 'erro'));
+      }
+    } catch (e) { alert('Falha: ' + e.message); }
+  };
+
   const fixEncoding = async () => {
     if (!confirm('Vai escanear todos os leads frios e tentar consertar acentos quebrados (mojibake do tipo "RogÃ©rio" → "Rogério"). Pode demorar alguns segundos. Continuar?')) return;
     try {
@@ -2117,6 +2323,14 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         )}
       </section>
 
+      {editing && (
+        <ColdLeadEditModal
+          lead={editing}
+          onClose={() => setEditing(null)}
+          onSave={saveEdit}
+        />
+      )}
+
       <section className="ad-widget ad-bc-history">
         <header className="ad-widget-head">
           <span className="ad-widget-eyebrow">Base atual</span>
@@ -2140,10 +2354,15 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             <table className="ad-bc-history-table">
               <thead>
                 <tr>
+                  <th style={{width: 32}}><input type="checkbox" onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(new Set(coldList.leads.map((l) => l.id)));
+                    else setSelectedIds(new Set());
+                  }} checked={coldList.leads.length > 0 && selectedIds.size === coldList.leads.length} /></th>
                   <th>Canal</th>
                   <th>E-mail</th>
                   <th>Nome</th>
                   <th>WhatsApp</th>
+                  <th>Instagram</th>
                   <th>Origem</th>
                   <th>Status</th>
                   <th></th>
@@ -2153,8 +2372,10 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                 {coldList.leads.map((l) => {
                   const emails = l.emails || (l.email ? [l.email] : []);
                   const phones = l.whatsapps || (l.whatsapp ? [l.whatsapp] : []);
+                  const checked = selectedIds.has(l.id);
                   return (
-                  <tr key={l.id || l.email || l.whatsapp}>
+                  <tr key={l.id || l.email || l.whatsapp} className={checked ? 'is-selected' : ''}>
+                    <td><input type="checkbox" checked={checked} onChange={() => toggleSelect(l.id)} /></td>
                     <td>
                       {l.canal === 'both' ? <span style={{color: '#819470'}}>e-mail + WA</span>
                         : l.canal === 'email' ? <span style={{color: 'var(--sand)'}}>e-mail</span>
@@ -2172,6 +2393,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                         : phones.length === 1 ? phones[0]
                         : <span title={phones.join('\n')}>{phones[0]} <span style={{color:'var(--sand)', fontSize:'10px'}}>+{phones.length - 1}</span></span>}
                     </td>
+                    <td>{l.instagram ? '@' + l.instagram : <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
                     <td className="ad-bc-history-filter" title={(l.sources || [l.source]).join('\n')}>
                       {l.source}{l.sources && l.sources.length > 1 ? <span style={{color:'var(--sand)', fontSize:'10px'}}> +{l.sources.length - 1}</span> : ''}
                     </td>
@@ -2182,7 +2404,8 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                         : l.frequencia === 'menor' ? <span style={{color:'#B89579'}}>freq. menor</span>
                         : <span style={{color:'rgba(247,245,242,0.6)'}}>frio</span>}
                     </td>
-                    <td style={{textAlign:'right'}}>
+                    <td style={{textAlign:'right', whiteSpace:'nowrap'}}>
+                      <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setEditing(l)} style={{marginRight: 6}}>Editar</button>
                       <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => deleteCold(l)}>Remover</button>
                     </td>
                   </tr>
@@ -2190,6 +2413,15 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                 })}
               </tbody>
             </table>
+            {selectedIds.size >= 2 && (
+              <div className="ad-cold-merge-bar">
+                <span><strong>{selectedIds.size}</strong> selecionados</span>
+                <button className="ad-btn ad-btn-primary ad-btn-sm" onClick={startMerge} disabled={mergeBusy}>
+                  {mergeBusy ? 'Mesclando…' : 'Mesclar selecionados'}
+                </button>
+                <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setSelectedIds(new Set())}>Limpar seleção</button>
+              </div>
+            )}
           )}
         {coldList && coldList.leads.length === 200 && (
           <p className="ad-bc-empty" style={{marginTop: 16}}>Mostrando primeiros 200. Use a busca pra filtrar.</p>
