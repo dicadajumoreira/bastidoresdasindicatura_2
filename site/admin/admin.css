@@ -2197,3 +2197,30 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
     border: none;
   }
 }
+
+/* Barra de progresso do disparo */
+.ad-bc-progress {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(247, 245, 242, 0.14);
+}
+.ad-bc-progress-track {
+  height: 6px;
+  background: rgba(247, 245, 242, 0.08);
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+}
+.ad-bc-progress-fill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  background: var(--sand, #DABDA9);
+  transition: width 300ms ease;
+}
+.ad-bc-progress-label {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: rgba(247, 245, 242, 0.7);
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+.ad-bc-progress-label strong { color: var(--sand, #DABDA9); }

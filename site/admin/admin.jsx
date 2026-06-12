@@ -2077,24 +2077,88 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
     } finally { setBusy(false); }
   };
 
+  const [progress, setProgress] = React.useState(null); // {sent, failed, processed, total}
+
   const sendReal = async () => {
     setConfirmOpen(false);
-    setBusy(true); setResult(null);
+    setBusy(true);
+    setResult(null);
+    setProgress({sent: 0, failed: 0, processed: 0, total: 0});
+
+    const filter = {
+      excludeOrigens: [...excludeOrigens],
+      statuses: statusFilter.size ? [...statusFilter] : undefined,
+    };
+    const broadcastId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const LIMIT_PER_CALL = 40;
+    let offset = 0;
+    let totalSent = 0;
+    let totalFailed = 0;
+    let total = 0;
+    const errorsAcc = [];
+    let failCount = 0;
+
     try {
-      const filter = {
-        excludeOrigens: [...excludeOrigens],
-        statuses: statusFilter.size ? [...statusFilter] : undefined,
-      };
-      const res = await api('/api/broadcast', {
-        method: 'POST',
-        body: JSON.stringify({subject, html, filter}),
+      // Loop de paginação: chama backend até não ter mais
+      // Cap de segurança: 200 chamadas (= até 8000 e-mails)
+      for (let i = 0; i < 200; i++) {
+        let res;
+        try {
+          res = await api('/api/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({
+              subject, html, filter,
+              offset, limit: LIMIT_PER_CALL, broadcastId,
+            }),
+          });
+        } catch (e) {
+          // Backend caiu ou timeout. Tenta de novo até 3x antes de desistir.
+          failCount++;
+          if (failCount >= 3) {
+            errorsAcc.push(`Backend não respondeu após 3 tentativas no offset ${offset}: ${e.message}`);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 1500 * failCount));
+          continue;
+        }
+        failCount = 0;
+
+        if (!res.ok) {
+          errorsAcc.push(res.error || 'erro desconhecido');
+          break;
+        }
+
+        totalSent += res.sent || 0;
+        totalFailed += res.failed || 0;
+        total = res.total || total;
+        if (res.errors && res.errors.length) errorsAcc.push(...res.errors);
+
+        setProgress({
+          sent: totalSent,
+          failed: totalFailed,
+          processed: res.nextOffset,
+          total,
+        });
+
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
+      }
+
+      setResult({
+        type: 'real',
+        ok: errorsAcc.length === 0 || totalSent > 0,
+        sent: totalSent,
+        failed: totalFailed,
+        total,
+        errors: errorsAcc.slice(0, 10),
       });
-      setResult({type: 'real', ok: !!res.ok, ...res});
-      // Recarrega histórico em background
       loadHistory();
     } catch (e) {
       setResult({type: 'real', ok: false, error: e.message});
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
   };
 
   const previewHtml = html
@@ -2251,8 +2315,19 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
               disabled={busy || targets.count === 0}
               onClick={() => setConfirmOpen(true)}
             >
-              Disparar pros {targets.count} cadastros
+              {busy ? 'Enviando…' : `Disparar pros ${targets.count} cadastros`}
             </button>
+            {progress && progress.total > 0 && (
+              <div className="ad-bc-progress">
+                <div className="ad-bc-progress-track">
+                  <div className="ad-bc-progress-fill" style={{width: `${Math.round((progress.processed / progress.total) * 100)}%`}}></div>
+                </div>
+                <p className="ad-bc-progress-label">
+                  Enviando <strong>{progress.processed}</strong> de <strong>{progress.total}</strong>
+                  {progress.failed > 0 && <span style={{color:'#d97757'}}> · {progress.failed} falharam</span>}
+                </p>
+              </div>
+            )}
             {result && (
               <div className={'ad-bc-result ' + (result.ok ? 'is-ok' : 'is-err')}>
                 {result.type === 'test' && result.ok && <p>✓ Teste enviado pra <strong>{testEmail}</strong>. Confere a caixa de entrada (ou spam).</p>}

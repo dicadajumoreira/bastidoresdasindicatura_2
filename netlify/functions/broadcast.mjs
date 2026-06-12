@@ -1,24 +1,26 @@
 // Netlify Function v2 · POST /api/broadcast
-// Disparo de e-mail em massa pros leads cadastrados.
-// Exige token Bearer válido (sessão do admin).
+// Disparo de e-mail em massa, com PAGINAÇÃO. O frontend chama essa função
+// repetidamente (offset/limit) até processar todos os destinatários, pra
+// não exceder o tempo limite da serverless function.
 //
 // Body esperado:
 // {
 //   subject: string,
 //   html: string,                     // pode usar {{nome}} e {{material}}
 //   filter: {
-//     excludeOrigens?: string[],      // pessoa que tenha QUALQUER origem aqui é excluída
-//     includeOrigens?: string[],      // se setado, precisa ter pelo menos uma
-//     statuses?: string[],            // filtra por status do cadastro (rep)
-//     states?: string[],              // filtra por UF do rep
+//     excludeOrigens?: string[],
+//     includeOrigens?: string[],
+//     statuses?: string[],
+//     states?: string[],
 //   },
-//   test?: { email: string },         // se presente, manda só pra esse e-mail (modo teste)
+//   offset?: number,                  // padrão 0
+//   limit?: number,                   // padrão 40 (cabe em ~6s)
+//   broadcastId?: string,             // id da campanha (frontend gera no 1º call)
+//   test?: { email: string },         // modo teste, manda só pra esse e-mail
 // }
 //
 // Resposta:
-// { ok: true, sent: N, failed: N, total: N, errors: string[] }
-//
-// Dedupe: agrupa por e-mail (lowercase). Cada e-mail único recebe 1 disparo.
+// { ok: true, sent: N, failed: N, processed: N, total: N, hasMore: bool, nextOffset: N }
 
 import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
@@ -53,7 +55,6 @@ const MATERIAL_NAMES = {
 export default async (req) => {
   if (req.method !== 'POST') return json({error: 'Method not allowed'}, 405);
 
-  // Auth
   const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
@@ -79,6 +80,7 @@ export default async (req) => {
         to: [body.test.email],
         subject: personalize(subject, {nome: 'Teste', material: 'o material'}),
         html: personalize(html, {nome: 'Teste', material: 'o material'}),
+        reply_to: 'contato@dicadajumoreira.com.br',
       });
       return json({ok: true, sent: 1, failed: 0, total: 1, test: true});
     } catch (e) {
@@ -86,22 +88,25 @@ export default async (req) => {
     }
   }
 
-  // ====== MODO REAL ======
+  // ====== MODO REAL (paginado) ======
+  const offset = Math.max(0, parseInt(body.offset || 0, 10) || 0);
+  const limit = Math.max(1, Math.min(60, parseInt(body.limit || 40, 10) || 40));
+  const broadcastId = String(body.broadcastId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+
   try {
     const store = getStore({name: 'leads', consistency: 'strong'});
-    const {leads} = await buildLeads(store, {budgetMs: 18000});
+    const {leads} = await buildLeads(store, {budgetMs: 3000});
 
-    // Dedupe por e-mail (lowercase, trim). Coleciona origens de TODOS os
-    // cadastros daquele e-mail pra aplicar a regra de excluir corretamente.
+    // Dedupe por e-mail
     const byEmail = new Map();
     for (const l of leads) {
-      if (l.deletedAt) continue; // ignora lixeira
+      if (l.deletedAt) continue;
       const email = String(l.email || '').trim().toLowerCase();
       if (!email || !email.includes('@')) continue;
       if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});
-      const entry = byEmail.get(email);
-      entry.leads.push(l);
-      entry.origens.add(l.origem || 'mentoria');
+      const e = byEmail.get(email);
+      e.leads.push(l);
+      e.origens.add(l.origem || 'mentoria');
     }
 
     const filter = body.filter || {};
@@ -113,54 +118,39 @@ export default async (req) => {
     const states = filter.states && filter.states.length
       ? new Set(filter.states) : null;
 
-    const targets = [];
+    const allTargets = [];
     for (const [email, entry] of byEmail) {
-      // Pula se qualquer origem da pessoa estiver na lista de exclusão
       let excluded = false;
       for (const o of entry.origens) if (excludeOrigens.has(o)) { excluded = true; break; }
       if (excluded) continue;
 
-      // Se include configurado, precisa ter ao menos uma origem na lista
       if (includeOrigens) {
         let any = false;
         for (const o of entry.origens) if (includeOrigens.has(o)) { any = true; break; }
         if (!any) continue;
       }
 
-      // Lead mais recente é o representante
       const rep = entry.leads.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
       if (statuses && !statuses.has(rep.status || 'novo')) continue;
       if (states && !states.has(rep.estado || '')) continue;
 
-      targets.push({
-        email,
-        rep,
-        origens: [...entry.origens],
-      });
+      allTargets.push({email, rep, origens: [...entry.origens]});
     }
 
-    // Dispara com concorrência limitada
-    const CONCURRENCY = 20;
+    // Ordem estável: por email (lexicográfica) pra paginação consistente entre calls
+    allTargets.sort((a, b) => a.email.localeCompare(b.email));
+
+    const total = allTargets.length;
+    const slice = allTargets.slice(offset, offset + limit);
+    const processed = slice.length;
+
+    // Dispara o lote em paralelo
+    const CONCURRENCY = 30;
     let sent = 0, failed = 0;
     const errors = [];
-    const startedAt = Date.now();
-    const MAX_BUDGET_MS = 50000; // 50s budget (Netlify Pro permite mais; fica seguro)
 
-    for (let i = 0; i < targets.length; i += CONCURRENCY) {
-      if (Date.now() - startedAt > MAX_BUDGET_MS) {
-        return json({
-          ok: false,
-          partial: true,
-          sent,
-          failed,
-          total: targets.length,
-          processed: i,
-          remaining: targets.length - i,
-          errors,
-          message: `Tempo limite atingido. Processei ${i} de ${targets.length}. Rode novamente pra continuar.`,
-        });
-      }
-      const batch = targets.slice(i, i + CONCURRENCY);
+    for (let i = 0; i < slice.length; i += CONCURRENCY) {
+      const batch = slice.slice(i, i + CONCURRENCY);
       const results = await Promise.allSettled(batch.map((t) => {
         const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
         const primaryOrigem = t.origens[0];
@@ -178,27 +168,31 @@ export default async (req) => {
       }));
       for (const r of results) {
         if (r.status === 'fulfilled') sent++;
-        else { failed++; if (errors.length < 10) errors.push(String(r.reason?.message || 'erro').slice(0, 200)); }
+        else { failed++; if (errors.length < 5) errors.push(String(r.reason?.message || 'erro').slice(0, 200)); }
       }
     }
 
-    // Salva histórico do disparo (best-effort, não derruba a resposta)
+    const nextOffset = offset + processed;
+    const hasMore = nextOffset < total;
+
+    // Atualiza histórico cumulativamente (best-effort)
     try {
       const histStore = getStore({name: 'broadcasts', consistency: 'strong'});
-      const histId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      let existing = null;
+      try { existing = await histStore.get(broadcastId, {type: 'json'}); } catch {}
       const filterSummary = [];
       if (excludeOrigens.size) filterSummary.push(`excluir ${[...excludeOrigens].join(', ')}`);
       if (includeOrigens) filterSummary.push(`incluir ${[...includeOrigens].join(', ')}`);
       if (statuses) filterSummary.push(`status ${[...statuses].join(', ')}`);
       if (states) filterSummary.push(`UF ${[...states].join(', ')}`);
-      await histStore.setJSON(histId, {
-        id: histId,
-        sentAt: new Date().toISOString(),
+      await histStore.setJSON(broadcastId, {
+        id: broadcastId,
+        sentAt: existing?.sentAt || new Date().toISOString(),
         subject,
-        html, // armazena pra reuso/cópia futura
-        sent,
-        failed,
-        total: targets.length,
+        html,
+        sent: (existing?.sent || 0) + sent,
+        failed: (existing?.failed || 0) + failed,
+        total,
         filter: {
           excludeOrigens: [...excludeOrigens],
           includeOrigens: includeOrigens ? [...includeOrigens] : null,
@@ -206,12 +200,25 @@ export default async (req) => {
           states: states ? [...states] : null,
         },
         filterSummary: filterSummary.join(' · ') || 'todos os leads',
+        completed: !hasMore,
+        lastBatchAt: new Date().toISOString(),
       });
     } catch (e) {
       console.error('[broadcast] failed to save history:', e.message);
     }
 
-    return json({ok: true, sent, failed, total: targets.length, errors});
+    return json({
+      ok: true,
+      sent,
+      failed,
+      processed,
+      total,
+      offset,
+      nextOffset,
+      hasMore,
+      broadcastId,
+      errors,
+    });
 
   } catch (err) {
     return json({error: 'Falha no disparo: ' + (err && err.message || 'erro desconhecido')}, 500);
