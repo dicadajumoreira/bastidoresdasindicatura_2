@@ -1572,7 +1572,7 @@ const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
 /* ============================================================
    OVERVIEW — Dashboard com estatísticas, tela inicial do admin
    ============================================================ */
-const Overview = ({onLogout, onOpenLeads, onOpenBroadcast}) => {
+const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -1687,6 +1687,9 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast}) => {
           {onOpenBroadcast && (
             <button className="ad-btn ad-btn-ghost" onClick={onOpenBroadcast}>Disparar e-mail</button>
           )}
+          {onOpenColdLeads && (
+            <button className="ad-btn ad-btn-ghost" onClick={onOpenColdLeads}>Leads frios</button>
+          )}
           <button className="ad-btn ad-btn-ghost" onClick={logout}>Sair</button>
         </div>
       </header>
@@ -1794,6 +1797,264 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast}) => {
 
         </div>
       )}
+    </div>
+  );
+};
+
+/* ============================================================
+   COLD LEADS PANEL — importação e gestão de bases frias
+   ============================================================ */
+const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
+  const [fileName, setFileName] = React.useState('');
+  const [parsed, setParsed] = React.useState(null); // {rows: [...], headers: [...], emailCol, nameCol, phoneCol, statusCol}
+  const [importing, setImporting] = React.useState(false);
+  const [importProgress, setImportProgress] = React.useState(null);
+  const [importResult, setImportResult] = React.useState(null);
+  const [coldList, setColdList] = React.useState(null);
+  const [search, setSearch] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const loadCold = React.useCallback(async (q = '') => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({limit: '200'});
+      if (q) params.set('search', q);
+      const res = await api(`/api/cold-leads?${params}`);
+      setColdList({leads: res.leads || [], total: res.total || 0, totalAll: res.totalAll || 0});
+    } catch (e) {
+      setColdList({leads: [], total: 0, error: e.message});
+    } finally { setLoading(false); }
+  }, []);
+  React.useEffect(() => { loadCold(); }, [loadCold]);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setFileName(file.name);
+    setImportResult(null);
+    setParsed(null);
+    try {
+      const data = await file.arrayBuffer();
+      const wb = window.XLSX.read(data, {type: 'array', raw: true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      // Para CSV com ; e UTF-8, SheetJS lida automaticamente. Para XLSX também.
+      const rows = window.XLSX.utils.sheet_to_json(ws, {defval: '', raw: false});
+      if (!rows.length) { alert('Arquivo vazio ou sem dados.'); return; }
+      const headers = Object.keys(rows[0]);
+      // Auto-detect colunas
+      const findCol = (regex) => headers.find((h) => regex.test(h.toLowerCase().trim()));
+      const emailCol = findCol(/^e-?mail$/) || findCol(/email/);
+      const nameCol = findCol(/^nome$/) || findCol(/^name$/) || findCol(/nome/) || findCol(/name/);
+      const phoneCol = findCol(/^celular$/) || findCol(/^telefone$/) || findCol(/^phone$/) || findCol(/whatsapp/i) || findCol(/celular/) || findCol(/phone/);
+      const statusCol = findCol(/email_status/) || findCol(/status/);
+      setParsed({rows, headers, emailCol, nameCol, phoneCol, statusCol});
+    } catch (e) {
+      alert('Falha ao ler o arquivo: ' + e.message);
+    }
+  };
+
+  const previewRows = parsed ? parsed.rows.slice(0, 5) : [];
+  const validRowCount = parsed ? parsed.rows.filter((r) => {
+    const email = String((parsed.emailCol ? r[parsed.emailCol] : '') || '').trim();
+    return email && email.includes('@');
+  }).length : 0;
+
+  const doImport = async () => {
+    if (!parsed) return;
+    if (!parsed.emailCol) { alert('Não detectei coluna de e-mail. Esse arquivo precisa ter uma coluna com e-mails pra ser importado.'); return; }
+    if (!confirm(`Vai importar ${validRowCount} entradas com e-mail. Duplicatas (e-mail já cadastrado como frio) serão ignoradas. Continuar?`)) return;
+
+    setImporting(true);
+    setImportResult(null);
+    setImportProgress({sent: 0, imported: 0, duplicates: 0, invalid: 0, total: validRowCount});
+
+    const entries = parsed.rows
+      .map((r) => ({
+        email: String(r[parsed.emailCol] || '').trim(),
+        nome: parsed.nameCol ? String(r[parsed.nameCol] || '').trim() : '',
+        whatsapp: parsed.phoneCol ? String(r[parsed.phoneCol] || '').trim() : '',
+        emailStatus: parsed.statusCol ? String(r[parsed.statusCol] || '').trim() : '',
+      }))
+      .filter((e) => e.email && e.email.includes('@'));
+
+    const CHUNK = 200;
+    let totals = {imported: 0, duplicates: 0, invalid: 0};
+    const errorsAcc = [];
+    try {
+      for (let i = 0; i < entries.length; i += CHUNK) {
+        const chunk = entries.slice(i, i + CHUNK);
+        const res = await api('/api/cold-leads', {
+          method: 'POST',
+          body: JSON.stringify({entries: chunk, source: fileName}),
+        });
+        if (res.ok) {
+          totals.imported += res.imported || 0;
+          totals.duplicates += res.duplicates || 0;
+          totals.invalid += res.invalid || 0;
+          if (res.errors?.length) errorsAcc.push(...res.errors);
+        } else {
+          errorsAcc.push(res.error || 'erro');
+        }
+        setImportProgress({sent: i + chunk.length, total: entries.length, ...totals});
+      }
+      setImportResult({ok: true, ...totals, total: entries.length, errors: errorsAcc.slice(0, 10)});
+      loadCold();
+    } catch (e) {
+      setImportResult({ok: false, error: e.message, ...totals});
+    } finally {
+      setImporting(false);
+      setImportProgress(null);
+    }
+  };
+
+  const deleteCold = async (email) => {
+    if (!confirm(`Remover ${email} da base de leads frios?`)) return;
+    try {
+      await api(`/api/cold-leads?email=${encodeURIComponent(email)}`, {method: 'DELETE'});
+      loadCold(search);
+    } catch (e) { alert('Falha: ' + e.message); }
+  };
+
+  return (
+    <div className="ad-broadcast">
+      <header className="ad-broadcast-head">
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onBackToOverview}>← Voltar à visão geral</button>
+        <h1 className="ad-broadcast-title">Leads frios</h1>
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+      </header>
+
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Importar nova base</span>
+          <h2 className="ad-widget-title">Upload de planilha</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Aceita <strong>CSV</strong> ou <strong>XLSX</strong>. O sistema detecta automaticamente as colunas de e-mail, nome e telefone. Entradas sem e-mail são <em>ignoradas</em>. Bounces (status "You can't send emails…") são <em>importados marcados</em> pra não receberem disparos.
+        </p>
+        <input
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          onChange={(e) => handleFile(e.target.files[0])}
+          disabled={importing}
+          className="ad-cold-file"
+        />
+
+        {parsed && (
+          <div className="ad-cold-preview">
+            <div className="ad-cold-detect">
+              <p><strong>{parsed.rows.length}</strong> linhas totais · <strong>{validRowCount}</strong> com e-mail válido</p>
+              <p>Colunas detectadas:
+                <span className="ad-cold-tag">e-mail: <code>{parsed.emailCol || '(não encontrei)'}</code></span>
+                <span className="ad-cold-tag">nome: <code>{parsed.nameCol || '—'}</code></span>
+                <span className="ad-cold-tag">telefone: <code>{parsed.phoneCol || '—'}</code></span>
+                {parsed.statusCol && <span className="ad-cold-tag">status: <code>{parsed.statusCol}</code></span>}
+              </p>
+            </div>
+
+            <div className="ad-cold-prev-table-wrap">
+              <table className="ad-bc-history-table">
+                <thead>
+                  <tr>{parsed.headers.map((h) => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((r, i) => (
+                    <tr key={i}>{parsed.headers.map((h) => <td key={h}>{String(r[h] || '').slice(0, 60)}</td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <button
+              className="ad-btn ad-btn-primary ad-btn-lg"
+              disabled={importing || !parsed.emailCol}
+              onClick={doImport}
+            >
+              {importing ? 'Importando…' : `Importar ${validRowCount} entradas`}
+            </button>
+
+            {importProgress && (
+              <div className="ad-bc-progress">
+                <div className="ad-bc-progress-track">
+                  <div className="ad-bc-progress-fill" style={{width: `${Math.round((importProgress.sent / importProgress.total) * 100)}%`}}></div>
+                </div>
+                <p className="ad-bc-progress-label">
+                  Processando {importProgress.sent} de {importProgress.total} ·
+                  <strong style={{color:'#819470'}}> {importProgress.imported} novos</strong> ·
+                  <span style={{color:'rgba(247,245,242,0.55)'}}> {importProgress.duplicates} duplicatas</span>
+                </p>
+              </div>
+            )}
+
+            {importResult && (
+              <div className={'ad-bc-result ' + (importResult.ok ? 'is-ok' : 'is-err')}>
+                {importResult.ok ? (
+                  <>
+                    <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · {importResult.duplicates} duplicatas ignoradas · {importResult.invalid} inválidos</p>
+                  </>
+                ) : <p>Erro: {importResult.error}</p>}
+                {importResult.errors?.length > 0 && (
+                  <details><summary>Erros</summary><ul>{importResult.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></details>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="ad-widget ad-bc-history">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Base atual</span>
+          <h2 className="ad-widget-title">Leads frios cadastrados <small style={{color:'rgba(247,245,242,0.55)'}}>{coldList?.totalAll != null ? `· ${coldList.totalAll} total` : ''}</small></h2>
+        </header>
+        <div className="ad-cold-search">
+          <input
+            type="search"
+            placeholder="Buscar por e-mail…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && loadCold(search)}
+          />
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => loadCold(search)}>Buscar</button>
+        </div>
+        {loading ? <p className="ad-bc-empty">Carregando…</p>
+          : !coldList || coldList.leads.length === 0 ? <p className="ad-bc-empty">Nenhum lead frio {search ? 'encontrado pra busca' : 'ainda. Importe uma planilha acima.'}</p>
+          : (
+            <table className="ad-bc-history-table">
+              <thead>
+                <tr>
+                  <th>E-mail</th>
+                  <th>Nome</th>
+                  <th>WhatsApp</th>
+                  <th>Origem</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {coldList.leads.map((l) => (
+                  <tr key={l.email}>
+                    <td className="ad-bc-history-subject">{l.email}</td>
+                    <td>{l.nome || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
+                    <td>{l.whatsapp || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
+                    <td className="ad-bc-history-filter">{l.source}</td>
+                    <td>
+                      {l.unsubscribed ? <span style={{color:'#d97757'}}>descadastrou</span>
+                        : l.convertedToHotAt ? <span style={{color:'#819470'}}>virou quente</span>
+                        : l.emailStatus && l.emailStatus.toLowerCase().includes("can't send") ? <span style={{color:'#d97757'}}>bounce</span>
+                        : l.frequencia === 'menor' ? <span style={{color:'#B89579'}}>freq. menor</span>
+                        : <span style={{color:'rgba(247,245,242,0.6)'}}>frio</span>}
+                    </td>
+                    <td style={{textAlign:'right'}}>
+                      <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => deleteCold(l.email)}>Remover</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        {coldList && coldList.leads.length === 200 && (
+          <p className="ad-bc-empty" style={{marginTop: 16}}>Mostrando primeiros 200. Use a busca pra filtrar.</p>
+        )}
+      </section>
     </div>
   );
 };
@@ -2829,6 +3090,7 @@ const App = () => {
       onLogout={() => setAuthed(false)}
       onOpenLeads={() => setView('leads')}
       onOpenBroadcast={() => setView('broadcast')}
+      onOpenColdLeads={() => setView('cold')}
     />;
   }
   if (view === 'broadcast') {
@@ -2839,6 +3101,12 @@ const App = () => {
       leadsLoading={leadsLoading}
       leadsLoadInfo={leadsLoadInfo}
       onReloadLeads={reloadLeads}
+    />;
+  }
+  if (view === 'cold') {
+    return <ColdLeadsPanel
+      onLogout={() => setAuthed(false)}
+      onBackToOverview={() => setView('overview')}
     />;
   }
   return <LeadsPanel onLogout={() => setAuthed(false)} onBackToOverview={() => setView('overview')} />;

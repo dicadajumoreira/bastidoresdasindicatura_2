@@ -2402,3 +2402,86 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(217, 119, 87, 0.18);
   color: #d97757;
 }
+
+/* Leads frios */
+.ad-cold-file {
+  display: block;
+  padding: 14px 18px;
+  background: rgba(247, 245, 242, 0.04);
+  border: 1px dashed rgba(247, 245, 242, 0.22);
+  color: var(--offwhite, #F7F5F2);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 18px;
+  width: 100%;
+}
+.ad-cold-file::file-selector-button {
+  margin-right: 14px;
+  background: var(--onix-deep, #11131e);
+  border: 1px solid rgba(218, 189, 169, 0.4);
+  color: var(--sand, #DABDA9);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ad-cold-preview {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(247, 245, 242, 0.14);
+}
+.ad-cold-detect {
+  padding: 12px 14px;
+  background: rgba(247, 245, 242, 0.03);
+  border-left: 2px solid var(--sand, #DABDA9);
+  margin-bottom: 16px;
+}
+.ad-cold-detect p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(247, 245, 242, 0.78);
+}
+.ad-cold-detect p:last-child { margin-bottom: 0; }
+.ad-cold-tag {
+  display: inline-block;
+  margin: 0 6px;
+  font-size: 11px;
+  color: rgba(247, 245, 242, 0.6);
+}
+.ad-cold-tag code {
+  background: rgba(247, 245, 242, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--sand, #DABDA9);
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+.ad-cold-prev-table-wrap {
+  margin-bottom: 18px;
+  overflow-x: auto;
+  max-height: 220px;
+  border: 1px solid rgba(247, 245, 242, 0.08);
+}
+.ad-cold-search {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.ad-cold-search input {
+  flex: 1;
+  background: rgba(247, 245, 242, 0.04);
+  border: 1px solid rgba(247, 245, 242, 0.18);
+  color: var(--offwhite, #F7F5F2);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+}
+.ad-cold-search input:focus {
+  outline: none;
+  border-color: var(--sand, #DABDA9);
+}
