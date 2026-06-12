@@ -2094,17 +2094,34 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
       }
     }
 
-    const CHUNK = 200;
+    // Chunks pequenos pra cada chamada caber no timeout de 10s da Netlify
+    // Function (cada entrada faz ~6 ops no Blobs). 40 é folgado e seguro.
+    const CHUNK = 40;
     let totals = {imported: 0, merged: 0, invalid: 0};
     const errorsAcc = [];
     try {
       for (let i = 0; i < allEntries.length; i += CHUNK) {
         const chunk = allEntries.slice(i, i + CHUNK);
-        const res = await api('/api/cold-leads', {
-          method: 'POST',
-          body: JSON.stringify({entries: chunk, source: fileName}),
-        });
-        if (res.ok) {
+        // Retry até 3x em falhas de rede/timeout (resposta inválida = HTML)
+        let res = null;
+        let attempt = 0;
+        let lastErr = '';
+        while (attempt < 3 && !res) {
+          attempt++;
+          try {
+            res = await api('/api/cold-leads', {
+              method: 'POST',
+              body: JSON.stringify({entries: chunk, source: fileName}),
+            });
+          } catch (e) {
+            lastErr = e.message || 'erro de rede';
+            if (attempt < 3) await new Promise((r) => setTimeout(r, 1200 * attempt));
+          }
+        }
+        if (!res) {
+          errorsAcc.push(`Lote ${i}-${i + chunk.length}: ${lastErr} (3 tentativas)`);
+          // Continua importando os próximos lotes mesmo assim
+        } else if (res.ok) {
           totals.imported += res.imported || 0;
           totals.merged += res.merged || 0;
           totals.invalid += res.invalid || 0;
@@ -2114,10 +2131,11 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         }
         setImportProgress({sent: i + chunk.length, total: allEntries.length, ...totals});
       }
-      setImportResult({ok: true, ...totals, total: allEntries.length, errors: errorsAcc.slice(0, 10)});
+      setImportResult({ok: errorsAcc.length === 0 || (totals.imported + totals.merged) > 0,
+        ...totals, total: allEntries.length, errors: errorsAcc.slice(0, 10), partial: errorsAcc.length > 0});
       loadCold();
     } catch (e) {
-      setImportResult({ok: false, error: e.message, ...totals});
+      setImportResult({ok: false, error: e.message, ...totals, errors: errorsAcc.slice(0, 10)});
     } finally {
       setImporting(false);
       setImportProgress(null);
