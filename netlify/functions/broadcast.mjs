@@ -166,13 +166,17 @@ export default async (req) => {
     const slice = allTargets.slice(offset, offset + limit);
     const processed = slice.length;
 
-    // Dispara o lote em paralelo
-    const CONCURRENCY = 30;
+    // Resend tem rate limit de 5 req/s. Disparamos em lotes de 4 em paralelo
+    // (deixando margem) e aguardamos 1100ms entre lotes pra ficar abaixo do
+    // limite. Pra 40 emails: ~10 lotes × 1.1s = ~11s por chamada, dentro do
+    // budget da Netlify Function.
+    const RATE_BATCH = 4;
+    const RATE_DELAY_MS = 1100;
     let sent = 0, failed = 0;
     const errors = [];
 
-    for (let i = 0; i < slice.length; i += CONCURRENCY) {
-      const batch = slice.slice(i, i + CONCURRENCY);
+    for (let i = 0; i < slice.length; i += RATE_BATCH) {
+      const batch = slice.slice(i, i + RATE_BATCH);
       const results = await Promise.allSettled(batch.map((t) => {
         const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
         const primaryOrigem = t.origens[0];
@@ -191,6 +195,10 @@ export default async (req) => {
       for (const r of results) {
         if (r.status === 'fulfilled') sent++;
         else { failed++; if (errors.length < 5) errors.push(String(r.reason?.message || 'erro').slice(0, 200)); }
+      }
+      // Espera antes do próximo lote (exceto se for o último)
+      if (i + RATE_BATCH < slice.length) {
+        await new Promise((res) => setTimeout(res, RATE_DELAY_MS));
       }
     }
 
