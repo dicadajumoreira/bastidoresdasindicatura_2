@@ -242,40 +242,36 @@ export default async (req) => {
       }
 
       // ====== LEADS FRIOS (opcional) ======
-      // Quando filter.includeCold === true, agrega leads frios da store
-      // 'cold-leads'. Pula descadastrados; respeita frequência reduzida
-      // (1 a cada 4 disparos — heurística simples: skipa quando o
-      // broadcastId hashado mod 4 != 0 pra cada lead).
+      // Lê do índice resumo (cold-leads-summary) construído por uma
+      // background function. UMA leitura de blob em vez de escanear 14k
+      // registros. Frequência menor recebe 1 a cada 4 disparos (hash
+      // determinístico por email × broadcastId).
       if (body.filter && body.filter.includeCold) {
         try {
-          const coldStore = getStore({name: 'cold-leads', consistency: 'strong'});
-          const list = await coldStore.list();
+          const summaryStore = getStore({name: 'cold-leads-summary', consistency: 'strong'});
+          const summary = await summaryStore.get('summary', {type: 'json'});
+          if (!summary || !Array.isArray(summary.entries)) {
+            return json({
+              error: 'Índice de leads frios ainda não foi construído. Vai em "Leads frios" no admin e clica em "Reconstruir índice", aguarda 1-2 minutos, depois tenta de novo.',
+              needsColdIndex: true,
+            }, 400);
+          }
           const seenEmails = new Set(allTargets.map((t) => t.email));
-          // Hash determinístico do broadcastId pra rolar a frequência menor
           const hashSeed = [...broadcastId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-          for (const b of (list.blobs || [])) {
-            if (!b.key.startsWith('lead:')) continue;
-            try {
-              const lead = await coldStore.get(b.key, {type: 'json'});
-              if (!lead) continue;
-              if (lead.unsubscribed) continue;
-              const emails = lead.emails && lead.emails.length ? lead.emails : (lead.email ? [lead.email] : []);
-              for (const em of emails) {
-                const email = String(em || '').trim().toLowerCase();
-                if (!email || !email.includes('@')) continue;
-                if (seenEmails.has(email)) continue;
-                // Frequência menor: pula 3 a cada 4 disparos
-                if (lead.frequencia === 'menor') {
-                  const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, hashSeed);
-                  if (emHash % 4 !== 0) continue;
-                }
-                seenEmails.add(email);
-                allTargets.push({email, rep: {nome: lead.nome || '', email}, origens: ['cold']});
-              }
-            } catch {}
+          for (const entry of summary.entries) {
+            if (entry.unsubscribed) continue;
+            if (entry.status && String(entry.status).toLowerCase().includes("can't send")) continue;
+            const email = entry.email;
+            if (!email || seenEmails.has(email)) continue;
+            if (entry.frequencia === 'menor') {
+              const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, hashSeed);
+              if (emHash % 4 !== 0) continue;
+            }
+            seenEmails.add(email);
+            allTargets.push({email, rep: {nome: entry.nome || '', email}, origens: ['cold']});
           }
         } catch (e) {
-          console.error('[broadcast] cold leads load failed:', e.message);
+          console.error('[broadcast] cold summary load failed:', e.message);
         }
       }
 

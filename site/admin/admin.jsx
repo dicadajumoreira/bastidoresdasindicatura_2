@@ -2240,6 +2240,29 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     } catch (e) { alert('Falha: ' + e.message); }
   };
 
+  // ============ Índice resumo (usado pelo disparo) ============
+  const [summaryStatus, setSummaryStatus] = React.useState(null);
+  const loadSummaryStatus = React.useCallback(async () => {
+    try {
+      const res = await api('/api/cold-leads-summary');
+      setSummaryStatus(res);
+    } catch { setSummaryStatus({exists: false, status: 'unknown'}); }
+  }, []);
+  React.useEffect(() => { loadSummaryStatus(); }, [loadSummaryStatus]);
+  React.useEffect(() => {
+    if (summaryStatus?.status !== 'building') return;
+    const id = setInterval(loadSummaryStatus, 4000);
+    return () => clearInterval(id);
+  }, [summaryStatus?.status, loadSummaryStatus]);
+
+  const rebuildSummary = async () => {
+    if (!confirm('Vai reconstruir o índice de leads frios usado pelo disparo de e-mail. Demora ~1-2 min em background. Continuar?')) return;
+    try {
+      await api('/api/cold-leads-summary', {method: 'POST', body: JSON.stringify({})});
+      loadSummaryStatus();
+    } catch (e) { alert('Falha: ' + e.message); }
+  };
+
   return (
     <div className="ad-broadcast">
       <header className="ad-broadcast-head">
@@ -2364,8 +2387,32 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
           />
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => loadCold(search)}>Buscar</button>
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={fixEncoding}>↻ Consertar acentos</button>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={rebuildSummary} disabled={summaryStatus?.status === 'building'}>
+            {summaryStatus?.status === 'building'
+              ? `Construindo índice… ${summaryStatus.progress || 0}/${summaryStatus.progressTotal || '?'}`
+              : '↻ Reconstruir índice de disparo'}
+          </button>
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={deleteBySource} style={{color: '#d97757'}}>Limpar por origem…</button>
         </div>
+        {summaryStatus && (
+          <p className="ad-bc-hint" style={{margin: '6px 0 14px', fontSize: 12, color: 'rgba(247,245,242,0.55)'}}>
+            Índice de disparo:
+            {summaryStatus.status === 'ready' && summaryStatus.builtAt && (
+              <> <span style={{color: '#819470'}}>pronto</span> · {summaryStatus.count} e-mails únicos · atualizado em {fmtDate(summaryStatus.builtAt)}</>
+            )}
+            {summaryStatus.status === 'building' && (
+              <> <span style={{color: 'var(--sand)'}}>construindo…</span> {summaryStatus.progress}/{summaryStatus.progressTotal || '?'} registros processados</>
+            )}
+            {summaryStatus.status === 'missing' && (
+              <> <span style={{color: '#d97757'}}>não construído</span> · clica em "Reconstruir índice" antes de fazer disparo com leads frios</>
+            )}
+            {summaryStatus.status === 'error' && (
+              <> <span style={{color: '#d97757'}}>erro: {summaryStatus.error}</span></>
+            )}
+            <br/>
+            <span style={{color: 'rgba(247,245,242,0.4)'}}>O índice é o que o disparo de e-mail lê pra mandar pros leads frios. Reconstrói depois de importar bases novas ou editar muitos cadastros.</span>
+          </p>
+        )}
         {loading ? <p className="ad-bc-empty">Carregando…</p>
           : !coldList || coldList.leads.length === 0 ? <p className="ad-bc-empty">Nenhum lead frio {search ? 'encontrado pra busca' : 'ainda. Importe uma planilha acima.'}</p>
           : (
@@ -2873,11 +2920,22 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
 
   const schedule = async () => {
     if (!scheduledFor) { alert('Escolha uma data e hora pro agendamento.'); return; }
+    if (includeCold) {
+      try {
+        const s = await api('/api/cold-leads-summary');
+        if (s.status !== 'ready' || !s.exists) {
+          if (!confirm(
+            'O índice de leads frios não está pronto. O agendamento pode falhar na hora marcada se o índice não estiver disponível.\n\nRecomendo cancelar, ir em "Leads frios" e clicar em "Reconstruir índice" antes de agendar.\n\nContinuar mesmo assim?'
+          )) return;
+        }
+      } catch {}
+    }
     setBusy(true); setResult(null);
     try {
       const filter = {
         excludeOrigens: [...excludeOrigens],
         statuses: statusFilter.size ? [...statusFilter] : undefined,
+        includeCold: includeCold || undefined,
       };
       // Trata o valor do datetime-local SEMPRE como horário de Brasília (UTC-3),
       // ignorando o fuso do navegador da pessoa que está agendando.
@@ -2936,8 +2994,35 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     finally { setBusy(false); }
   };
 
+  // Verifica se o índice de leads frios está pronto antes de chamar o
+  // broadcast. Se não está, oferece pra construir.
+  const ensureColdSummaryReady = async () => {
+    if (!includeCold) return true;
+    try {
+      const s = await api('/api/cold-leads-summary');
+      if (s.status === 'ready' && s.exists) return true;
+      if (s.status === 'building') {
+        alert(`O índice de leads frios ainda tá sendo construído (${s.progress || 0} de ${s.progressTotal || '?'} processados). Aguarda terminar e tenta de novo.`);
+        return false;
+      }
+      // missing ou error
+      if (confirm(
+        'O índice de leads frios precisa ser construído antes do disparo (demora ~1-2 min em background).\n\nClica OK pra eu disparar a construção agora. Quando terminar, volta aqui e clica em "Disparar" de novo.'
+      )) {
+        try { await api('/api/cold-leads-summary', {method: 'POST', body: JSON.stringify({})}); } catch {}
+        alert('Construção iniciada. Aguarda ~1-2 min, recarrega a página e tenta o disparo de novo.');
+      }
+      return false;
+    } catch (e) {
+      alert('Falha ao verificar índice de leads frios: ' + e.message);
+      return false;
+    }
+  };
+
   const sendReal = async () => {
     setConfirmOpen(false);
+    const okCold = await ensureColdSummaryReady();
+    if (!okCold) return;
     setBusy(true);
     setResult(null);
     setProgress({sent: 0, failed: 0, processed: 0, total: 0});
