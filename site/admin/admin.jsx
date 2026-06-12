@@ -2689,7 +2689,7 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
           </td></tr>
         </table>
         <p style="text-align:center;margin:0 0 28px">
-          <a href="https://bastidoresdasindicatura.com.br/sorteio-mba/" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 28px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero concorrer à bolsa</a>
+          <a href="https://bastidoresdasindicatura.com.br/mba/" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 28px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero concorrer à bolsa</a>
         </p>
         <p style="font-size:14px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
           A inscrição leva 2 minutos. A turma começa semana que vem.

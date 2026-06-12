@@ -95,7 +95,20 @@
 
 [[edge_functions]]
   function = "serve-html"
-  path = "/sorteio-mba/"
+  path = "/mba/"
+
+# Redirect 301 da URL antiga pra preservar links já compartilhados
+[[redirects]]
+  from = "/sorteio-mba/"
+  to = "/mba/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/sorteio-mba"
+  to = "/mba/"
+  status = 301
+  force = true
 
 # As rotas /api/* agora são declaradas via `export const config = { path: ... }`
 # em cada function. Mantemos esses redirects como FALLBACK (não-force) caso
