@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Descadastrar · Bastidores da Sindicatura</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Georgia, 'Bodoni Moda', serif;
+      background: #F2EFE9;
+      color: #1A1C29;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      line-height: 1.5;
+    }
+    .card {
+      background: #F7F5F2;
+      max-width: 520px;
+      width: 100%;
+      padding: 40px 36px;
+      border: 1px solid #E8E2D8;
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      font-size: 11px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: #B89579;
+      font-weight: 700;
+    }
+    h1 {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-weight: 400;
+      font-size: 30px;
+      line-height: 1.15;
+      margin: 0 0 18px;
+    }
+    p { margin: 0 0 14px; font-size: 15px; }
+    .email { font-weight: 700; color: #B89579; word-break: break-all; }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+    button {
+      font-family: Georgia, 'Bodoni Moda', serif;
+      font-size: 13px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 16px 22px;
+      cursor: pointer;
+      background: #1A1C29;
+      color: #F7F5F2;
+      border: 1px solid #1A1C29;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button.ghost {
+      background: transparent;
+      color: #1A1C29;
+      border: 1px solid #1A1C29;
+    }
+    button[disabled] { opacity: .5; cursor: not-allowed; }
+    .footer { margin-top: 28px; font-size: 12px; color: #8a8881; text-align: center; }
+    .footer a { color: #B89579; }
+    .msg { padding: 14px; background: #FBF8F2; border-left: 3px solid #B89579; margin-top: 18px; font-size: 14px; }
+    .err { color: #d97757; }
+    .ok { color: #819470; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p class="eyebrow">Bastidores da Sindicatura</p>
+
+    <div id="loading">
+      <h1>Carregando…</h1>
+      <p>Validando seu link de descadastro.</p>
+    </div>
+
+    <div id="invalid" class="hidden">
+      <h1>Link inválido</h1>
+      <p>Esse link de descadastro não é válido ou já expirou.</p>
+      <p>Se quiser parar de receber e-mails, responda ao último que recebeu da gente que a gente cuida disso na mão.</p>
+      <p class="footer"><a href="https://bastidoresdasindicatura.com.br">← Voltar para o site</a></p>
+    </div>
+
+    <div id="choose" class="hidden">
+      <p class="eyebrow">Descadastro</p>
+      <h1>Não quer mais receber?</h1>
+      <p>
+        O e-mail <span class="email" id="email-display"></span> está cadastrado.
+        Antes de descadastrar de vez, dá pra reduzir a frequência — você passa a receber 1 e-mail a cada 4 envios.
+      </p>
+      <div class="actions">
+        <button id="btn-reduce" class="ghost">Receber só 1 a cada 4 e-mails</button>
+        <button id="btn-unsub">Descadastrar de vez</button>
+      </div>
+      <p class="footer"><a href="https://bastidoresdasindicatura.com.br">← Voltar para o site</a></p>
+    </div>
+
+    <div id="done-reduce" class="hidden">
+      <h1>Frequência reduzida.</h1>
+      <p class="ok">A partir de agora você recebe só 1 a cada 4 e-mails.</p>
+      <p>Se mudar de ideia e quiser parar de vez, é só voltar pelo link do próximo e-mail.</p>
+      <p class="footer"><a href="https://bastidoresdasindicatura.com.br">← Voltar para o site</a></p>
+    </div>
+
+    <div id="done-unsub" class="hidden">
+      <h1>Descadastrado.</h1>
+      <p class="ok">Não vamos mais te mandar e-mail. Sentiremos sua falta.</p>
+      <p>Se mudar de ideia, é só se cadastrar de novo em qualquer um dos materiais do site.</p>
+      <p class="footer"><a href="https://bastidoresdasindicatura.com.br">← Voltar para o site</a></p>
+    </div>
+
+    <div id="error" class="hidden">
+      <h1>Algo deu errado.</h1>
+      <p class="err" id="error-msg"></p>
+      <p>Tenta de novo daqui a pouco, ou nos manda um e-mail em <a href="mailto:contato@dicadajumoreira.com.br">contato@dicadajumoreira.com.br</a>.</p>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('t');
+    const $ = (id) => document.getElementById(id);
+    const show = (id) => {
+      ['loading','invalid','choose','done-reduce','done-unsub','error'].forEach((x) => {
+        $(x).classList.toggle('hidden', x !== id);
+      });
+    };
+
+    if (!token) { show('invalid'); return; }
+
+    fetch('/api/unsubscribe?t=' + encodeURIComponent(token))
+      .then((r) => r.json().then((d) => ({status: r.status, body: d})))
+      .then(({status, body}) => {
+        if (status !== 200 || !body.email) { show('invalid'); return; }
+        $('email-display').textContent = body.email;
+        show('choose');
+      })
+      .catch(() => show('invalid'));
+
+    async function act(action) {
+      $('btn-reduce').disabled = true;
+      $('btn-unsub').disabled = true;
+      try {
+        const r = await fetch('/api/unsubscribe', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token, action}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          show(action === 'unsubscribe' ? 'done-unsub' : 'done-reduce');
+        } else {
+          $('error-msg').textContent = data.error || 'Erro desconhecido';
+          show('error');
+        }
+      } catch (e) {
+        $('error-msg').textContent = e.message;
+        show('error');
+      }
+    }
+
+    $('btn-reduce').addEventListener('click', () => act('reduce'));
+    $('btn-unsub').addEventListener('click', () => act('unsubscribe'));
+  })();
+  </script>
+</body>
+</html>

@@ -6,9 +6,20 @@
 // Best-effort: se o Resend falhar, NÃO derruba o cadastro.
 // A chave RESEND_API_KEY é lida do ambiente do Netlify.
 
+import { sign } from './auth-token.mjs';
+
 const SITE = 'https://bastidoresdasindicatura.com.br';
 const FROM = 'Bastidores da Sindicatura <contato@dicadajumoreira.com.br>';
 const ADMIN_TO = 'contato@dicadajumoreira.com.br';
+
+// Gera URL de descadastro/redução de frequência. Token vale 1 ano.
+export function makeUnsubscribeUrl(email, type = 'transacional') {
+  if (!email || !/@/.test(email)) return null;
+  const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
+  const exp = Date.now() + 365 * 24 * 60 * 60 * 1000;
+  const token = sign({email: String(email).toLowerCase(), type, exp}, secret);
+  return `${SITE}/sair?t=${encodeURIComponent(token)}`;
+}
 
 // Mapa de origem → metadata do material entregue
 const MATERIALS = {
@@ -69,7 +80,7 @@ export async function sendEmails(lead) {
       from: FROM,
       to: [lead.email],
       subject: leadSubject(lead, info),
-      html: leadEmail(lead, info),
+      html: leadEmail(lead, info, makeUnsubscribeUrl(lead.email, 'transacional')),
     }, 'lead'));
   }
 
@@ -112,7 +123,11 @@ function leadSubject(lead, info) {
 // ============================================================
 // HTML SHELL
 // ============================================================
-function baseHtml(content) {
+function baseHtml(content, unsubscribeUrl) {
+  const unsubBlock = unsubscribeUrl ? `
+        <p style="margin:8px 0 0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Não quer mais receber? <a href="${unsubscribeUrl}" style="color:#B89579">Descadastre ou reduza a frequência</a>.
+        </p>` : '';
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -135,7 +150,7 @@ function baseHtml(content) {
         <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
           Você recebeu este e-mail porque se cadastrou em
           <a href="${SITE}" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
-        </p>
+        </p>${unsubBlock}
       </td></tr>
     </table>
   </td></tr>
@@ -149,6 +164,11 @@ function signature() {
     <div style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
       <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
       <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+      <p style="margin:12px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+        <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+        <a href="https://linkedin.com/in/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">LinkedIn @dicadajumoreira</a><br>
+        <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+      </p>
     </div>`;
 }
 
@@ -189,7 +209,7 @@ function adminEmail(lead, info) {
 // ============================================================
 // LEAD EMAIL (boas-vindas pra quem se cadastrou)
 // ============================================================
-function leadEmail(lead, info) {
+function leadEmail(lead, info, unsubscribeUrl) {
   const fn = firstName(lead.nome);
   const ola = fn ? `Olá, ${esc(fn)}.` : 'Olá.';
 
@@ -207,7 +227,7 @@ function leadEmail(lead, info) {
         O mercado ensina teoria.<br>A vida real ensina sobrevivência.
       </p>
       ${signature()}
-    `);
+    `, unsubscribeUrl);
   }
 
   // SORTEIO MBA
@@ -227,7 +247,7 @@ function leadEmail(lead, info) {
         O resultado sai no seu WhatsApp.
       </p>
       ${signature()}
-    `);
+    `, unsubscribeUrl);
   }
 
   // MATERIAL (e-book / guia / arquétipo)
@@ -260,5 +280,5 @@ function leadEmail(lead, info) {
       <a href="${SITE}/#vagas" style="color:#B89579;font-weight:600">Conhecer a Mentoria</a>
     </p>
     ${signature()}
-  `);
+  `, unsubscribeUrl);
 }

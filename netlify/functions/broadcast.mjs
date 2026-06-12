@@ -25,12 +25,37 @@
 import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
 import { buildLeads } from '../lib/leads-index.mjs';
+import { makeUnsubscribeUrl } from '../lib/email-resend.mjs';
 
 export const config = {
   path: ['/api/broadcast', '/.netlify/functions/broadcast'],
 };
 
 const FROM = 'Bastidores da Sindicatura <contato@dicadajumoreira.com.br>';
+
+// Bloco de rodapé com redes sociais + descadastro. Anexado a TODO disparo.
+// {{unsubscribe_url}} é substituído por uma URL única por destinatário.
+const BROADCAST_FOOTER = `
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:0 16px 32px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px">
+      <tr><td style="padding:14px 40px 8px;background:#F7F5F2;border-top:1px solid #E8E2D8;text-align:center">
+        <p style="margin:0;font-size:12px;line-height:1.7;color:#8a8881">
+          <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a>
+          &nbsp;·&nbsp;
+          <a href="https://linkedin.com/in/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">LinkedIn @dicadajumoreira</a>
+          &nbsp;·&nbsp;
+          <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+        </p>
+      </td></tr>
+      <tr><td style="padding:14px 40px 18px;background:#FBF8F2;border-top:1px solid #E8E2D8;text-align:center">
+        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881">
+          Não quer mais receber? <a href="{{unsubscribe_url}}" style="color:#B89579">Descadastre ou reduza a frequência</a>.
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
 
 const MATERIAL_NAMES = {
   'mentoria': 'a Mentoria',
@@ -95,11 +120,13 @@ export default async (req) => {
   // ====== MODO TESTE ======
   if (body.test && body.test.email) {
     try {
+      const unsubUrl = makeUnsubscribeUrl(body.test.email, 'broadcast') || '';
       await sendOne({
         from: FROM,
         to: [body.test.email],
         subject: personalize(subject, {nome: 'Teste', material: 'o material'}),
-        html: personalize(html, {nome: 'Teste', material: 'o material'}),
+        html: personalize(html + BROADCAST_FOOTER, {nome: 'Teste', material: 'o material'})
+          .replace(/\{\{unsubscribe_url\}\}/g, unsubUrl),
         reply_to: 'contato@dicadajumoreira.com.br',
       });
       return json({ok: true, sent: 1, failed: 0, total: 1, test: true});
@@ -216,6 +243,44 @@ export default async (req) => {
         allTargets.push({email, rep, origens: [...entry.origens]});
       }
 
+      // ====== LEADS FRIOS (opcional) ======
+      // Quando filter.includeCold === true, agrega leads frios da store
+      // 'cold-leads'. Pula descadastrados; respeita frequência reduzida
+      // (1 a cada 4 disparos — heurística simples: skipa quando o
+      // broadcastId hashado mod 4 != 0 pra cada lead).
+      if (body.filter && body.filter.includeCold) {
+        try {
+          const coldStore = getStore({name: 'cold-leads', consistency: 'strong'});
+          const list = await coldStore.list();
+          const seenEmails = new Set(allTargets.map((t) => t.email));
+          // Hash determinístico do broadcastId pra rolar a frequência menor
+          const hashSeed = [...broadcastId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+          for (const b of (list.blobs || [])) {
+            if (!b.key.startsWith('lead:')) continue;
+            try {
+              const lead = await coldStore.get(b.key, {type: 'json'});
+              if (!lead) continue;
+              if (lead.unsubscribed) continue;
+              const emails = lead.emails && lead.emails.length ? lead.emails : (lead.email ? [lead.email] : []);
+              for (const em of emails) {
+                const email = String(em || '').trim().toLowerCase();
+                if (!email || !email.includes('@')) continue;
+                if (seenEmails.has(email)) continue;
+                // Frequência menor: pula 3 a cada 4 disparos
+                if (lead.frequencia === 'menor') {
+                  const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, hashSeed);
+                  if (emHash % 4 !== 0) continue;
+                }
+                seenEmails.add(email);
+                allTargets.push({email, rep: {nome: lead.nome || '', email}, origens: ['cold']});
+              }
+            } catch {}
+          }
+        } catch (e) {
+          console.error('[broadcast] cold leads load failed:', e.message);
+        }
+      }
+
       // Ordem estável: por email pra paginação consistente entre calls
       allTargets.sort((a, b) => a.email.localeCompare(b.email));
     }
@@ -241,12 +306,15 @@ export default async (req) => {
         nome: firstName || 'aí',
         material: MATERIAL_NAMES[primaryOrigem] || 'o material',
       };
+      const unsubUrl = makeUnsubscribeUrl(t.email, 'broadcast') || '';
+      const personalizedHtml = personalize(html + BROADCAST_FOOTER, vars)
+        .replace(/\{\{unsubscribe_url\}\}/g, unsubUrl);
       try {
         await sendOne({
           from: FROM,
           to: [t.email],
           subject: personalize(subject, vars),
-          html: personalize(html, vars),
+          html: personalizedHtml,
           reply_to: 'contato@dicadajumoreira.com.br',
         });
         sent++;

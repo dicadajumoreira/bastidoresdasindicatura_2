@@ -2581,6 +2581,11 @@ function buildMaterialHtml(m) {
         <div style="margin-top:28px;padding-top:24px;border-top:1px solid #E8E2D8">
           <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
           <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+          <p style="margin:12px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+            <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+            <a href="https://linkedin.com/in/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">LinkedIn @dicadajumoreira</a><br>
+            <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+          </p>
         </div>
       </td></tr>
       <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
@@ -2631,6 +2636,11 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
         <div style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
           <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
           <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+          <p style="margin:12px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+            <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+            <a href="https://linkedin.com/in/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">LinkedIn @dicadajumoreira</a><br>
+            <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+          </p>
         </div>
       </td></tr>
       <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
@@ -2647,6 +2657,8 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   const [html, setHtml] = React.useState(MBA_DEFAULT_HTML);
   const [excludeOrigens, setExcludeOrigens] = React.useState(() => new Set(['sorteio-mba']));
   const [statusFilter, setStatusFilter] = React.useState(() => new Set()); // vazio = todos
+  const [includeCold, setIncludeCold] = React.useState(false);
+  const [coldCount, setColdCount] = React.useState(null);
   const [testEmail, setTestEmail] = React.useState('contato@dicadajumoreira.com.br');
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState(null);
@@ -2666,6 +2678,18 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     } finally { setLoadingHistory(false); }
   }, []);
   React.useEffect(() => { loadHistory(); }, [loadHistory]);
+
+  // Carrega a contagem de leads frios elegíveis (não-descadastrados)
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api('/api/cold-leads?limit=1');
+        if (!cancelled) setColdCount(res.totalAll || 0);
+      } catch { if (!cancelled) setColdCount(0); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Carrega um rascunho de material no compositor
   const loadDraft = (m) => {
@@ -2905,6 +2929,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     const filter = {
       excludeOrigens: [...excludeOrigens],
       statuses: statusFilter.size ? [...statusFilter] : undefined,
+      includeCold: includeCold || undefined,
     };
     const broadcastId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const LIMIT_PER_CALL = 40;
@@ -3106,6 +3131,16 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 ))}
               </div>
             </div>
+            <div className="ad-bc-section">
+              <p className="ad-bc-section-title">Leads frios (base importada de planilhas):</p>
+              <label className={'ad-bc-check' + (includeCold ? ' is-on' : '')}>
+                <input type="checkbox" checked={includeCold} onChange={(e) => setIncludeCold(e.target.checked)} />
+                <span>
+                  Incluir leads frios no disparo
+                  {coldCount != null && <span style={{color: 'var(--sand)', fontSize: '12px', marginLeft: 8}}>(~{coldCount} contatos com e-mail · descadastrados ficam de fora · freq. menor recebe 1 a cada 4)</span>}
+                </span>
+              </label>
+            </div>
             <div className="ad-bc-funnel">
               <p className="ad-bc-funnel-title">
                 Funil de destinatários
@@ -3150,8 +3185,14 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 )}
                 <li className="ad-bc-funnel-final">
                   <span className="ad-bc-funnel-n">{targets.count}</span>
-                  <span className="ad-bc-funnel-lbl">{targets.count === 1 ? 'pessoa vai receber' : 'pessoas vão receber'}</span>
+                  <span className="ad-bc-funnel-lbl">{targets.count === 1 ? 'pessoa vai receber' : 'pessoas vão receber'} (leads quentes)</span>
                 </li>
+                {includeCold && coldCount != null && (
+                  <li className="ad-bc-funnel-final" style={{color:'#B89579'}}>
+                    <span className="ad-bc-funnel-n">+~{coldCount}</span>
+                    <span className="ad-bc-funnel-lbl">leads frios da base (dedupe automático com quentes)</span>
+                  </li>
+                )}
               </ul>
             </div>
           </section>
