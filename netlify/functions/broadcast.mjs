@@ -166,49 +166,41 @@ export default async (req) => {
     const slice = allTargets.slice(offset, offset + limit);
     const processed = slice.length;
 
-    // Resend tem rate limit de 5 req/s. Disparamos em lotes de 4 em paralelo
-    // (deixando margem) e aguardamos 1100ms entre lotes pra ficar abaixo do
-    // limite. Pra 40 emails: ~10 lotes × 1.1s = ~11s por chamada, dentro do
-    // budget da Netlify Function.
-    const RATE_BATCH = 4;
-    const RATE_DELAY_MS = 1100;
+    // Resend rate limit: 5 req/s. Pra ficar SEM RAJADA (causa de 429
+    // mesmo respeitando a média), enviamos sequencialmente, 1 e-mail por
+    // vez, com 250ms entre cada = ~4 req/s constantes.
+    const RATE_DELAY_MS = 250;
     let sent = 0, failed = 0;
     const errors = [];
-    const recipientsLog = []; // Registro detalhado por destinatário
+    const recipientsLog = [];
 
-    for (let i = 0; i < slice.length; i += RATE_BATCH) {
-      const batch = slice.slice(i, i + RATE_BATCH);
+    for (let i = 0; i < slice.length; i++) {
+      const t = slice[i];
       const sentAt = new Date().toISOString();
-      const results = await Promise.allSettled(batch.map((t) => {
-        const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
-        const primaryOrigem = t.origens[0];
-        const vars = {
-          nome: firstName || 'aí',
-          material: MATERIAL_NAMES[primaryOrigem] || 'o material',
-        };
-        return sendOne({
+      const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
+      const primaryOrigem = t.origens[0];
+      const vars = {
+        nome: firstName || 'aí',
+        material: MATERIAL_NAMES[primaryOrigem] || 'o material',
+      };
+      try {
+        await sendOne({
           from: FROM,
           to: [t.email],
           subject: personalize(subject, vars),
           html: personalize(html, vars),
           reply_to: 'contato@dicadajumoreira.com.br',
         });
-      }));
-      for (let j = 0; j < results.length; j++) {
-        const r = results[j];
-        const t = batch[j];
-        if (r.status === 'fulfilled') {
-          sent++;
-          recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'sent', sentAt});
-        } else {
-          failed++;
-          const errMsg = String(r.reason?.message || 'erro').slice(0, 200);
-          if (errors.length < 5) errors.push(errMsg);
-          recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
-        }
+        sent++;
+        recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'sent', sentAt});
+      } catch (e) {
+        failed++;
+        const errMsg = String(e.message || 'erro').slice(0, 200);
+        if (errors.length < 5) errors.push(errMsg);
+        recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
       }
-      // Espera antes do próximo lote (exceto se for o último)
-      if (i + RATE_BATCH < slice.length) {
+      // Pausa entre envios (exceto o último)
+      if (i < slice.length - 1) {
         await new Promise((res) => setTimeout(res, RATE_DELAY_MS));
       }
     }

@@ -66,7 +66,14 @@ export default async () => {
 
   for (const schedule of pending) {
     try {
-      // Marca como em processamento (idempotência)
+      // Re-checa o status: se já está sendo processado (manual ou outra
+      // invocação do cron), pula pra evitar disparo duplicado.
+      const fresh = await scheduleStore.get(schedule.id, {type: 'json'});
+      if (!fresh || fresh.status !== 'pending') {
+        console.log(`[scheduled-broadcasts] ${schedule.id} pulado: status=${fresh?.status}`);
+        continue;
+      }
+      // Marca como em processamento (lock)
       await scheduleStore.setJSON(schedule.id, {...schedule, status: 'processing', processingAt: new Date().toISOString()});
       await runBroadcast(schedule, leadsStore, historyStore);
       // Marca como concluído (mantém no store por algum tempo pra auditoria)
@@ -131,52 +138,49 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
     targets.push({email, rep, origens: [...entry.origens]});
   }
 
-  // Manda respeitando rate limit do Resend (5/s) com margem
-  const RATE_BATCH = 4;
-  const RATE_DELAY_MS = 1100;
+  // Resend rate limit: 5 req/s. Envia SEQUENCIAL com 250ms entre cada = 4 req/s.
+  const recipientsStore = getStore({name: 'broadcast-recipients', consistency: 'strong'});
+  const RATE_DELAY_MS = 250;
+  const RECIPIENTS_BATCH_SAVE = 10; // salva log do progresso a cada N envios
   let sent = 0, failed = 0;
   const errors = [];
-  const recipientsStore = (await import('@netlify/blobs')).getStore({name: 'broadcast-recipients', consistency: 'strong'});
+  let pendingLog = [];
+  let batchSaveIndex = 0;
 
-  for (let i = 0; i < targets.length; i += RATE_BATCH) {
-    const batch = targets.slice(i, i + RATE_BATCH);
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
     const sentAt = new Date().toISOString();
-    const results = await Promise.allSettled(batch.map((t) => {
-      const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
-      const primaryOrigem = t.origens[0];
-      const vars = {
-        nome: firstName || 'aí',
-        material: MATERIAL_NAMES[primaryOrigem] || 'o material',
-      };
-      return sendOne({
+    const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
+    const primaryOrigem = t.origens[0];
+    const vars = {
+      nome: firstName || 'aí',
+      material: MATERIAL_NAMES[primaryOrigem] || 'o material',
+    };
+    try {
+      await sendOne({
         from: FROM,
         to: [t.email],
         subject: personalize(subject, vars),
         html: personalize(html, vars),
         reply_to: 'contato@dicadajumoreira.com.br',
       });
-    }));
-    const recipientsLog = [];
-    for (let j = 0; j < results.length; j++) {
-      const r = results[j];
-      const t = batch[j];
-      if (r.status === 'fulfilled') {
-        sent++;
-        recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'sent', sentAt});
-      } else {
-        failed++;
-        const errMsg = String(r.reason?.message || 'erro').slice(0, 200);
-        if (errors.length < 10) errors.push(errMsg);
-        recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
-      }
-    }
-    // Salva o log do lote
-    try {
-      await recipientsStore.setJSON(`${broadcastId}__${String(i).padStart(7, '0')}`, recipientsLog);
+      sent++;
+      pendingLog.push({email: t.email, nome: t.rep.nome || '', status: 'sent', sentAt});
     } catch (e) {
-      console.error('[scheduled-broadcasts] failed to save recipients log:', e.message);
+      failed++;
+      const errMsg = String(e.message || 'erro').slice(0, 200);
+      if (errors.length < 10) errors.push(errMsg);
+      pendingLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
     }
-    if (i + RATE_BATCH < targets.length) {
+    // Salva log a cada N envios (pra ter rastro mesmo se a função morrer no meio)
+    if (pendingLog.length >= RECIPIENTS_BATCH_SAVE || i === targets.length - 1) {
+      try {
+        await recipientsStore.setJSON(`${broadcastId}__${String(batchSaveIndex).padStart(7, '0')}`, pendingLog);
+        batchSaveIndex++;
+        pendingLog = [];
+      } catch (e) {}
+    }
+    if (i < targets.length - 1) {
       await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
     }
   }
