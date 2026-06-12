@@ -3484,6 +3484,33 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
               <span className="ad-widget-eyebrow">Quem recebe</span>
               <h2 className="ad-widget-title">Filtros</h2>
             </header>
+
+            {/* Atalho: marca TODOS os leads quentes (cadastrados em
+                qualquer formulário do Bastidores). Limpa exclusões,
+                limpa status, desliga leads frios. */}
+            <div className="ad-bc-section" style={{
+              background: 'rgba(184, 149, 121, 0.10)',
+              border: '1px solid rgba(184, 149, 121, 0.35)',
+              padding: 14,
+              marginBottom: 16,
+            }}>
+              <button
+                type="button"
+                className="ad-btn ad-btn-primary"
+                style={{width: '100%'}}
+                onClick={() => {
+                  setExcludeOrigens(new Set());
+                  setStatusFilter(new Set());
+                  setIncludeCold(false);
+                }}
+              >
+                ▶ Selecionar TODOS os leads cadastrados ({targets.funnel.uniqueEmails || '...'})
+              </button>
+              <p className="ad-bc-hint" style={{margin: '8px 0 0', textAlign: 'center', fontSize: 11}}>
+                Limpa todas as exclusões e seleciona quem já preencheu qualquer formulário do site. Sem leads frios.
+              </p>
+            </div>
+
             <div className="ad-bc-section">
               <p className="ad-bc-section-title">Excluir quem já se cadastrou em:</p>
               <div className="ad-bc-checks">
