@@ -50,6 +50,9 @@ const BROADCAST_FOOTER = `
         <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881">
           Não quer mais receber? <a href="{{unsubscribe_url}}" style="color:#B89579">Descadastre ou reduza a frequência</a>.
         </p>
+        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;letter-spacing:.06em">
+          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
+        </p>
       </td></tr>
     </table>
   </td></tr>

@@ -151,6 +151,9 @@ function baseHtml(content, unsubscribeUrl) {
           Você recebeu este e-mail porque se cadastrou em
           <a href="${SITE}" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
         </p>${unsubBlock}
+        <p style="margin:8px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+          <a href="${SITE}/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
+        </p>
       </td></tr>
     </table>
   </td></tr>

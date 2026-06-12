@@ -125,7 +125,10 @@ const BsFooter = () => (
     </div>
 
     <div className="bs-footer-base">
-      <span>© 2026 · Bastidores da Sindicatura · Todos os direitos reservados</span>
+      <span>
+        © 2026 · Bastidores da Sindicatura · Todos os direitos reservados ·{' '}
+        <a href="/politica-de-privacidade/" style={{color: 'inherit', textDecoration: 'underline'}}>Política de Privacidade</a>
+      </span>
       <span className="bs-footer-quote">A vida real ensina sobrevivência.</span>
     </div>
   </footer>
