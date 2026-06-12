@@ -2868,7 +2868,6 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setResult(null);
     setProgress({sent: h.sent || 0, failed: h.failed || 0, processed, total: h.total});
 
-    const filter = h.filter || {};
     const LIMIT_PER_CALL = 40;
     let offset = processed;
     let totalSent = h.sent || 0;
@@ -2881,11 +2880,13 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
       for (let i = 0; i < 600; i++) {
         let res;
         try {
+          // resumeFrom: backend lê subject/html/filter/broadcastId direto
+          // do registro original. Frontend só passa o id e o offset.
           res = await api('/api/broadcast', {
             method: 'POST',
             body: JSON.stringify({
-              subject: h.subject, html: h.html, filter,
-              offset, limit: LIMIT_PER_CALL, broadcastId: h.id,
+              resumeFrom: h.id,
+              offset, limit: LIMIT_PER_CALL,
             }),
           });
         } catch (e) {

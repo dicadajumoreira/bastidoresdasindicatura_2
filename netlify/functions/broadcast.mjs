@@ -90,6 +90,25 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'JSON inválido'}, 400); }
 
+  // ====== MODO RETOMAR DISPARO INCOMPLETO ======
+  // Quando body.resumeFrom é setado, carrega subject/html/filter/broadcastId
+  // do registro original e injeta no body antes do processamento normal.
+  // O frontend só precisa mandar { resumeFrom, offset }.
+  if (body.resumeFrom) {
+    try {
+      const histStore = getStore({name: 'broadcasts', consistency: 'strong'});
+      const orig = await histStore.get(String(body.resumeFrom), {type: 'json'});
+      if (!orig) return json({error: 'Disparo original não encontrado pra retomar'}, 404);
+      if (!orig.subject || !orig.html) return json({error: 'Disparo original sem subject/html salvo (provavelmente foi feito antes desse recurso existir)'}, 500);
+      body.subject = orig.subject;
+      body.html = orig.html;
+      body.filter = orig.filter || {};
+      body.broadcastId = orig.id || String(body.resumeFrom);
+    } catch (err) {
+      return json({error: 'Falha ao ler disparo original: ' + err.message}, 500);
+    }
+  }
+
   // ====== MODO REENVIO DE FALHAS ======
   // Quando body.resendFailedFrom é setado, ignoramos subject/html/filter
   // e mandamos o MESMO conteúdo do disparo original APENAS pros e-mails
