@@ -162,10 +162,15 @@
   status = 200
   force = true
 
-# Headers de segurança no admin
+# Headers de segurança e cache no admin
+# Cache-Control no-cache: força o browser a revalidar com o servidor a cada
+# request, evitando que uma versão velha (e potencialmente quebrada) do
+# admin.jsx fique presa no cache local.
 [[headers]]
   for = "/admin/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
+    Cache-Control = "no-cache, must-revalidate"
+    Netlify-CDN-Cache-Control = "no-store"
