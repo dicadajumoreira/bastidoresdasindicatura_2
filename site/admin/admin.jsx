@@ -2724,6 +2724,76 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
   </td></tr>
 </table>`;
 
+// Rascunho de últimas horas — pra disparar nas horas finais antes do
+// encerramento das inscrições. Tem 2 CTAs: 'Quero saber mais sobre o
+// MBA' (abre o PDF de apresentação) e 'Quero me inscrever' (vai pra
+// /mba/).
+const MBA_LAST_HOURS_SUBJECT = 'Faltam poucas horas: bolsa integral do MBA Executivo IBMEC encerra hoje.';
+const MBA_LAST_HOURS_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:32px 16px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
+      <tr><td style="padding:32px 40px 18px;border-bottom:1px solid #E8E2D8">
+        <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;letter-spacing:-.01em">Bastidores da Sindicatura</p>
+        <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">por Juliana Moreira</p>
+      </td></tr>
+      <tr><td style="padding:40px">
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#d97757;font-weight:700">Últimas horas · Inscrições encerram hoje</p>
+        <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">{{nome}}, o tempo tá <em>acabando.</em></h1>
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          Faltam <strong>poucas horas</strong> pro encerramento das inscrições do sorteio da <strong>bolsa integral do MBA Executivo em Gestão Condominial</strong>, com certificação <strong>IBMEC</strong> e patrocínio da <strong>Condo Academy</strong>.
+        </p>
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          360 horas de formação. 12 meses. 6 módulos. Uma certificação que abre porta.
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #d97757">
+          <tr><td style="padding:18px 22px">
+            <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#d97757;font-weight:700">Encerramento das inscrições</p>
+            <p style="margin:0 0 16px;font-family:'Bodoni Moda',Georgia,serif;font-size:22px;color:#1A1C29">Hoje · 12 de junho · 23h59</p>
+            <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Sorteio · ao vivo</p>
+            <p style="margin:0 0 4px;font-family:'Bodoni Moda',Georgia,serif;font-size:22px;color:#1A1C29">Sábado, 13 de junho · 12h</p>
+            <p style="margin:0;font-size:13px;color:#1A1C29">No Instagram <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;font-weight:600;text-decoration:none">@dicadajumoreira</a></p>
+          </td></tr>
+        </table>
+
+        <p style="text-align:center;margin:0 0 12px">
+          <a href="https://bastidoresdasindicatura.com.br/mba/" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 28px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero me inscrever</a>
+        </p>
+        <p style="text-align:center;margin:0 0 12px">
+          <a href="https://bastidoresdasindicatura.com.br/mba/material.pdf" style="display:inline-block;background:transparent;color:#1A1C29;border:1px solid #1A1C29;padding:15px 27px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero saber mais sobre o MBA</a>
+        </p>
+        <p style="text-align:center;font-size:11px;line-height:1.5;color:#8a8881;margin:0 0 28px">
+          Ao se inscrever você aceita o <a href="https://bastidoresdasindicatura.com.br/regulamento-mba/" style="color:#B89579">regulamento do sorteio</a> e a <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">política de privacidade</a>.
+        </p>
+
+        <p style="font-size:14px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          O material em PDF mostra a grade completa, os 6 módulos, o corpo docente, a comunidade e o investimento. Pra você decidir com clareza.
+        </p>
+
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#d97757;margin:24px 0 0;text-align:center">
+          Depois das 23h59 de hoje, fica pra próxima turma.
+        </p>
+
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
+          <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+          <p style="margin:12px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+            <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+            <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+          </p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
+        </p>
+        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
+
 const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, leadsLoadInfo, onReloadLeads}) => {
   const [subject, setSubject] = React.useState(MBA_DEFAULT_SUBJECT);
   const [html, setHtml] = React.useState(MBA_DEFAULT_HTML);
@@ -2778,6 +2848,18 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   const loadMBADraft = () => {
     setSubject(MBA_DEFAULT_SUBJECT);
     setHtml(MBA_DEFAULT_HTML);
+    setExcludeOrigens(new Set(['sorteio-mba']));
+    setStatusFilter(new Set());
+    setResult(null);
+    setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
+  };
+
+  // Rascunho 'Últimas horas': pra disparar nas horas finais antes do
+  // encerramento das inscrições. Mesma exclusão (sorteio-mba) pra
+  // não enviar pra quem já se inscreveu.
+  const loadMBALastHoursDraft = () => {
+    setSubject(MBA_LAST_HOURS_SUBJECT);
+    setHtml(MBA_LAST_HOURS_HTML);
     setExcludeOrigens(new Set(['sorteio-mba']));
     setStatusFilter(new Set());
     setResult(null);
@@ -3331,6 +3413,20 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
           Cada material já publicado tem um rascunho pré-formatado. Clica em um deles pra carregar no compositor abaixo. O filtro já vem marcado pra excluir quem <em>já tem</em> o material, ou seja, só vai pros leads que ainda não receberam.
         </p>
         <div className="ad-bc-drafts-grid">
+          <button
+            type="button"
+            className="ad-bc-draft"
+            onClick={loadMBALastHoursDraft}
+            style={{borderColor: '#d97757'}}
+          >
+            <div className="ad-bc-draft-head">
+              <span className="ad-bc-draft-eyebrow" style={{color: '#d97757'}}>Sorteio MBA · ÚLTIMAS HORAS</span>
+            </div>
+            <h3 className="ad-bc-draft-title">Faltam poucas horas pra encerrar</h3>
+            <p className="ad-bc-draft-meta">
+              {leadsAll ? `${countNotHaving('sorteio-mba')} leads não inscritos · 2 CTAs (saber mais + inscrever)` : 'Carregando…'}
+            </p>
+          </button>
           <button
             type="button"
             className={'ad-bc-draft' + (sentOrigens.has('sorteio-mba') ? ' is-sent' : '')}
