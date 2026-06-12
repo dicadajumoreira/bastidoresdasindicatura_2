@@ -1775,6 +1775,163 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast}) => {
 /* ============================================================
    BROADCAST PANEL — disparo de e-mail pros leads
    ============================================================ */
+
+// Templates de materiais (rascunhos prontos). Pra cada material publicado,
+// um e-mail pré-formatado que convida quem AINDA NÃO baixou a pegar.
+// Quando você publicar um novo material, basta adicionar uma entrada aqui
+// e ele já aparece na lista de rascunhos disponíveis.
+const MATERIAL_BROADCASTS = [
+  {
+    origem: 'saude-mental',
+    nome: 'Saúde Mental do Síndico',
+    eyebrow: 'Volume 09 · Guia editorial',
+    titulo: 'A profissão que todo mundo cobra mas poucos compreendem.',
+    desc: 'Um guia sobre o custo emocional invisível da profissão, com 10 capítulos, autoavaliação com +50 itens e plano de ação de 30 dias.',
+    landingPath: '/saude-mental/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'gestao-sob-ataque',
+    nome: 'Gestão sob Ataque',
+    eyebrow: 'Volume 07 · Guia editorial',
+    titulo: 'Quando a oposição saudável vira sabotagem.',
+    desc: '20 capítulos pra atravessar boatos, grupos inflamados e tentativas de destituição. Com 10 modelos prontos de resposta e checklist de proteção da gestão.',
+    landingPath: '/gestao-sob-ataque/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'conflitos',
+    nome: 'Conflitos absurdos em condomínio',
+    eyebrow: 'Volume 08 · Guia editorial',
+    titulo: 'O que ninguém te conta sobre conflito no condomínio.',
+    desc: 'Os casos mais absurdos de conflito real em condomínio, com método pra desarmar antes de virarem crise.',
+    landingPath: '/conflitos/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'nr1',
+    nome: 'NR-1 nos Condomínios',
+    eyebrow: 'Volume 06 · Guia editorial',
+    titulo: 'A norma que mudou o jogo da gestão de pessoas no condomínio.',
+    desc: 'Tudo sobre a NR-1 aplicada à realidade condominial. O que muda na prática e como se adequar sem virar refém de auditoria.',
+    landingPath: '/nr1/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: '50-frases',
+    nome: '50 Frases pra responder sem perder a cabeça',
+    eyebrow: 'Volume 05 · Guia editorial',
+    titulo: 'As frases certas pra responder no condomínio.',
+    desc: '50 respostas prontas para os comentários, cobranças e provocações mais comuns no dia a dia da sindicatura.',
+    landingPath: '/50-frases/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'sobrevivencia-whatsapp',
+    nome: 'Sobrevivência ao WhatsApp do Condomínio',
+    eyebrow: 'Volume 04 · Manual',
+    titulo: 'Como sobreviver ao grupo de WhatsApp do condomínio.',
+    desc: 'O guia prático pra parar de ser refém do grupo. Comunicação, protocolo e quando responder (ou não).',
+    landingPath: '/sobrevivencia-whatsapp/',
+    ctaLabel: 'Baixar o manual em PDF',
+  },
+  {
+    origem: 'bombeiro',
+    nome: 'O Bombeiro · Série Arquétipos',
+    eyebrow: 'Volume 12 · Série Arquétipos',
+    titulo: 'Você vive apagando incêndio?',
+    desc: 'Diagnóstico pra síndicos que vivem correndo atrás de problema. Matriz de prioridades, método 30-30-30 e plano de 30 dias.',
+    landingPath: '/bombeiro/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'politico',
+    nome: 'O Político · Série Arquétipos',
+    eyebrow: 'Volume 13 · Série Arquétipos',
+    titulo: 'Quer agradar todo mundo? Tem preço.',
+    desc: 'Pra síndicos bem-intencionados que estão perdendo autoridade na busca por consenso. Equilibrar ser aprovado e ser respeitado.',
+    landingPath: '/politico/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'solitario',
+    nome: 'O Solitário · Série Arquétipos',
+    eyebrow: 'Volume 14 · Série Arquétipos',
+    titulo: 'Você carrega o condomínio sozinho?',
+    desc: 'Pra síndicos dedicados que viraram o gargalo da gestão. Delegação, processo e fim do modo herói.',
+    landingPath: '/solitario/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'burocrata',
+    nome: 'O Burocrata · Série Arquétipos',
+    eyebrow: 'Volume 15 · Série Arquétipos',
+    titulo: 'Você informa, mas não conecta?',
+    desc: 'Pra síndicos organizados que escrevem comunicado impecável e ninguém lê. Transforme informação em conexão.',
+    landingPath: '/burocrata/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'estrategista',
+    nome: 'O Estrategista · Série Arquétipos',
+    eyebrow: 'Volume 16 · Série Arquétipos',
+    titulo: 'Os bastidores das gestões que viram referência.',
+    desc: 'Pra quem já opera em modo estratégico e quer sustentar esse jeito de trabalhar. Visão dos 5 horizontes e plano de 12 meses.',
+    landingPath: '/estrategista/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'sargento',
+    nome: 'O Sargento · Série Arquétipos',
+    eyebrow: 'Volume 17 · Série Arquétipos',
+    titulo: 'Obedecido ou seguido?',
+    desc: 'Pra síndicos firmes que confundem autoridade com medo. 10 sinais de alerta e os 5 pilares da autoridade verdadeira.',
+    landingPath: '/sargento/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+];
+
+// Constrói o HTML do e-mail pra um material, com a identidade da marca.
+function buildMaterialHtml(m) {
+  const url = `https://bastidoresdasindicatura.com.br${m.landingPath}`;
+  return `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:32px 16px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
+      <tr><td style="padding:32px 40px 18px;border-bottom:1px solid #E8E2D8">
+        <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;letter-spacing:-.01em">Bastidores da Sindicatura</p>
+        <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">por Juliana Moreira</p>
+      </td></tr>
+      <tr><td style="padding:40px">
+        <p style="margin:0 0 8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">${m.eyebrow}</p>
+        <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:32px;line-height:1.1;margin:0 0 18px;color:#1A1C29">Olá, {{nome}}.</h1>
+        <p style="font-size:18px;line-height:1.4;color:#1A1C29;margin:0 0 18px;font-family:'Bodoni Moda',Georgia,serif;font-style:italic">${m.titulo}</p>
+        <p style="font-size:15px;line-height:1.6;color:#1A1C29;margin:0 0 28px">${m.desc}</p>
+        <p style="text-align:center;margin:0 0 32px">
+          <a href="${url}" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 28px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">${m.ctaLabel}</a>
+        </p>
+        <hr style="border:none;border-top:1px dashed #E8E2D8;margin:24px 0">
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#1A1C29;margin:0 0 8px">P.S.</p>
+        <p style="font-size:14px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          Se quiser ir além dos materiais, conheça a <strong>Mentoria Bastidores da Sindicatura.</strong> Turma 01 começa em setembro de 2026, com vagas limitadas.
+        </p>
+        <p style="margin:0 0 8px">
+          <a href="https://bastidoresdasindicatura.com.br/#vagas" style="color:#B89579;font-weight:600">Conhecer a Mentoria</a>
+        </p>
+        <div style="margin-top:28px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
+          <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
+}
+
 const MBA_DEFAULT_SUBJECT = 'Uma bolsa integral do MBA Executivo IBMEC vai ser sorteada no sábado.';
 const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
   <tr><td align="center" style="padding:32px 16px">
@@ -1833,6 +1990,42 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [history, setHistory] = React.useState(null);
+  const [loadingHistory, setLoadingHistory] = React.useState(false);
+
+  // Carrega o histórico de disparos
+  const loadHistory = React.useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await api('/api/broadcast-history');
+      setHistory(res.history || []);
+    } catch (e) {
+      console.error('falha ao carregar histórico:', e);
+      setHistory([]);
+    } finally { setLoadingHistory(false); }
+  }, []);
+  React.useEffect(() => { loadHistory(); }, [loadHistory]);
+
+  // Carrega um rascunho de material no compositor
+  const loadDraft = (m) => {
+    setSubject(`${m.titulo}`);
+    setHtml(buildMaterialHtml(m));
+    setExcludeOrigens(new Set([m.origem]));
+    setStatusFilter(new Set());
+    setResult(null);
+    // Sobe a tela pro topo do compositor
+    setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
+  };
+
+  // Restaura a campanha do MBA (rascunho original)
+  const loadMBADraft = () => {
+    setSubject(MBA_DEFAULT_SUBJECT);
+    setHtml(MBA_DEFAULT_HTML);
+    setExcludeOrigens(new Set(['sorteio-mba']));
+    setStatusFilter(new Set());
+    setResult(null);
+    setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
+  };
 
   // Cálculo de destinatários no front (mesma lógica do backend)
   const targets = React.useMemo(() => {
@@ -1897,6 +2090,8 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
         body: JSON.stringify({subject, html, filter}),
       });
       setResult({type: 'real', ok: !!res.ok, ...res});
+      // Recarrega histórico em background
+      loadHistory();
     } catch (e) {
       setResult({type: 'real', ok: false, error: e.message});
     } finally { setBusy(false); }
@@ -1906,6 +2101,33 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
     .replace(/\{\{nome\}\}/g, 'Maria')
     .replace(/\{\{material\}\}/g, 'o seu material');
 
+  // Conta quantos leads ainda não têm cada material (pra mostrar nos rascunhos)
+  const countNotHaving = (origem) => {
+    if (!leadsAll || !leadsAll.length) return 0;
+    const byEmail = new Map();
+    for (const l of leadsAll) {
+      if (l.deletedAt) continue;
+      const email = String(l.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      if (!byEmail.has(email)) byEmail.set(email, new Set());
+      byEmail.get(email).add(l.origem || 'mentoria');
+    }
+    let n = 0;
+    for (const origens of byEmail.values()) if (!origens.has(origem)) n++;
+    return n;
+  };
+
+  // Marca quais rascunhos já foram disparados pelo menos uma vez
+  const sentOrigens = React.useMemo(() => {
+    const s = new Set();
+    if (history) {
+      for (const h of history) {
+        for (const o of (h.origensExcluded || [])) s.add(o);
+      }
+    }
+    return s;
+  }, [history]);
+
   return (
     <div className="ad-broadcast">
       <header className="ad-broadcast-head">
@@ -1913,6 +2135,50 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
         <h1 className="ad-broadcast-title">Disparo de e-mail</h1>
         <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
       </header>
+
+      {/* Rascunhos prontos por material */}
+      <section className="ad-widget ad-bc-drafts">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Rascunhos prontos</span>
+          <h2 className="ad-widget-title">Por material publicado</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Cada material já publicado tem um rascunho pré-formatado. Clica em um deles pra carregar no compositor abaixo. O filtro já vem marcado pra excluir quem <em>já tem</em> o material, ou seja, só vai pros leads que ainda não receberam.
+        </p>
+        <div className="ad-bc-drafts-grid">
+          <button
+            type="button"
+            className={'ad-bc-draft' + (sentOrigens.has('sorteio-mba') ? ' is-sent' : '')}
+            onClick={loadMBADraft}
+          >
+            <div className="ad-bc-draft-head">
+              <span className="ad-bc-draft-eyebrow">Sorteio MBA IBMEC</span>
+              {sentOrigens.has('sorteio-mba') && <span className="ad-bc-draft-badge">Já enviado</span>}
+            </div>
+            <h3 className="ad-bc-draft-title">Bolsa integral do MBA Executivo</h3>
+            <p className="ad-bc-draft-meta">
+              {leadsAll ? `${countNotHaving('sorteio-mba')} leads não inscritos` : 'Carregando…'}
+            </p>
+          </button>
+          {MATERIAL_BROADCASTS.map((m) => (
+            <button
+              key={m.origem}
+              type="button"
+              className={'ad-bc-draft' + (sentOrigens.has(m.origem) ? ' is-sent' : '')}
+              onClick={() => loadDraft(m)}
+            >
+              <div className="ad-bc-draft-head">
+                <span className="ad-bc-draft-eyebrow">{m.eyebrow}</span>
+                {sentOrigens.has(m.origem) && <span className="ad-bc-draft-badge">Já enviado</span>}
+              </div>
+              <h3 className="ad-bc-draft-title">{m.nome}</h3>
+              <p className="ad-bc-draft-meta">
+                {leadsAll ? `${countNotHaving(m.origem)} leads sem o material` : 'Carregando…'}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="ad-broadcast-grid">
         <div className="ad-broadcast-compose">
@@ -2019,6 +2285,42 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
           </section>
         </div>
       </div>
+
+      {/* Histórico de disparos já feitos */}
+      <section className="ad-widget ad-bc-history">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Histórico</span>
+          <h2 className="ad-widget-title">Disparos já feitos</h2>
+        </header>
+        {loadingHistory ? (
+          <p className="ad-bc-empty">Carregando…</p>
+        ) : !history || history.length === 0 ? (
+          <p className="ad-bc-empty">Nenhum disparo feito ainda.</p>
+        ) : (
+          <table className="ad-bc-history-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Assunto</th>
+                <th>Filtro</th>
+                <th style={{textAlign:'right'}}>Enviados</th>
+                <th style={{textAlign:'right'}}>Falharam</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.id}>
+                  <td className="ad-bc-history-date">{fmtDate(h.sentAt)}</td>
+                  <td className="ad-bc-history-subject">{h.subject}</td>
+                  <td className="ad-bc-history-filter">{h.filterSummary || 'todos'}</td>
+                  <td style={{textAlign:'right'}}><strong>{h.sent}</strong> / {h.total}</td>
+                  <td style={{textAlign:'right'}}>{h.failed > 0 ? <span style={{color:'#d97757'}}>{h.failed}</span> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       {confirmOpen && (
         <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}>

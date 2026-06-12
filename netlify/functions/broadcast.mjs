@@ -182,6 +182,35 @@ export default async (req) => {
       }
     }
 
+    // Salva histórico do disparo (best-effort, não derruba a resposta)
+    try {
+      const histStore = getStore({name: 'broadcasts', consistency: 'strong'});
+      const histId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const filterSummary = [];
+      if (excludeOrigens.size) filterSummary.push(`excluir ${[...excludeOrigens].join(', ')}`);
+      if (includeOrigens) filterSummary.push(`incluir ${[...includeOrigens].join(', ')}`);
+      if (statuses) filterSummary.push(`status ${[...statuses].join(', ')}`);
+      if (states) filterSummary.push(`UF ${[...states].join(', ')}`);
+      await histStore.setJSON(histId, {
+        id: histId,
+        sentAt: new Date().toISOString(),
+        subject,
+        html, // armazena pra reuso/cópia futura
+        sent,
+        failed,
+        total: targets.length,
+        filter: {
+          excludeOrigens: [...excludeOrigens],
+          includeOrigens: includeOrigens ? [...includeOrigens] : null,
+          statuses: statuses ? [...statuses] : null,
+          states: states ? [...states] : null,
+        },
+        filterSummary: filterSummary.join(' · ') || 'todos os leads',
+      });
+    } catch (e) {
+      console.error('[broadcast] failed to save history:', e.message);
+    }
+
     return json({ok: true, sent, failed, total: targets.length, errors});
 
   } catch (err) {
