@@ -2685,3 +2685,69 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
 .ad-bc-history {
   overflow-x: auto;
 }
+
+/* ============================================================
+   ROLETA DO SORTEIO — palco com nome ciclando + revelação
+   ============================================================ */
+.ad-sorteio-roleta {
+  background: linear-gradient(180deg, rgba(217, 119, 87, 0.06), rgba(217, 119, 87, 0.02));
+  border: 1px solid rgba(217, 119, 87, 0.35);
+}
+.ad-sorteio-stage {
+  padding: 56px 32px;
+  text-align: center;
+  background: rgba(10, 12, 18, 0.6);
+  border: 1px solid rgba(217, 119, 87, 0.25);
+  margin: 16px 0 22px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+}
+.ad-sorteio-name {
+  font-family: var(--font-display, 'Bodoni Moda', Georgia, serif);
+  font-style: italic;
+  font-size: clamp(36px, 7vw, 64px);
+  line-height: 1.05;
+  color: var(--offwhite, #F7F5F2);
+  letter-spacing: -0.01em;
+  transition: transform 80ms ease-out;
+}
+.ad-sorteio-name.is-spinning {
+  filter: blur(0.6px);
+  animation: ad-roleta-pulse 0.15s infinite alternate;
+}
+.ad-sorteio-name.is-winner {
+  color: #d97757;
+  text-shadow: 0 0 30px rgba(217, 119, 87, 0.45);
+  animation: ad-roleta-winner 0.5s ease-out;
+}
+@keyframes ad-roleta-pulse {
+  from { transform: scale(0.98); opacity: 0.85; }
+  to { transform: scale(1.02); opacity: 1; }
+}
+@keyframes ad-roleta-winner {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.ad-sorteio-meta {
+  margin-top: 8px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: rgba(247, 245, 242, 0.75);
+}
+.ad-sorteio-meta p { margin: 4px 0; }
+.ad-sorteio-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+@media (max-width: 720px) {
+  .ad-sorteio-stage { padding: 36px 18px; min-height: 180px; }
+  .ad-sorteio-actions { flex-direction: column; }
+  .ad-sorteio-actions .ad-btn { width: 100%; }
+}

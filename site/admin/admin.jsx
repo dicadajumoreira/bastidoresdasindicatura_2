@@ -1572,7 +1572,7 @@ const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
 /* ============================================================
    OVERVIEW — Dashboard com estatísticas, tela inicial do admin
    ============================================================ */
-const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads}) => {
+const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOpenSorteio}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -1689,6 +1689,9 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads}) => 
           )}
           {onOpenColdLeads && (
             <button className="ad-btn ad-btn-ghost" onClick={onOpenColdLeads}>Leads frios</button>
+          )}
+          {onOpenSorteio && (
+            <button className="ad-btn ad-btn-ghost" onClick={onOpenSorteio} style={{borderColor: '#d97757', color: '#d97757'}}>Roleta do sorteio</button>
           )}
           <button className="ad-btn ad-btn-ghost" onClick={logout}>Sair</button>
         </div>
@@ -2494,6 +2497,243 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
           <p className="ad-bc-empty" style={{marginTop: 16}}>Mostrando primeiros 200. Use a busca pra filtrar.</p>
         )}
       </section>
+    </div>
+  );
+};
+
+/* ============================================================
+   SORTEIO PANEL — roleta visual pra sortear ganhador entre os
+   cadastrados em uma origem (ex.: 'sorteio-mba')
+   ============================================================ */
+const SorteioPanel = ({onLogout, onBackToOverview}) => {
+  const [origem, setOrigem] = React.useState('sorteio-mba');
+  const [excludeUnsub, setExcludeUnsub] = React.useState(true);
+  const [excludeBounce, setExcludeBounce] = React.useState(true);
+  const [leadsAll, setLeadsAll] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [spinning, setSpinning] = React.useState(false);
+  const [displayName, setDisplayName] = React.useState('—');
+  const [winner, setWinner] = React.useState(null);
+  const [history, setHistory] = React.useState([]); // sorteios anteriores nesta sessão
+
+  // Carrega TODOS os leads (paginado se necessário)
+  const loadLeads = React.useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      let merged = [];
+      for (let i = 0; i < 30; i++) {
+        const res = await api('/api/leads');
+        if (!res.leads) break;
+        merged = res.leads;
+        if (!res.truncated) break;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      setLeadsAll(merged);
+    } catch (e) {
+      setError(e.message);
+      setLeadsAll([]);
+    } finally { setLoading(false); }
+  }, []);
+  React.useEffect(() => { loadLeads(); }, [loadLeads]);
+
+  // Lista de candidatos elegíveis baseado nos filtros
+  const candidates = React.useMemo(() => {
+    if (!leadsAll || !leadsAll.length) return [];
+    // Dedup por e-mail — mesma pessoa não conta duas vezes
+    const seen = new Set();
+    const out = [];
+    for (const l of leadsAll) {
+      if (l.deletedAt) continue;
+      if (l.origem !== origem) continue;
+      const email = String(l.email || '').trim().toLowerCase();
+      if (excludeUnsub && l.unsubscribed) continue;
+      if (excludeBounce && l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send")) continue;
+      // Evita candidato sem nome (anônimo) — opcional, podemos relaxar
+      const nome = String(l.nome || '').trim();
+      if (!nome) continue;
+      if (email && seen.has(email)) continue;
+      if (email) seen.add(email);
+      out.push({
+        nome,
+        email,
+        whatsapp: l.whatsapp || '',
+        cidade: l.cidade || '',
+        estado: l.estado || '',
+        id: l.id || `${email || nome}-${out.length}`,
+      });
+    }
+    return out;
+  }, [leadsAll, origem, excludeUnsub, excludeBounce]);
+
+  // Origens disponíveis com contagem
+  const origemCounts = React.useMemo(() => {
+    if (!leadsAll) return {};
+    const counts = {};
+    for (const l of leadsAll) {
+      if (l.deletedAt) continue;
+      const o = l.origem || 'desconhecida';
+      counts[o] = (counts[o] || 0) + 1;
+    }
+    return counts;
+  }, [leadsAll]);
+
+  const spin = () => {
+    if (candidates.length === 0) {
+      alert('Nenhum candidato elegível com os filtros atuais.');
+      return;
+    }
+    setWinner(null);
+    setSpinning(true);
+    // Seleciona o ganhador aleatoriamente AGORA pra não dar pra "ler"
+    // visualmente quem vai sair. O algoritmo embaralha um pouco mais
+    // misturando timestamp + math.random pra reduzir vieses.
+    const seed = Date.now() ^ Math.floor(Math.random() * 0xffffffff);
+    const rng = (function () {
+      let s = seed >>> 0;
+      return () => {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        return s / 0x100000000;
+      };
+    })();
+    const idx = Math.floor(rng() * candidates.length);
+    const chosen = candidates[idx];
+
+    // Animação: cicla nomes aleatórios com velocidade que diminui
+    let elapsed = 0;
+    const TOTAL_MS = 5000; // duração total da roleta
+    const tick = () => {
+      elapsed += 60 + (elapsed * elapsed) / 40000; // acelera o intervalo conforme passa o tempo (desacelera visualmente)
+      if (elapsed >= TOTAL_MS) {
+        setDisplayName(chosen.nome);
+        setWinner(chosen);
+        setHistory((prev) => [{...chosen, drawnAt: new Date().toISOString()}, ...prev]);
+        setSpinning(false);
+        // Confete simples via emoji ou alert
+        return;
+      }
+      const rand = candidates[Math.floor(rng() * candidates.length)];
+      setDisplayName(rand.nome);
+      const nextDelay = Math.max(60, Math.min(280, 60 + (elapsed / TOTAL_MS) * 250));
+      setTimeout(tick, nextDelay);
+    };
+    setDisplayName(candidates[Math.floor(rng() * candidates.length)].nome);
+    setTimeout(tick, 80);
+  };
+
+  const ORIGEM_LIST = React.useMemo(() => {
+    const all = [...new Set([...Object.keys(origemCounts), 'sorteio-mba'])];
+    all.sort((a, b) => (origemCounts[b] || 0) - (origemCounts[a] || 0));
+    return all;
+  }, [origemCounts]);
+
+  return (
+    <div className="ad-broadcast">
+      <header className="ad-broadcast-head">
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onBackToOverview}>← Voltar à visão geral</button>
+        <h1 className="ad-broadcast-title">Roleta do sorteio</h1>
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+      </header>
+
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Configurar</span>
+          <h2 className="ad-widget-title">Base do sorteio</h2>
+        </header>
+        <div className="ad-bc-section">
+          <p className="ad-bc-section-title">Origem dos inscritos:</p>
+          <select
+            value={origem}
+            onChange={(e) => { setOrigem(e.target.value); setWinner(null); setDisplayName('—'); }}
+            disabled={spinning || loading}
+            style={{width: '100%', padding: 12, background: 'rgba(247,245,242,0.05)', border: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 14}}
+          >
+            {ORIGEM_LIST.map((o) => (
+              <option key={o} value={o}>
+                {(ORIGEM_LABELS[o] || o)} ({origemCounts[o] || 0} cadastros)
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="ad-bc-section">
+          <label className={'ad-bc-check' + (excludeUnsub ? ' is-on' : '')}>
+            <input type="checkbox" checked={excludeUnsub} onChange={(e) => setExcludeUnsub(e.target.checked)} disabled={spinning} />
+            <span>Excluir descadastrados</span>
+          </label>
+          <label className={'ad-bc-check' + (excludeBounce ? ' is-on' : '')} style={{marginLeft: 12}}>
+            <input type="checkbox" checked={excludeBounce} onChange={(e) => setExcludeBounce(e.target.checked)} disabled={spinning} />
+            <span>Excluir bounces de e-mail</span>
+          </label>
+        </div>
+        <p className="ad-bc-hint">
+          {loading ? 'Carregando base de leads…'
+            : error ? <span style={{color: '#d97757'}}>Erro: {error}</span>
+            : <><strong>{candidates.length}</strong> candidatos elegíveis na origem <strong>{ORIGEM_LABELS[origem] || origem}</strong> (sem duplicatas por e-mail).</>}
+        </p>
+      </section>
+
+      {/* Roleta */}
+      <section className="ad-widget ad-sorteio-roleta">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow" style={{color: '#d97757'}}>Sorteio ao vivo</span>
+          <h2 className="ad-widget-title">A roleta</h2>
+        </header>
+
+        <div className="ad-sorteio-stage">
+          <div className={'ad-sorteio-name' + (spinning ? ' is-spinning' : '') + (winner ? ' is-winner' : '')}>
+            {displayName}
+          </div>
+          {winner && (
+            <div className="ad-sorteio-meta">
+              {winner.email && <p>✉ {winner.email}</p>}
+              {winner.whatsapp && <p>☎ {winner.whatsapp}</p>}
+              {(winner.cidade || winner.estado) && <p>📍 {winner.cidade}{winner.estado ? ` · ${winner.estado}` : ''}</p>}
+            </div>
+          )}
+        </div>
+
+        <div className="ad-sorteio-actions">
+          <button
+            className="ad-btn ad-btn-primary ad-btn-lg"
+            style={{background: '#d97757', borderColor: '#d97757', minWidth: 220}}
+            disabled={spinning || loading || candidates.length === 0}
+            onClick={spin}
+          >
+            {spinning ? 'Sorteando…' : winner ? '↻ Sortear de novo' : '▶ Girar roleta'}
+          </button>
+          {winner && !spinning && (
+            <button
+              className="ad-btn ad-btn-ghost ad-btn-lg"
+              onClick={() => { setWinner(null); setDisplayName('—'); }}
+            >
+              Limpar resultado
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* Histórico desta sessão */}
+      {history.length > 0 && (
+        <section className="ad-widget">
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">Sorteios desta sessão</span>
+            <h2 className="ad-widget-title">Histórico</h2>
+          </header>
+          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {history.map((h, i) => (
+              <li key={i} style={{padding: '12px 0', borderBottom: i < history.length - 1 ? '1px solid rgba(247,245,242,0.08)' : 'none'}}>
+                <p style={{margin: 0, fontSize: 16, color: 'var(--offwhite)'}}>
+                  <strong>{h.nome}</strong> {h.email && <span style={{color: 'rgba(247,245,242,0.6)', fontSize: 13}}>· {h.email}</span>}
+                </p>
+                <p style={{margin: '4px 0 0', fontSize: 11, color: 'rgba(247,245,242,0.45)', fontFamily: 'monospace'}}>
+                  {fmtDate(h.drawnAt)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 };
@@ -4023,6 +4263,7 @@ const App = () => {
       onOpenLeads={() => setView('leads')}
       onOpenBroadcast={() => setView('broadcast')}
       onOpenColdLeads={() => setView('cold')}
+      onOpenSorteio={() => setView('sorteio')}
     />;
   }
   if (view === 'broadcast') {
@@ -4037,6 +4278,12 @@ const App = () => {
   }
   if (view === 'cold') {
     return <ColdLeadsPanel
+      onLogout={() => setAuthed(false)}
+      onBackToOverview={() => setView('overview')}
+    />;
+  }
+  if (view === 'sorteio') {
+    return <SorteioPanel
       onLogout={() => setAuthed(false)}
       onBackToOverview={() => setView('overview')}
     />;
