@@ -93,6 +93,10 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'JSON inválido'}, 400); }
 
+  // Total original do broadcast sendo retomado (usado pra detectar se o
+  // disparo original tinha leads frios mas o filtro salvo não registrou).
+  let resumeOrigTotal = 0;
+
   // ====== MODO RETOMAR DISPARO INCOMPLETO ======
   // Quando body.resumeFrom é setado, carrega subject/html/filter/broadcastId
   // do registro original e injeta no body antes do processamento normal.
@@ -107,6 +111,7 @@ export default async (req) => {
       body.html = orig.html;
       body.filter = orig.filter || {};
       body.broadcastId = orig.id || String(body.resumeFrom);
+      resumeOrigTotal = orig.total || 0;
     } catch (err) {
       return json({error: 'Falha ao ler disparo original: ' + err.message}, 500);
     }
@@ -263,12 +268,24 @@ export default async (req) => {
         allTargets.push({email, rep, origens: [...entry.origens]});
       }
 
+      // ====== AUTO-DETECÇÃO PRA RETOMAR DISPARO ANTIGO ======
+      // Se estamos retomando um disparo (resumeFrom) e o total atual de
+      // leads quentes é MUITO menor que o total salvo no histórico,
+      // significa que o disparo original incluía leads frios mas o filtro
+      // salvo não registrou (bug histórico — broadcasts antes de junho/2026
+      // não persistiam includeCold). Force includeCold=true pra
+      // reconstruir os mesmos destinatários do disparo original.
+      let effectiveIncludeCold = !!(body.filter && body.filter.includeCold);
+      if (body.resumeFrom && resumeOrigTotal > 0 && allTargets.length < resumeOrigTotal * 0.7) {
+        effectiveIncludeCold = true;
+      }
+
       // ====== LEADS FRIOS (opcional) ======
       // Lê do índice resumo (cold-leads-summary) construído por uma
       // background function. UMA leitura de blob em vez de escanear 14k
       // registros. Frequência menor recebe 1 a cada 4 disparos (hash
       // determinístico por email × broadcastId).
-      if (body.filter && body.filter.includeCold) {
+      if (effectiveIncludeCold) {
         try {
           const summaryStore = getStore({name: 'cold-leads-summary', consistency: 'strong'});
           const summary = await summaryStore.get('summary', {type: 'json'});
