@@ -418,6 +418,12 @@ const BsForm = () => {
           </button>
         </div>
       </div>
+      {isLast && (
+        <p style={{margin: '14px 0 0', textAlign: 'right', fontSize: '11px', color: 'rgba(247,245,242,0.55)', lineHeight: 1.5}}>
+          Ao se inscrever você aceita a{' '}
+          <a href="/politica-de-privacidade/" style={{color: 'var(--sand)', textDecoration: 'underline'}}>política de privacidade</a>.
+        </p>
+      )}
     </form>
   );
 };
