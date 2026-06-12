@@ -3212,6 +3212,53 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
       </header>
 
+      {/* Disparos incompletos — destaque visível no topo */}
+      {history && history.some((h) => {
+        const processed = (h.sent || 0) + (h.failed || 0);
+        return h.total && processed < h.total && !h.resendOf;
+      }) && (
+        <section className="ad-widget" style={{
+          background: 'rgba(217, 119, 87, 0.10)',
+          border: '1px solid rgba(217, 119, 87, 0.45)',
+          marginBottom: 18,
+        }}>
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow" style={{color: '#d97757'}}>Atenção</span>
+            <h2 className="ad-widget-title">Disparos incompletos</h2>
+          </header>
+          <p className="ad-bc-drafts-lead" style={{marginBottom: 16}}>
+            Estes disparos não terminaram de enviar pra todos os destinatários. Clica em <strong>Continuar</strong> pra retomar de onde parou.
+          </p>
+          <div className="ad-bc-incomplete-list">
+            {history.filter((h) => {
+              const processed = (h.sent || 0) + (h.failed || 0);
+              return h.total && processed < h.total && !h.resendOf;
+            }).map((h) => {
+              const processed = (h.sent || 0) + (h.failed || 0);
+              const remaining = h.total - processed;
+              return (
+                <div key={h.id} className="ad-bc-incomplete-card">
+                  <div className="ad-bc-incomplete-info">
+                    <p className="ad-bc-incomplete-subject">{h.subject}</p>
+                    <p className="ad-bc-incomplete-meta">
+                      Enviados: <strong>{h.sent}</strong> · Faltam: <strong style={{color: '#d97757'}}>{remaining}</strong> de {h.total}
+                    </p>
+                    <p className="ad-bc-incomplete-date">{fmtDate(h.sentAt)}</p>
+                  </div>
+                  <button
+                    className="ad-btn ad-btn-primary ad-btn-lg ad-bc-incomplete-cta"
+                    onClick={() => resumeBroadcast(h)}
+                    disabled={busy}
+                  >
+                    {busy ? 'Enviando…' : `▶ Continuar (${remaining})`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Rascunhos prontos por material */}
       <section className="ad-widget ad-bc-drafts">
         <header className="ad-widget-head">
