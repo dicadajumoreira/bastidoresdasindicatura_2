@@ -2339,3 +2339,66 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   font-size: 14px;
   color-scheme: dark;
 }
+
+/* Modal de destinatários */
+.ad-modal-card-wide {
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.ad-rec-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(247, 245, 242, 0.12);
+}
+.ad-rec-head h3 {
+  margin: 0;
+  font-family: var(--font-display, Georgia);
+  font-size: 18px;
+  flex: 1;
+  color: var(--offwhite, #F7F5F2);
+}
+.ad-rec-summary {
+  display: flex;
+  gap: 24px;
+  padding: 10px 0 16px;
+  font-size: 13px;
+  color: rgba(247, 245, 242, 0.7);
+}
+.ad-rec-summary strong {
+  color: var(--offwhite, #F7F5F2);
+  font-family: var(--font-display, Georgia);
+  font-size: 18px;
+  margin-right: 4px;
+}
+.ad-rec-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 200px;
+}
+.ad-rec-table {
+  width: 100%;
+}
+.ad-rec-table th:first-child { width: 110px; }
+.ad-rec-table th:nth-child(4) { width: 160px; }
+.ad-rec-badge {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 2px;
+}
+.ad-rec-badge.is-ok {
+  background: rgba(129, 148, 112, 0.18);
+  color: #819470;
+}
+.ad-rec-badge.is-err {
+  background: rgba(217, 119, 87, 0.18);
+  color: #d97757;
+}

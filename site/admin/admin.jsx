@@ -2096,6 +2096,17 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   const [progress, setProgress] = React.useState(null); // {sent, failed, processed, total}
   const [scheduledFor, setScheduledFor] = React.useState(''); // ISO string "YYYY-MM-DDTHH:mm" do <input type="datetime-local">
   const [scheduledList, setScheduledList] = React.useState(null);
+  const [recipientsModal, setRecipientsModal] = React.useState(null); // { broadcastId, subject, recipients, loading }
+
+  const openRecipients = async (h) => {
+    setRecipientsModal({broadcastId: h.id, subject: h.subject, recipients: null, loading: true});
+    try {
+      const res = await api(`/api/broadcast-recipients?broadcastId=${encodeURIComponent(h.id)}`);
+      setRecipientsModal((cur) => cur && cur.broadcastId === h.id ? {...cur, recipients: res.recipients || [], loading: false} : cur);
+    } catch (e) {
+      setRecipientsModal((cur) => cur && cur.broadcastId === h.id ? {...cur, recipients: [], loading: false, error: e.message} : cur);
+    }
+  };
 
   // Carrega lista de agendamentos pendentes
   const loadScheduled = React.useCallback(async () => {
@@ -2547,6 +2558,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 <th>Filtro</th>
                 <th style={{textAlign:'right'}}>Enviados</th>
                 <th style={{textAlign:'right'}}>Falharam</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -2557,12 +2569,68 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                   <td className="ad-bc-history-filter">{h.filterSummary || 'todos'}</td>
                   <td style={{textAlign:'right'}}><strong>{h.sent}</strong> / {h.total}</td>
                   <td style={{textAlign:'right'}}>{h.failed > 0 ? <span style={{color:'#d97757'}}>{h.failed}</span> : '—'}</td>
+                  <td style={{textAlign:'right'}}>
+                    <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => openRecipients(h)}>Ver destinatários</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </section>
+
+      {recipientsModal && (
+        <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && setRecipientsModal(null)}>
+          <div className="ad-modal-card ad-modal-card-wide">
+            <header className="ad-rec-head">
+              <span className="ad-widget-eyebrow">Destinatários</span>
+              <h3>{recipientsModal.subject}</h3>
+              <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setRecipientsModal(null)}>Fechar</button>
+            </header>
+            {recipientsModal.loading ? (
+              <p className="ad-bc-empty">Carregando…</p>
+            ) : recipientsModal.error ? (
+              <p className="ad-bc-empty" style={{color:'#d97757'}}>Erro: {recipientsModal.error}</p>
+            ) : !recipientsModal.recipients || recipientsModal.recipients.length === 0 ? (
+              <p className="ad-bc-empty">Sem registro de destinatários para esse disparo.</p>
+            ) : (
+              <>
+                <div className="ad-rec-summary">
+                  <span><strong>{recipientsModal.recipients.length}</strong> total</span>
+                  <span style={{color:'#819470'}}><strong>{recipientsModal.recipients.filter((r) => r.status === 'sent').length}</strong> entregues</span>
+                  <span style={{color:'#d97757'}}><strong>{recipientsModal.recipients.filter((r) => r.status === 'failed').length}</strong> falharam</span>
+                </div>
+                <div className="ad-rec-table-wrap">
+                  <table className="ad-bc-history-table ad-rec-table">
+                    <thead>
+                      <tr>
+                        <th>Status</th>
+                        <th>E-mail</th>
+                        <th>Nome</th>
+                        <th>Horário</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recipientsModal.recipients.map((r, i) => (
+                        <tr key={r.email + i}>
+                          <td>
+                            <span className={'ad-rec-badge ' + (r.status === 'sent' ? 'is-ok' : 'is-err')}>
+                              {r.status === 'sent' ? '✓ enviado' : '✗ falhou'}
+                            </span>
+                          </td>
+                          <td className="ad-bc-history-subject">{r.email}</td>
+                          <td>{r.nome || <span style={{color:'rgba(247,245,242,0.4)'}}>—</span>}</td>
+                          <td className="ad-bc-history-date">{r.sentAt ? new Date(r.sentAt).toLocaleString('pt-BR') : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {confirmOpen && (
         <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}>

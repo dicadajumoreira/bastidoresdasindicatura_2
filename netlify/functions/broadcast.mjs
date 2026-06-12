@@ -174,9 +174,11 @@ export default async (req) => {
     const RATE_DELAY_MS = 1100;
     let sent = 0, failed = 0;
     const errors = [];
+    const recipientsLog = []; // Registro detalhado por destinatário
 
     for (let i = 0; i < slice.length; i += RATE_BATCH) {
       const batch = slice.slice(i, i + RATE_BATCH);
+      const sentAt = new Date().toISOString();
       const results = await Promise.allSettled(batch.map((t) => {
         const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
         const primaryOrigem = t.origens[0];
@@ -192,14 +194,31 @@ export default async (req) => {
           reply_to: 'contato@dicadajumoreira.com.br',
         });
       }));
-      for (const r of results) {
-        if (r.status === 'fulfilled') sent++;
-        else { failed++; if (errors.length < 5) errors.push(String(r.reason?.message || 'erro').slice(0, 200)); }
+      for (let j = 0; j < results.length; j++) {
+        const r = results[j];
+        const t = batch[j];
+        if (r.status === 'fulfilled') {
+          sent++;
+          recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'sent', sentAt});
+        } else {
+          failed++;
+          const errMsg = String(r.reason?.message || 'erro').slice(0, 200);
+          if (errors.length < 5) errors.push(errMsg);
+          recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
+        }
       }
       // Espera antes do próximo lote (exceto se for o último)
       if (i + RATE_BATCH < slice.length) {
         await new Promise((res) => setTimeout(res, RATE_DELAY_MS));
       }
+    }
+
+    // Salva log detalhado de destinatários desta chamada
+    try {
+      const recipientsStore = getStore({name: 'broadcast-recipients', consistency: 'strong'});
+      await recipientsStore.setJSON(`${broadcastId}__${String(offset).padStart(7, '0')}`, recipientsLog);
+    } catch (e) {
+      console.error('[broadcast] failed to save recipients log:', e.message);
     }
 
     const nextOffset = offset + processed;

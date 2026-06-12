@@ -134,9 +134,11 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
   const RATE_DELAY_MS = 1100;
   let sent = 0, failed = 0;
   const errors = [];
+  const recipientsStore = (await import('@netlify/blobs')).getStore({name: 'broadcast-recipients', consistency: 'strong'});
 
   for (let i = 0; i < targets.length; i += RATE_BATCH) {
     const batch = targets.slice(i, i + RATE_BATCH);
+    const sentAt = new Date().toISOString();
     const results = await Promise.allSettled(batch.map((t) => {
       const firstName = String(t.rep.nome || '').trim().split(/\s+/)[0] || '';
       const primaryOrigem = t.origens[0];
@@ -152,9 +154,25 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
         reply_to: 'contato@dicadajumoreira.com.br',
       });
     }));
-    for (const r of results) {
-      if (r.status === 'fulfilled') sent++;
-      else { failed++; if (errors.length < 10) errors.push(String(r.reason?.message || 'erro').slice(0, 200)); }
+    const recipientsLog = [];
+    for (let j = 0; j < results.length; j++) {
+      const r = results[j];
+      const t = batch[j];
+      if (r.status === 'fulfilled') {
+        sent++;
+        recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'sent', sentAt});
+      } else {
+        failed++;
+        const errMsg = String(r.reason?.message || 'erro').slice(0, 200);
+        if (errors.length < 10) errors.push(errMsg);
+        recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
+      }
+    }
+    // Salva o log do lote
+    try {
+      await recipientsStore.setJSON(`${broadcastId}__${String(i).padStart(7, '0')}`, recipientsLog);
+    } catch (e) {
+      console.error('[scheduled-broadcasts] failed to save recipients log:', e.message);
     }
     if (i + RATE_BATCH < targets.length) {
       await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
