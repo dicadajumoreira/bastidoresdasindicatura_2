@@ -1,19 +1,17 @@
 // Netlify Function v2 · POST /api/cold-leads (importação em lote)
 // e GET /api/cold-leads (lista com paginação).
 //
-// IMPORTAR (POST):
-// Body: {
-//   entries: [{email, nome?, whatsapp?, source?}, ...],
-//   source: 'addressbookreport.csv' (origem do arquivo)
-// }
-// Resposta: { ok, imported, duplicates, invalid, total }
+// SCHEMA (novo):
+// - lead:{id}       → full record com emails: [...], whatsapps: [...]
+// - idxe:{email}    → {leadId} (índice de e-mail → registro)
+// - idxp:{phone}    → {leadId} (índice de telefone → registro)
 //
-// LISTAR (GET):
-// Query opcional: ?limit=100&offset=0&search=...
-// Resposta: { ok, leads: [...], total }
+// SCHEMA (antigo, mantido pra leitura backward-compat):
+// - cold:e:{email}  → full record (single email)
+// - cold:p:{phone}  → full record (single phone)
 //
-// CHAVE: 'cold:{email_normalizado}' — permite dedupe O(1) por get(key)
-// Status default: { unsubscribed: false, frequencia: 'normal' }
+// Listagem combina os dois schemas. Imports novos vão pro novo schema.
+// Pra migrar dados antigos, basta limpar por origem e re-importar.
 
 import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
@@ -22,27 +20,32 @@ export const config = {
   path: ['/api/cold-leads', '/.netlify/functions/cold-leads'],
 };
 
+const KEY_LEAD = 'lead:';
+const KEY_IDXE = 'idxe:';
+const KEY_IDXP = 'idxp:';
+
 function normEmail(e) {
   return String(e || '').trim().toLowerCase();
 }
-
 function isValidEmail(e) {
   if (!e || typeof e !== 'string') return false;
   const at = e.indexOf('@');
   const dot = e.lastIndexOf('.');
   return at > 0 && dot > at + 1 && dot < e.length - 1 && !e.includes(' ');
 }
-
 function normPhone(p) {
-  // Normaliza pra só dígitos. Pra Brasil, números válidos têm 10-13 dígitos
-  // (DDD 2 + 8/9 dígitos, opcionalmente com 55 do país).
-  const digits = String(p || '').replace(/\D/g, '');
-  return digits;
+  return String(p || '').replace(/\D/g, '');
 }
-
 function isValidPhone(p) {
   const d = normPhone(p);
   return d.length >= 10 && d.length <= 13;
+}
+
+// Hash determinístico curto pra id de registro (a partir do primeiro e-mail ou tel)
+function makeLeadId(primaryEmail, primaryPhone) {
+  const base = primaryEmail || `p${primaryPhone}` || `${Date.now()}${Math.random()}`;
+  // só caracteres seguros pra key
+  return base.replace(/[^a-z0-9._@+-]/gi, '_').slice(0, 80);
 }
 
 export default async (req) => {
@@ -53,7 +56,9 @@ export default async (req) => {
 
   const store = getStore({name: 'cold-leads', consistency: 'strong'});
 
-  // ====== LISTAR ======
+  // ============================================================
+  // LISTAR
+  // ============================================================
   if (req.method === 'GET') {
     const url = new URL(req.url);
     const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get('limit') || '100', 10)));
@@ -62,52 +67,58 @@ export default async (req) => {
 
     try {
       const list = await store.list();
-      let keys = (list.blobs || []).map((b) => b.key);
-      keys.sort();
-      const total = keys.length;
-      // Aplica busca rápida no e-mail do próprio key
+      // Filtra só chaves de registro (skip índices)
+      const allKeys = (list.blobs || []).map((b) => b.key);
+      const recordKeys = allKeys.filter((k) =>
+        k.startsWith(KEY_LEAD) || k.startsWith('cold:e:') || k.startsWith('cold:p:')
+      );
+      recordKeys.sort();
+      const total = recordKeys.length;
+
+      // Busca rápida pelo conteúdo da chave (rough)
+      let filtered = recordKeys;
       if (search) {
-        keys = keys.filter((k) => k.toLowerCase().includes(search));
+        filtered = recordKeys.filter((k) => k.toLowerCase().includes(search));
       }
-      const pageKeys = keys.slice(offset, offset + limit);
+      const pageKeys = filtered.slice(offset, offset + limit);
+
+      // Carrega registros em paralelo
       const leads = [];
       const BATCH = 12;
       for (let i = 0; i < pageKeys.length; i += BATCH) {
         const batch = pageKeys.slice(i, i + BATCH);
         const got = await Promise.allSettled(batch.map((k) => store.get(k, {type: 'json'})));
-        for (const g of got) {
-          if (g.status === 'fulfilled' && g.value) leads.push(g.value);
+        for (let j = 0; j < got.length; j++) {
+          const g = got[j];
+          if (g.status === 'fulfilled' && g.value) {
+            leads.push(toUnifiedLead(g.value, batch[j]));
+          }
         }
       }
-      return json({ok: true, leads, total: search ? keys.length : total, totalAll: total});
+      return json({ok: true, leads, total: search ? filtered.length : total, totalAll: total});
     } catch (err) {
       return json({error: 'Falha ao listar leads frios: ' + err.message}, 500);
     }
   }
 
-  // ====== IMPORTAR EM LOTE ======
+  // ============================================================
+  // IMPORTAR EM LOTE (POST)
+  // ============================================================
   if (req.method === 'POST') {
     let body;
     try { body = await req.json(); } catch { return json({error: 'JSON inválido'}, 400); }
 
     const entries = Array.isArray(body.entries) ? body.entries : [];
     const source = String(body.source || 'import-manual');
+    if (entries.length === 0) return json({error: 'Nenhuma entrada fornecida'}, 400);
+    if (entries.length > 800) return json({error: 'Lote muito grande. Envie em chunks de até 500.'}, 400);
 
-    if (entries.length === 0) {
-      return json({error: 'Nenhuma entrada fornecida'}, 400);
-    }
-    if (entries.length > 800) {
-      return json({error: 'Lote muito grande. Envie em chunks de até 500 por vez.'}, 400);
-    }
-
-    let importedEmail = 0;
-    let importedPhone = 0;
+    let importedNew = 0;
     let merged = 0;
     let invalid = 0;
     const errors = [];
 
-    // Aceita entradas com e-mail OU só telefone (vão pra canais diferentes
-    // no futuro: e-mail via Resend, WhatsApp via outro disparador).
+    // Normaliza entradas
     const candidates = [];
     for (const e of entries) {
       const email = normEmail(e.email);
@@ -124,103 +135,21 @@ export default async (req) => {
       });
     }
 
-    // Função utilitária: localiza registro existente por e-mail OU telefone
-    const findExisting = async (c) => {
-      if (c.email) {
-        try {
-          const v = await store.get(`cold:e:${c.email}`, {type: 'json'});
-          if (v) return {key: `cold:e:${c.email}`, lead: v};
-        } catch {}
-      }
-      if (c.whatsapp) {
-        try {
-          const v = await store.get(`cold:p:${c.whatsapp}`, {type: 'json'});
-          if (v) return {key: `cold:p:${c.whatsapp}`, lead: v};
-        } catch {}
-      }
-      return null;
-    };
-
-    // Merge: ATUALIZA o registro com as novas informações da lista importada.
-    // Regra: campo novo preenchido SOBRESCREVE o existente. Campo novo vazio
-    // mantém o existente (não apaga dado já cadastrado).
-    const mergeLead = (existing, c) => {
-      const sourcesOld = existing.sources || (existing.source ? [existing.source] : []);
-      const sourcesNew = sourcesOld.includes(c.source) ? sourcesOld : [...sourcesOld, c.source];
-      const out = {
-        ...existing,
-        // e-mail só pode ser ADICIONADO se não existia (é parte da chave de dedupe)
-        email: existing.email || c.email,
-        // demais campos: novo valor vence se preenchido
-        whatsapp: c.whatsapp || existing.whatsapp,
-        nome: (c.nome && c.nome.trim()) ? c.nome : existing.nome,
-        emailStatus: c.emailStatus || existing.emailStatus,
-        sources: sourcesNew,
-        source: existing.source || c.source, // origem original preservada
-        updatedAt: new Date().toISOString(),
-      };
-      out.canal = out.email && out.whatsapp ? 'both' : (out.email ? 'email' : 'whatsapp');
-      return out;
-    };
-
-    // Salva em paralelo com concorrência baixa
-    const CONCURRENCY = 8;
-    for (let i = 0; i < candidates.length; i += CONCURRENCY) {
-      const batch = candidates.slice(i, i + CONCURRENCY);
-      const results = await Promise.allSettled(batch.map(async (c) => {
-        const found = await findExisting(c);
-        if (found) {
-          const updated = mergeLead(found.lead, c);
-          // Se achei por telefone mas agora tem e-mail, migra a chave pra e-mail
-          if (found.key.startsWith('cold:p:') && c.email) {
-            const newKey = `cold:e:${c.email}`;
-            updated.id = newKey;
-            await store.setJSON(newKey, updated);
-            try { await store.delete(found.key); } catch {}
-          } else {
-            await store.setJSON(found.key, updated);
-          }
-          return {status: 'merged'};
-        }
-        // Novo registro
-        const key = c.email ? `cold:e:${c.email}` : `cold:p:${c.whatsapp}`;
-        const canal = c.email && c.whatsapp ? 'both' : (c.email ? 'email' : 'whatsapp');
-        const lead = {
-          id: key,
-          email: c.email,
-          whatsapp: c.whatsapp,
-          nome: c.nome,
-          source: c.source,
-          sources: [c.source],
-          emailStatus: c.emailStatus,
-          tipo: 'frio',
-          canal,
-          importedAt: new Date().toISOString(),
-          unsubscribed: false,
-          frequencia: 'normal',
-          convertedToHotAt: null,
-        };
-        await store.setJSON(key, lead);
-        return {status: 'imported', canal: c.email ? 'email' : 'phone'};
-      }));
-      for (const r of results) {
-        if (r.status === 'fulfilled') {
-          if (r.value.status === 'imported') {
-            if (r.value.canal === 'email') importedEmail++;
-            else importedPhone++;
-          } else if (r.value.status === 'merged') merged++;
-        } else {
-          invalid++;
-          if (errors.length < 5) errors.push(String(r.reason?.message || 'erro').slice(0, 200));
-        }
+    // Processa um a um pra evitar conflitos de merge concorrente no mesmo registro
+    for (const c of candidates) {
+      try {
+        const result = await upsertLead(store, c);
+        if (result === 'new') importedNew++;
+        else if (result === 'merged') merged++;
+      } catch (err) {
+        invalid++;
+        if (errors.length < 5) errors.push(String(err.message || 'erro').slice(0, 200));
       }
     }
 
     return json({
       ok: true,
-      imported: importedEmail + importedPhone,
-      importedEmail,
-      importedPhone,
+      imported: importedNew,
       merged,
       invalid,
       total: entries.length,
@@ -228,67 +157,261 @@ export default async (req) => {
     });
   }
 
-  // ====== DELETE ======
+  // ============================================================
+  // DELETE
+  // ============================================================
   if (req.method === 'DELETE') {
     const url = new URL(req.url);
     const email = (url.searchParams.get('email') || '').toLowerCase().trim();
-    const sourceContains = (url.searchParams.get('sourceContains') || '').trim();
     const phone = (url.searchParams.get('phone') || '').replace(/\D/g, '');
+    const leadId = url.searchParams.get('leadId');
+    const sourceContains = (url.searchParams.get('sourceContains') || '').trim();
 
-    // Delete por e-mail único
+    if (leadId) {
+      try {
+        await deleteLeadById(store, leadId);
+        return json({ok: true});
+      } catch (err) { return json({error: err.message}, 500); }
+    }
     if (email) {
       try {
-        // Pode ter sido salvo com prefixo 'cold:' (antigo) ou 'cold:e:' (novo)
-        await store.delete(`cold:e:${email}`);
-        try { await store.delete(`cold:${email}`); } catch {}
+        // Procura novo schema primeiro
+        const ptr = await store.get(`${KEY_IDXE}${email}`, {type: 'json'});
+        if (ptr?.leadId) {
+          await deleteLeadById(store, ptr.leadId);
+        }
+        // Apaga old schema também (cold:e:)
+        try { await store.delete(`cold:e:${email}`); } catch {}
+        try { await store.delete(`cold:${email}`); } catch {} // versão muito antiga
         return json({ok: true});
-      } catch (err) {
-        return json({error: err.message}, 500);
-      }
+      } catch (err) { return json({error: err.message}, 500); }
     }
-
-    // Delete por telefone único
     if (phone) {
       try {
-        await store.delete(`cold:p:${phone}`);
+        const ptr = await store.get(`${KEY_IDXP}${phone}`, {type: 'json'});
+        if (ptr?.leadId) {
+          await deleteLeadById(store, ptr.leadId);
+        }
+        try { await store.delete(`cold:p:${phone}`); } catch {}
         return json({ok: true});
-      } catch (err) {
-        return json({error: err.message}, 500);
-      }
+      } catch (err) { return json({error: err.message}, 500); }
     }
-
-    // Delete em lote por origem (source contém X)
     if (sourceContains) {
       try {
         const list = await store.list();
-        const keys = (list.blobs || []).map((b) => b.key);
+        const allKeys = (list.blobs || []).map((b) => b.key);
+        const recordKeys = allKeys.filter((k) =>
+          k.startsWith(KEY_LEAD) || k.startsWith('cold:e:') || k.startsWith('cold:p:')
+        );
         let deleted = 0;
-        const CONCURRENCY = 15;
-        for (let i = 0; i < keys.length; i += CONCURRENCY) {
-          const batch = keys.slice(i, i + CONCURRENCY);
-          const matches = await Promise.allSettled(batch.map(async (k) => {
+        const CONC = 12;
+        for (let i = 0; i < recordKeys.length; i += CONC) {
+          const batch = recordKeys.slice(i, i + CONC);
+          const checks = await Promise.allSettled(batch.map(async (k) => {
             const v = await store.get(k, {type: 'json'});
-            if (v && v.source && v.source.includes(sourceContains)) {
-              await store.delete(k);
+            if (!v) return false;
+            const sources = v.sources || (v.source ? [v.source] : []);
+            const matched = sources.some((s) => s && String(s).includes(sourceContains));
+            if (matched) {
+              if (k.startsWith(KEY_LEAD)) {
+                await deleteLeadById(store, k.slice(KEY_LEAD.length));
+              } else {
+                // Old schema: deleta direto
+                await store.delete(k);
+              }
               return true;
             }
             return false;
           }));
-          for (const m of matches) {
-            if (m.status === 'fulfilled' && m.value === true) deleted++;
+          for (const r of checks) {
+            if (r.status === 'fulfilled' && r.value === true) deleted++;
           }
         }
         return json({ok: true, deleted});
-      } catch (err) {
-        return json({error: err.message}, 500);
-      }
+      } catch (err) { return json({error: err.message}, 500); }
     }
 
-    return json({error: 'Especifique email, phone ou sourceContains'}, 400);
+    return json({error: 'Especifique email, phone, leadId ou sourceContains'}, 400);
   }
 
   return json({error: 'Method not allowed'}, 405);
 };
+
+// ============================================================
+// UPSERT — núcleo da lógica de merge multi-email/telefone
+// ============================================================
+async function upsertLead(store, c) {
+  // 1. Tenta achar registro existente por QUALQUER e-mail ou telefone candidato
+  let existingLeadId = null;
+
+  // Primeiro tenta pelos índices novos
+  if (c.email) {
+    const ptr = await safeGet(store, `${KEY_IDXE}${c.email}`);
+    if (ptr?.leadId) existingLeadId = ptr.leadId;
+  }
+  if (!existingLeadId && c.whatsapp) {
+    const ptr = await safeGet(store, `${KEY_IDXP}${c.whatsapp}`);
+    if (ptr?.leadId) existingLeadId = ptr.leadId;
+  }
+
+  // Se não achou nos índices novos, tenta no schema antigo
+  let oldKey = null;
+  let oldLead = null;
+  if (!existingLeadId) {
+    if (c.email) {
+      const v = await safeGet(store, `cold:e:${c.email}`);
+      if (v) { oldLead = v; oldKey = `cold:e:${c.email}`; }
+    }
+    if (!oldLead && c.whatsapp) {
+      const v = await safeGet(store, `cold:p:${c.whatsapp}`);
+      if (v) { oldLead = v; oldKey = `cold:p:${c.whatsapp}`; }
+    }
+  }
+
+  let existingLead = null;
+  if (existingLeadId) {
+    existingLead = await safeGet(store, `${KEY_LEAD}${existingLeadId}`);
+  } else if (oldLead) {
+    // Migra registro antigo pra novo schema
+    existingLead = migrateOldLead(oldLead);
+    existingLeadId = existingLead.id;
+    await store.setJSON(`${KEY_LEAD}${existingLeadId}`, existingLead);
+    // Cria índices pros e-mails/telefones do registro migrado
+    for (const e of existingLead.emails) {
+      await store.setJSON(`${KEY_IDXE}${e}`, {leadId: existingLeadId});
+    }
+    for (const p of existingLead.whatsapps) {
+      await store.setJSON(`${KEY_IDXP}${p}`, {leadId: existingLeadId});
+    }
+    // Remove a chave antiga
+    try { await store.delete(oldKey); } catch {}
+  }
+
+  if (existingLead) {
+    // MERGE: adiciona e-mail/telefone novos aos arrays, atualiza outros campos
+    const newEmails = c.email && !existingLead.emails.includes(c.email)
+      ? [...existingLead.emails, c.email]
+      : existingLead.emails;
+    const newPhones = c.whatsapp && !existingLead.whatsapps.includes(c.whatsapp)
+      ? [...existingLead.whatsapps, c.whatsapp]
+      : existingLead.whatsapps;
+
+    const oldSources = existingLead.sources || [];
+    const newSources = oldSources.includes(c.source) ? oldSources : [...oldSources, c.source];
+
+    const updated = {
+      ...existingLead,
+      emails: newEmails,
+      whatsapps: newPhones,
+      nome: (c.nome && c.nome.trim()) ? c.nome : existingLead.nome,
+      emailStatus: c.emailStatus || existingLead.emailStatus,
+      sources: newSources,
+      updatedAt: new Date().toISOString(),
+    };
+    updated.canal = newEmails.length && newPhones.length ? 'both' : (newEmails.length ? 'email' : 'whatsapp');
+
+    await store.setJSON(`${KEY_LEAD}${existingLeadId}`, updated);
+
+    // Atualiza índices pros e-mails/telefones que ainda não tinham ponteiro
+    if (c.email && !existingLead.emails.includes(c.email)) {
+      await store.setJSON(`${KEY_IDXE}${c.email}`, {leadId: existingLeadId});
+    }
+    if (c.whatsapp && !existingLead.whatsapps.includes(c.whatsapp)) {
+      await store.setJSON(`${KEY_IDXP}${c.whatsapp}`, {leadId: existingLeadId});
+    }
+    return 'merged';
+  }
+
+  // Cria novo registro
+  const leadId = makeLeadId(c.email, c.whatsapp);
+  const emails = c.email ? [c.email] : [];
+  const whatsapps = c.whatsapp ? [c.whatsapp] : [];
+  const lead = {
+    id: leadId,
+    emails,
+    whatsapps,
+    nome: c.nome,
+    source: c.source,
+    sources: [c.source],
+    emailStatus: c.emailStatus,
+    tipo: 'frio',
+    canal: emails.length && whatsapps.length ? 'both' : (emails.length ? 'email' : 'whatsapp'),
+    importedAt: new Date().toISOString(),
+    unsubscribed: false,
+    frequencia: 'normal',
+    convertedToHotAt: null,
+  };
+
+  await store.setJSON(`${KEY_LEAD}${leadId}`, lead);
+  for (const e of emails) await store.setJSON(`${KEY_IDXE}${e}`, {leadId});
+  for (const p of whatsapps) await store.setJSON(`${KEY_IDXP}${p}`, {leadId});
+
+  return 'new';
+}
+
+async function deleteLeadById(store, leadId) {
+  const lead = await safeGet(store, `${KEY_LEAD}${leadId}`);
+  if (!lead) return;
+  for (const e of (lead.emails || [])) {
+    try { await store.delete(`${KEY_IDXE}${e}`); } catch {}
+  }
+  for (const p of (lead.whatsapps || [])) {
+    try { await store.delete(`${KEY_IDXP}${p}`); } catch {}
+  }
+  try { await store.delete(`${KEY_LEAD}${leadId}`); } catch {}
+}
+
+async function safeGet(store, key) {
+  try { return await store.get(key, {type: 'json'}); } catch { return null; }
+}
+
+// Converte registro do schema antigo (1 email + 1 phone) pro novo (arrays)
+function migrateOldLead(old) {
+  const emails = old.email ? [old.email] : [];
+  const whatsapps = old.whatsapp ? [old.whatsapp] : [];
+  const id = makeLeadId(old.email, old.whatsapp);
+  return {
+    id,
+    emails,
+    whatsapps,
+    nome: old.nome || '',
+    source: old.source || '',
+    sources: old.sources || (old.source ? [old.source] : []),
+    emailStatus: old.emailStatus || null,
+    tipo: 'frio',
+    canal: emails.length && whatsapps.length ? 'both' : (emails.length ? 'email' : 'whatsapp'),
+    importedAt: old.importedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    unsubscribed: !!old.unsubscribed,
+    frequencia: old.frequencia || 'normal',
+    convertedToHotAt: old.convertedToHotAt || null,
+  };
+}
+
+// Normaliza qualquer registro (novo ou antigo) pro formato unificado que o front entende
+function toUnifiedLead(v, key) {
+  // Se é novo schema, já tem arrays
+  if (Array.isArray(v.emails) || Array.isArray(v.whatsapps)) {
+    return {
+      ...v,
+      emails: v.emails || [],
+      whatsapps: v.whatsapps || [],
+      // backwards-compat pro UI atual
+      email: (v.emails || [])[0] || null,
+      whatsapp: (v.whatsapps || [])[0] || null,
+    };
+  }
+  // Schema antigo: cria arrays a partir dos campos singulares
+  return {
+    ...v,
+    id: v.id || key,
+    emails: v.email ? [v.email] : [],
+    whatsapps: v.whatsapp ? [v.whatsapp] : [],
+    email: v.email || null,
+    whatsapp: v.whatsapp || null,
+    sources: v.sources || (v.source ? [v.source] : []),
+  };
+}
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {

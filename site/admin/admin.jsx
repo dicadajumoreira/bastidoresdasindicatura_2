@@ -1950,12 +1950,14 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
   };
 
   const deleteCold = async (lead) => {
-    const label = lead.email || lead.whatsapp;
+    const emails = lead.emails || (lead.email ? [lead.email] : []);
+    const phones = lead.whatsapps || (lead.whatsapp ? [lead.whatsapp] : []);
+    const label = emails[0] || phones[0] || lead.nome || lead.id;
     if (!confirm(`Remover ${label} da base de leads frios?`)) return;
     try {
-      const qs = lead.email
-        ? `email=${encodeURIComponent(lead.email)}`
-        : `phone=${encodeURIComponent(lead.whatsapp)}`;
+      const qs = lead.id ? `leadId=${encodeURIComponent(lead.id)}`
+        : emails[0] ? `email=${encodeURIComponent(emails[0])}`
+        : `phone=${encodeURIComponent(phones[0])}`;
       await api(`/api/cold-leads?${qs}`, {method: 'DELETE'});
       loadCold(search);
     } catch (e) { alert('Falha: ' + e.message); }
@@ -2102,7 +2104,10 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                 </tr>
               </thead>
               <tbody>
-                {coldList.leads.map((l) => (
+                {coldList.leads.map((l) => {
+                  const emails = l.emails || (l.email ? [l.email] : []);
+                  const phones = l.whatsapps || (l.whatsapp ? [l.whatsapp] : []);
+                  return (
                   <tr key={l.id || l.email || l.whatsapp}>
                     <td>
                       {l.canal === 'both' ? <span style={{color: '#819470'}}>e-mail + WA</span>
@@ -2110,10 +2115,20 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                         : l.canal === 'whatsapp' ? <span style={{color: '#B89579'}}>WhatsApp</span>
                         : <span style={{color: 'rgba(247,245,242,0.4)'}}>—</span>}
                     </td>
-                    <td className="ad-bc-history-subject">{l.email || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
+                    <td className="ad-bc-history-subject">
+                      {emails.length === 0 ? <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>
+                        : emails.length === 1 ? emails[0]
+                        : <span title={emails.join('\n')}>{emails[0]} <span style={{color:'var(--sand)', fontSize:'10px'}}>+{emails.length - 1}</span></span>}
+                    </td>
                     <td>{l.nome || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
-                    <td>{l.whatsapp || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
-                    <td className="ad-bc-history-filter">{l.source}</td>
+                    <td>
+                      {phones.length === 0 ? <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>
+                        : phones.length === 1 ? phones[0]
+                        : <span title={phones.join('\n')}>{phones[0]} <span style={{color:'var(--sand)', fontSize:'10px'}}>+{phones.length - 1}</span></span>}
+                    </td>
+                    <td className="ad-bc-history-filter" title={(l.sources || [l.source]).join('\n')}>
+                      {l.source}{l.sources && l.sources.length > 1 ? <span style={{color:'var(--sand)', fontSize:'10px'}}> +{l.sources.length - 1}</span> : ''}
+                    </td>
                     <td>
                       {l.unsubscribed ? <span style={{color:'#d97757'}}>descadastrou</span>
                         : l.convertedToHotAt ? <span style={{color:'#819470'}}>virou quente</span>
@@ -2125,7 +2140,8 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                       <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => deleteCold(l)}>Remover</button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}
