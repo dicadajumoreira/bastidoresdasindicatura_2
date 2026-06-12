@@ -30,7 +30,7 @@ export const config = {
   path: ['/api/broadcast', '/.netlify/functions/broadcast'],
 };
 
-const FROM = 'Juliana Moreira <contato@dicadajumoreira.com.br>';
+const FROM = 'Bastidores da Sindicatura <contato@dicadajumoreira.com.br>';
 
 const MATERIAL_NAMES = {
   'mentoria': 'a Mentoria',

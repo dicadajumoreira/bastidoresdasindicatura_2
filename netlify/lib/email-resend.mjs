@@ -7,7 +7,7 @@
 // A chave RESEND_API_KEY é lida do ambiente do Netlify.
 
 const SITE = 'https://bastidoresdasindicatura.com.br';
-const FROM = 'Juliana Moreira <contato@dicadajumoreira.com.br>';
+const FROM = 'Bastidores da Sindicatura <contato@dicadajumoreira.com.br>';
 const ADMIN_TO = 'contato@dicadajumoreira.com.br';
 
 // Mapa de origem → metadata do material entregue
