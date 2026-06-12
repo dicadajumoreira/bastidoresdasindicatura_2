@@ -2198,6 +2198,22 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
     padding: 4px 0;
     border: none;
   }
+  /* Botões da última coluna (ações: Continuar, Ver destinatários,
+     Editar, Remover) viram blocos empilhados pra todos caberem na
+     tela do celular. */
+  .ad-bc-history-table td:last-child {
+    text-align: left !important;
+    white-space: normal !important;
+    margin-top: 10px;
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ad-bc-history-table td:last-child .ad-btn {
+    width: 100%;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
 }
 
 /* Barra de progresso do disparo */
