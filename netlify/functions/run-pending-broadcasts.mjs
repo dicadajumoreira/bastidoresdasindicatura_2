@@ -9,6 +9,7 @@
 import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
 import { buildLeads } from '../lib/leads-index.mjs';
+import { withBroadcastFooter } from '../lib/broadcast-footer.mjs';
 
 export const config = {
   path: ['/api/run-pending-broadcasts', '/.netlify/functions/run-pending-broadcasts'],
@@ -172,7 +173,7 @@ async function runBroadcast(schedule, leadsStore, historyStore, recipientsStore)
         from: FROM,
         to: [t.email],
         subject: personalize(subject, vars),
-        html: personalize(html, vars),
+        html: withBroadcastFooter(html, t.email, vars),
         reply_to: 'contato@dicadajumoreira.com.br',
       });
       sent++;

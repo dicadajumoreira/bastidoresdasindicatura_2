@@ -7,6 +7,7 @@
 
 import { getStore } from '@netlify/blobs';
 import { buildLeads } from '../lib/leads-index.mjs';
+import { withBroadcastFooter } from '../lib/broadcast-footer.mjs';
 
 export const config = {
   schedule: '*/5 * * * *',
@@ -161,7 +162,7 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
         from: FROM,
         to: [t.email],
         subject: personalize(subject, vars),
-        html: personalize(html, vars),
+        html: withBroadcastFooter(html, t.email, vars),
         reply_to: 'contato@dicadajumoreira.com.br',
       });
       sent++;
