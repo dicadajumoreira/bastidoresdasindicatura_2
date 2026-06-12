@@ -1847,7 +1847,7 @@ const ColdLeadEditModal = ({lead, onClose, onSave}) => {
   };
 
   return (
-    <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="ad-modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="ad-modal-card ad-modal-card-wide">
         <header className="ad-rec-head">
           <span className="ad-widget-eyebrow">Editar lead frio</span>
@@ -3392,7 +3392,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
       </section>
 
       {recipientsModal && (
-        <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && setRecipientsModal(null)}>
+        <div className="ad-modal-bg" onClick={(e) => e.target === e.currentTarget && setRecipientsModal(null)}>
           <div className="ad-modal-card ad-modal-card-wide">
             <header className="ad-rec-head">
               <span className="ad-widget-eyebrow">Destinatários</span>
@@ -3453,7 +3453,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
       )}
 
       {confirmOpen && (
-        <div className="ad-modal" onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}>
+        <div className="ad-modal-bg" onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}>
           <div className="ad-modal-card">
             <h3>Confirmar disparo</h3>
             <p>Você vai enviar este e-mail pra <strong>{targets.count} pessoas</strong>. Essa ação é definitiva e não dá pra desfazer.</p>

@@ -2013,15 +2013,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
 }
 
 /* Modal de confirmação */
-.ad-modal {
+.ad-modal-bg {
   position: fixed;
   inset: 0;
   background: rgba(10, 12, 18, 0.7);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 9999;
   padding: 24px;
+  overflow-y: auto;
 }
 .ad-modal-card {
   background: var(--onix, #1A1C29);
@@ -2029,6 +2030,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   padding: 32px 36px;
   max-width: 500px;
   width: 100%;
+  margin: auto;
 }
 .ad-modal-card h3 {
   font-family: var(--font-display, Georgia);
@@ -2340,12 +2342,26 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   color-scheme: dark;
 }
 
-/* Modal de destinatários */
+/* Modal de destinatários e edição de lead frio */
 .ad-modal-card-wide {
-  max-width: 900px;
-  max-height: 85vh;
+  max-width: 720px;
+  max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Mobile: modal ocupa toda a largura, sem padding lateral perdido */
+@media (max-width: 720px) {
+  .ad-modal-bg { padding: 12px; align-items: flex-start; }
+  .ad-modal-card,
+  .ad-modal-card-wide {
+    padding: 22px 18px;
+    max-width: 100%;
+  }
+  .ad-cold-edit-row {
+    grid-template-columns: 1fr;
+  }
 }
 .ad-rec-head {
   display: flex;
