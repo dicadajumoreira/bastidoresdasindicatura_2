@@ -2856,6 +2856,64 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     }
   };
 
+  // Retoma um disparo que parou no meio (offset = sent + failed do original).
+  // Usa o MESMO broadcastId pra continuar acumulando no histórico, mesma
+  // ordenação determinística dos destinatários (por email) garante que
+  // não vai re-enviar pra quem já recebeu.
+  const resumeBroadcast = async (h) => {
+    const processed = (h.sent || 0) + (h.failed || 0);
+    const remaining = h.total - processed;
+    if (!confirm(`Vai continuar este disparo a partir do destinatário ${processed + 1} (faltam ${remaining}). Mesmo broadcastId, sem duplicar pra quem já recebeu. Continuar?`)) return;
+    setBusy(true);
+    setResult(null);
+    setProgress({sent: h.sent || 0, failed: h.failed || 0, processed, total: h.total});
+
+    const filter = h.filter || {};
+    const LIMIT_PER_CALL = 40;
+    let offset = processed;
+    let totalSent = h.sent || 0;
+    let totalFailed = h.failed || 0;
+    let total = h.total;
+    const errorsAcc = [];
+    let failCount = 0;
+
+    try {
+      for (let i = 0; i < 600; i++) {
+        let res;
+        try {
+          res = await api('/api/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({
+              subject: h.subject, html: h.html, filter,
+              offset, limit: LIMIT_PER_CALL, broadcastId: h.id,
+            }),
+          });
+        } catch (e) {
+          failCount++;
+          if (failCount >= 3) { errorsAcc.push(`Backend caiu 3x no offset ${offset}: ${e.message}`); break; }
+          await new Promise((r) => setTimeout(r, 1500 * failCount));
+          continue;
+        }
+        failCount = 0;
+        if (!res.ok) { errorsAcc.push(res.error || 'erro'); break; }
+        totalSent += res.sent || 0;
+        totalFailed += res.failed || 0;
+        total = res.total || total;
+        if (res.errors?.length) errorsAcc.push(...res.errors);
+        setProgress({sent: totalSent, failed: totalFailed, processed: res.nextOffset, total});
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
+      }
+      setResult({type: 'real', ok: errorsAcc.length === 0 || totalSent > (h.sent || 0), sent: totalSent, failed: totalFailed, total, errors: errorsAcc.slice(0, 10)});
+      loadHistory();
+    } catch (e) {
+      setResult({type: 'real', ok: false, error: e.message});
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  };
+
   const resendFailed = async (sourceId, failedCount) => {
     if (!confirm(`Reenviar pros ${failedCount} e-mails que falharam? O sistema vai mandar o MESMO conteúdo do disparo original, apenas pra quem não recebeu.`)) return;
     setRecipientsModal(null);
@@ -2873,7 +2931,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     let failCountApi = 0;
 
     try {
-      for (let i = 0; i < 200; i++) {
+      for (let i = 0; i < 600; i++) {
         let res;
         try {
           res = await api('/api/broadcast', {
@@ -3043,8 +3101,9 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
 
     try {
       // Loop de paginação: chama backend até não ter mais
-      // Cap de segurança: 200 chamadas (= até 8000 e-mails)
-      for (let i = 0; i < 200; i++) {
+      // Cap de segurança: 600 chamadas (= até 24.000 e-mails)
+      // 11k leads × ~0.5s por chamada paginada ≈ 90 min total.
+      for (let i = 0; i < 600; i++) {
         let res;
         try {
           res = await api('/api/broadcast', {
@@ -3466,18 +3525,28 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
               </tr>
             </thead>
             <tbody>
-              {history.map((h) => (
+              {history.map((h) => {
+                const processed = (h.sent || 0) + (h.failed || 0);
+                const isIncomplete = h.total && processed < h.total && !h.resendOf;
+                return (
                 <tr key={h.id}>
                   <td className="ad-bc-history-date">{fmtDate(h.sentAt)}</td>
                   <td className="ad-bc-history-subject">{h.subject}</td>
                   <td className="ad-bc-history-filter">{h.filterSummary || 'todos'}</td>
-                  <td style={{textAlign:'right'}}><strong>{h.sent}</strong> / {h.total}</td>
-                  <td style={{textAlign:'right'}}>{h.failed > 0 ? <span style={{color:'#d97757'}}>{h.failed}</span> : '—'}</td>
                   <td style={{textAlign:'right'}}>
+                    <strong>{h.sent}</strong> / {h.total}
+                    {isIncomplete && <div style={{fontSize:10, color:'#d97757', marginTop:2}}>incompleto · {h.total - processed} faltam</div>}
+                  </td>
+                  <td style={{textAlign:'right'}}>{h.failed > 0 ? <span style={{color:'#d97757'}}>{h.failed}</span> : '—'}</td>
+                  <td style={{textAlign:'right', whiteSpace:'nowrap'}}>
+                    {isIncomplete && (
+                      <button className="ad-btn ad-btn-primary ad-btn-sm" style={{marginRight: 6}} onClick={() => resumeBroadcast(h)}>Continuar</button>
+                    )}
                     <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => openRecipients(h)}>Ver destinatários</button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}

@@ -363,6 +363,7 @@ export default async (req) => {
           includeOrigens: includeOrigens ? [...includeOrigens] : null,
           statuses: statuses ? [...statuses] : null,
           states: states ? [...states] : null,
+          includeCold: !!(body.filter && body.filter.includeCold),
         },
         filterSummary: filterSummary.join(' · ') || 'todos os leads',
         completed: !hasMore,
