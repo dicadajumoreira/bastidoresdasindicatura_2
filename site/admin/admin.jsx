@@ -2691,14 +2691,14 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
             <p style="margin:0;font-size:13px;color:#1A1C29">No Instagram <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;font-weight:600;text-decoration:none">@dicadajumoreira</a></p>
           </td></tr>
         </table>
-        <p style="text-align:center;margin:0 0 28px">
+        <p style="text-align:center;margin:0 0 12px">
           <a href="https://bastidoresdasindicatura.com.br/mba/" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 28px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero concorrer à bolsa</a>
+        </p>
+        <p style="text-align:center;font-size:11px;line-height:1.5;color:#8a8881;margin:0 0 28px">
+          Ao se inscrever você aceita o <a href="https://bastidoresdasindicatura.com.br/regulamento-mba/" style="color:#B89579">regulamento do sorteio</a> e a <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">política de privacidade</a>.
         </p>
         <p style="font-size:14px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
           A inscrição leva 2 minutos. A turma começa semana que vem.
-        </p>
-        <p style="font-size:12px;line-height:1.5;color:#8a8881;margin:0 0 16px">
-          Veja o <a href="https://bastidoresdasindicatura.com.br/regulamento-mba/" style="color:#B89579">regulamento completo do sorteio</a>.
         </p>
         <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:16px;color:#B89579;margin:24px 0 0">
           Boa sorte.
