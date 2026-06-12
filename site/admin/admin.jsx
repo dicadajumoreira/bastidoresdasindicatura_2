@@ -3201,7 +3201,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 )}
                 <li className="ad-bc-funnel-final">
                   <span className="ad-bc-funnel-n">{targets.count}</span>
-                  <span className="ad-bc-funnel-lbl">{targets.count === 1 ? 'pessoa vai receber' : 'pessoas vão receber'} (leads quentes)</span>
+                  <span className="ad-bc-funnel-lbl">{targets.count === 1 ? 'lead quente' : 'leads quentes'}</span>
                 </li>
                 {includeCold && coldCount != null && (
                   <li className="ad-bc-funnel-final" style={{color:'#B89579'}}>
@@ -3209,6 +3209,10 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                     <span className="ad-bc-funnel-lbl">leads frios da base (dedupe automático com quentes)</span>
                   </li>
                 )}
+                <li className="ad-bc-funnel-final" style={{borderTop: '1px dashed rgba(247,245,242,0.18)', paddingTop: 8, marginTop: 4}}>
+                  <span className="ad-bc-funnel-n">{includeCold && coldCount != null ? `~${targets.count + coldCount}` : targets.count}</span>
+                  <span className="ad-bc-funnel-lbl">{(targets.count + (includeCold ? (coldCount || 0) : 0)) === 1 ? 'pessoa vai receber' : 'pessoas vão receber'}{includeCold && coldCount != null ? ' (estimado · dedupe acontece no envio)' : ''}</span>
+                </li>
               </ul>
             </div>
           </section>
@@ -3246,23 +3250,28 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 Em branco = disparo imediato. Preenchido = sistema agenda e dispara automaticamente na data/hora marcada (verifica a cada 5 min). O input sempre é interpretado como <strong>horário de Brasília</strong> (UTC-3), independente do fuso do seu dispositivo.
               </span>
             </div>
-            {scheduledFor ? (
-              <button
-                className="ad-btn ad-btn-primary ad-btn-lg"
-                disabled={busy || targets.count === 0}
-                onClick={schedule}
-              >
-                {busy ? 'Agendando…' : `Agendar pra ${scheduledFor ? fmtDateShort(brasiliaInputToUtcIso(scheduledFor)) : ''} (Brasília)`}
-              </button>
-            ) : (
-              <button
-                className="ad-btn ad-btn-primary ad-btn-lg"
-                disabled={busy || targets.count === 0}
-                onClick={() => setConfirmOpen(true)}
-              >
-                {busy ? 'Enviando…' : `Disparar agora pros ${targets.count} cadastros`}
-              </button>
-            )}
+            {(() => {
+              const totalEstimate = targets.count + (includeCold ? (coldCount || 0) : 0);
+              const canSend = totalEstimate > 0;
+              const countLbl = includeCold && coldCount != null ? `~${totalEstimate}` : String(totalEstimate);
+              return scheduledFor ? (
+                <button
+                  className="ad-btn ad-btn-primary ad-btn-lg"
+                  disabled={busy || !canSend}
+                  onClick={schedule}
+                >
+                  {busy ? 'Agendando…' : `Agendar pra ${scheduledFor ? fmtDateShort(brasiliaInputToUtcIso(scheduledFor)) : ''} (Brasília) · ${countLbl} cadastros`}
+                </button>
+              ) : (
+                <button
+                  className="ad-btn ad-btn-primary ad-btn-lg"
+                  disabled={busy || !canSend}
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  {busy ? 'Enviando…' : `Disparar agora pros ${countLbl} cadastros${includeCold && coldCount != null ? ' (quentes + frios)' : ''}`}
+                </button>
+              );
+            })()}
             {progress && progress.total > 0 && (
               <div className="ad-bc-progress">
                 <div className="ad-bc-progress-track">
@@ -3454,7 +3463,12 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         <div className="ad-modal-bg" onClick={(e) => e.target === e.currentTarget && setConfirmOpen(false)}>
           <div className="ad-modal-card">
             <h3>Confirmar disparo</h3>
-            <p>Você vai enviar este e-mail pra <strong>{targets.count} pessoas</strong>. Essa ação é definitiva e não dá pra desfazer.</p>
+            <p>
+              Você vai enviar este e-mail pra <strong>{targets.count}</strong> {targets.count === 1 ? 'lead quente' : 'leads quentes'}
+              {includeCold && coldCount != null && <> + <strong style={{color:'#B89579'}}>~{coldCount}</strong> leads frios da base (dedupe automático no envio)</>}
+              .
+            </p>
+            <p>Total estimado: <strong>{includeCold && coldCount != null ? `~${targets.count + coldCount}` : targets.count}</strong> {(targets.count + (includeCold ? (coldCount || 0) : 0)) === 1 ? 'pessoa' : 'pessoas'}. Essa ação é definitiva e não dá pra desfazer.</p>
             <p>Assunto: <em>{subject}</em></p>
             <div className="ad-modal-actions">
               <button className="ad-btn ad-btn-ghost" onClick={() => setConfirmOpen(false)}>Cancelar</button>
