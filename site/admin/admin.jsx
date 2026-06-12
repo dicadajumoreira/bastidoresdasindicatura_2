@@ -2134,6 +2134,59 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     }
   };
 
+  const resendFailed = async (sourceId, failedCount) => {
+    if (!confirm(`Reenviar pros ${failedCount} e-mails que falharam? O sistema vai mandar o MESMO conteúdo do disparo original, apenas pra quem não recebeu.`)) return;
+    setRecipientsModal(null);
+    setBusy(true);
+    setResult(null);
+    setProgress({sent: 0, failed: 0, processed: 0, total: 0});
+
+    const broadcastId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const LIMIT_PER_CALL = 40;
+    let offset = 0;
+    let totalSent = 0;
+    let totalFailed = 0;
+    let total = 0;
+    const errorsAcc = [];
+    let failCountApi = 0;
+
+    try {
+      for (let i = 0; i < 200; i++) {
+        let res;
+        try {
+          res = await api('/api/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({
+              resendFailedFrom: sourceId,
+              offset, limit: LIMIT_PER_CALL, broadcastId,
+            }),
+          });
+        } catch (e) {
+          failCountApi++;
+          if (failCountApi >= 3) { errorsAcc.push(`Backend caiu 3x no offset ${offset}: ${e.message}`); break; }
+          await new Promise((r) => setTimeout(r, 1500 * failCountApi));
+          continue;
+        }
+        failCountApi = 0;
+        if (!res.ok) { errorsAcc.push(res.error || 'erro'); break; }
+        totalSent += res.sent || 0;
+        totalFailed += res.failed || 0;
+        total = res.total || total;
+        if (res.errors?.length) errorsAcc.push(...res.errors);
+        setProgress({sent: totalSent, failed: totalFailed, processed: res.nextOffset, total});
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
+      }
+      setResult({type: 'resend', ok: errorsAcc.length === 0 || totalSent > 0, sent: totalSent, failed: totalFailed, total, errors: errorsAcc.slice(0, 10)});
+      loadHistory();
+    } catch (e) {
+      setResult({type: 'resend', ok: false, error: e.message});
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  };
+
   // Carrega lista de agendamentos pendentes
   const loadScheduled = React.useCallback(async () => {
     try {
@@ -2533,6 +2586,12 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
               <div className={'ad-bc-result ' + (result.ok ? 'is-ok' : 'is-err')}>
                 {result.type === 'schedule' && result.ok && <p>✓ Agendado pra <strong>{fmtDate(result.scheduledFor)}</strong> (horário de Brasília). O sistema vai disparar automaticamente.</p>}
                 {result.type === 'test' && result.ok && <p>✓ Teste enviado pra <strong>{testEmail}</strong>. Confere a caixa de entrada (ou spam).</p>}
+                {result.type === 'resend' && result.ok && (
+                  <>
+                    <p>✓ Reenvio concluído: <strong>{result.sent}</strong> e-mails enviados com sucesso.</p>
+                    {result.failed > 0 && <p>{result.failed} falharam novamente. Você pode reenviar de novo pelo modal de destinatários do novo registro.</p>}
+                  </>
+                )}
                 {result.type === 'real' && result.ok && (
                   <>
                     <p><strong>{result.sent}</strong> e-mails enviados com sucesso.</p>
@@ -2644,6 +2703,14 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             <header className="ad-rec-head">
               <span className="ad-widget-eyebrow">Destinatários</span>
               <h3>{recipientsModal.subject}</h3>
+              {recipientsModal.recipients && recipientsModal.recipients.filter((r) => r.status === 'failed').length > 0 && (
+                <button
+                  className="ad-btn ad-btn-primary ad-btn-sm"
+                  onClick={() => resendFailed(recipientsModal.broadcastId, recipientsModal.recipients.filter((r) => r.status === 'failed').length)}
+                >
+                  ↻ Reenviar pros que falharam ({recipientsModal.recipients.filter((r) => r.status === 'failed').length})
+                </button>
+              )}
               <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setRecipientsModal(null)}>Fechar</button>
             </header>
             {recipientsModal.loading ? (

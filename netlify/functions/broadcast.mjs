@@ -67,10 +67,30 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'JSON inválido'}, 400); }
 
-  const subject = String(body.subject || '').trim();
-  const html = String(body.html || '');
-  if (!subject) return json({error: 'O assunto é obrigatório'}, 400);
-  if (!html) return json({error: 'O corpo do e-mail é obrigatório'}, 400);
+  // ====== MODO REENVIO DE FALHAS ======
+  // Quando body.resendFailedFrom é setado, ignoramos subject/html/filter
+  // e mandamos o MESMO conteúdo do disparo original APENAS pros e-mails
+  // que falharam naquela campanha.
+  const resendFailedFrom = body.resendFailedFrom ? String(body.resendFailedFrom) : null;
+
+  let subject, html;
+  if (resendFailedFrom) {
+    try {
+      const historyStore = getStore({name: 'broadcasts', consistency: 'strong'});
+      const original = await historyStore.get(resendFailedFrom, {type: 'json'});
+      if (!original) return json({error: 'Disparo original não encontrado pra reenvio'}, 404);
+      subject = original.subject || '';
+      html = original.html || '';
+      if (!subject || !html) return json({error: 'Disparo original sem subject/html salvo'}, 500);
+    } catch (err) {
+      return json({error: 'Falha ao ler disparo original: ' + err.message}, 500);
+    }
+  } else {
+    subject = String(body.subject || '').trim();
+    html = String(body.html || '');
+    if (!subject) return json({error: 'O assunto é obrigatório'}, 400);
+    if (!html) return json({error: 'O corpo do e-mail é obrigatório'}, 400);
+  }
 
   // ====== MODO TESTE ======
   if (body.test && body.test.email) {
@@ -94,73 +114,111 @@ export default async (req) => {
   const broadcastId = String(body.broadcastId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
 
   try {
-    const store = getStore({name: 'leads', consistency: 'strong'});
-    // Tenta carregar TODOS os leads (refresca o índice se truncado).
-    // Em offsets > 0 confiamos no índice já populado: budget pequeno.
-    let leads;
-    let totalLeadsInStore;
-    let attempts = 0;
-    const maxAttempts = offset === 0 ? 4 : 1;
-    while (attempts < maxAttempts) {
-      attempts++;
-      const r = await buildLeads(store, {budgetMs: 5000});
-      leads = r.leads;
-      totalLeadsInStore = r.total;
-      if (!r.truncated && leads.length >= totalLeadsInStore) break;
-      // Se truncou, espera um pouquinho e tenta de novo pra index ficar mais cheio
-      await new Promise((res) => setTimeout(res, 250));
-    }
-    if (offset === 0 && leads.length < totalLeadsInStore * 0.95) {
-      // No primeiro call, se ainda falta carregar muita coisa, falha cedo
-      return json({
-        error: `Base de leads ainda não foi totalmente carregada (${leads.length} de ${totalLeadsInStore}). Aguarde alguns segundos e tente de novo (o índice está sendo construído em background).`,
-        leadsLoaded: leads.length,
-        totalInStore: totalLeadsInStore,
-      }, 503);
-    }
+    let allTargets;
+    // Estes vars são populados no modo NORMAL e usados depois pra salvar
+    // histórico. No modo REENVIO ficam vazios (já que o reenvio não usa filtros).
+    let excludeOrigens = new Set();
+    let includeOrigens = null;
+    let statuses = null;
+    let states = null;
 
-    // Dedupe por e-mail
-    const byEmail = new Map();
-    for (const l of leads) {
-      if (l.deletedAt) continue;
-      const email = String(l.email || '').trim().toLowerCase();
-      if (!email || !email.includes('@')) continue;
-      if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});
-      const e = byEmail.get(email);
-      e.leads.push(l);
-      e.origens.add(l.origem || 'mentoria');
-    }
-
-    const filter = body.filter || {};
-    const excludeOrigens = new Set(filter.excludeOrigens || []);
-    const includeOrigens = filter.includeOrigens && filter.includeOrigens.length
-      ? new Set(filter.includeOrigens) : null;
-    const statuses = filter.statuses && filter.statuses.length
-      ? new Set(filter.statuses) : null;
-    const states = filter.states && filter.states.length
-      ? new Set(filter.states) : null;
-
-    const allTargets = [];
-    for (const [email, entry] of byEmail) {
-      let excluded = false;
-      for (const o of entry.origens) if (excludeOrigens.has(o)) { excluded = true; break; }
-      if (excluded) continue;
-
-      if (includeOrigens) {
-        let any = false;
-        for (const o of entry.origens) if (includeOrigens.has(o)) { any = true; break; }
-        if (!any) continue;
+    if (resendFailedFrom) {
+      // ====== Modo REENVIO ======
+      // Targets são os e-mails que falharam no broadcast original.
+      // Lê do store broadcast-recipients com prefix do broadcastId original.
+      const recipientsStore = getStore({name: 'broadcast-recipients', consistency: 'strong'});
+      const list = await recipientsStore.list({prefix: `${resendFailedFrom}__`});
+      const failed = [];
+      const seenEmails = new Set(); // dedupe (pode haver tentativas múltiplas)
+      const keys = (list.blobs || []).map((b) => b.key);
+      for (const k of keys) {
+        try {
+          const part = await recipientsStore.get(k, {type: 'json'});
+          if (Array.isArray(part)) {
+            for (const r of part) {
+              if (r.status === 'failed' && r.email && !seenEmails.has(r.email)) {
+                seenEmails.add(r.email);
+                failed.push(r);
+              }
+            }
+          }
+        } catch {}
+      }
+      // Converte pra formato de target que o resto da função espera
+      allTargets = failed.map((r) => ({
+        email: r.email,
+        rep: {nome: r.nome || '', email: r.email},
+        origens: ['mentoria'], // origem não importa no reenvio
+      }));
+      allTargets.sort((a, b) => a.email.localeCompare(b.email));
+    } else {
+      // ====== Modo NORMAL ======
+      const store = getStore({name: 'leads', consistency: 'strong'});
+      // Tenta carregar TODOS os leads (refresca o índice se truncado).
+      // Em offsets > 0 confiamos no índice já populado: budget pequeno.
+      let leads;
+      let totalLeadsInStore;
+      let attempts = 0;
+      const maxAttempts = offset === 0 ? 4 : 1;
+      while (attempts < maxAttempts) {
+        attempts++;
+        const r = await buildLeads(store, {budgetMs: 5000});
+        leads = r.leads;
+        totalLeadsInStore = r.total;
+        if (!r.truncated && leads.length >= totalLeadsInStore) break;
+        await new Promise((res) => setTimeout(res, 250));
+      }
+      if (offset === 0 && leads.length < totalLeadsInStore * 0.95) {
+        return json({
+          error: `Base de leads ainda não foi totalmente carregada (${leads.length} de ${totalLeadsInStore}). Aguarde alguns segundos e tente de novo (o índice está sendo construído em background).`,
+          leadsLoaded: leads.length,
+          totalInStore: totalLeadsInStore,
+        }, 503);
       }
 
-      const rep = entry.leads.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
-      if (statuses && !statuses.has(rep.status || 'novo')) continue;
-      if (states && !states.has(rep.estado || '')) continue;
+      // Dedupe por e-mail
+      const byEmail = new Map();
+      for (const l of leads) {
+        if (l.deletedAt) continue;
+        const email = String(l.email || '').trim().toLowerCase();
+        if (!email || !email.includes('@')) continue;
+        if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});
+        const e = byEmail.get(email);
+        e.leads.push(l);
+        e.origens.add(l.origem || 'mentoria');
+      }
 
-      allTargets.push({email, rep, origens: [...entry.origens]});
+      const filter = body.filter || {};
+      excludeOrigens = new Set(filter.excludeOrigens || []);
+      includeOrigens = filter.includeOrigens && filter.includeOrigens.length
+        ? new Set(filter.includeOrigens) : null;
+      statuses = filter.statuses && filter.statuses.length
+        ? new Set(filter.statuses) : null;
+      states = filter.states && filter.states.length
+        ? new Set(filter.states) : null;
+
+      allTargets = [];
+      for (const [email, entry] of byEmail) {
+        let excluded = false;
+        for (const o of entry.origens) if (excludeOrigens.has(o)) { excluded = true; break; }
+        if (excluded) continue;
+
+        if (includeOrigens) {
+          let any = false;
+          for (const o of entry.origens) if (includeOrigens.has(o)) { any = true; break; }
+          if (!any) continue;
+        }
+
+        const rep = entry.leads.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+        if (statuses && !statuses.has(rep.status || 'novo')) continue;
+        if (states && !states.has(rep.estado || '')) continue;
+
+        allTargets.push({email, rep, origens: [...entry.origens]});
+      }
+
+      // Ordem estável: por email pra paginação consistente entre calls
+      allTargets.sort((a, b) => a.email.localeCompare(b.email));
     }
-
-    // Ordem estável: por email (lexicográfica) pra paginação consistente entre calls
-    allTargets.sort((a, b) => a.email.localeCompare(b.email));
 
     const total = allTargets.length;
     const slice = allTargets.slice(offset, offset + limit);
@@ -222,10 +280,14 @@ export default async (req) => {
       let existing = null;
       try { existing = await histStore.get(broadcastId, {type: 'json'}); } catch {}
       const filterSummary = [];
-      if (excludeOrigens.size) filterSummary.push(`excluir ${[...excludeOrigens].join(', ')}`);
-      if (includeOrigens) filterSummary.push(`incluir ${[...includeOrigens].join(', ')}`);
-      if (statuses) filterSummary.push(`status ${[...statuses].join(', ')}`);
-      if (states) filterSummary.push(`UF ${[...states].join(', ')}`);
+      if (resendFailedFrom) {
+        filterSummary.push(`reenvio dos que falharam · origem ${resendFailedFrom}`);
+      } else {
+        if (excludeOrigens.size) filterSummary.push(`excluir ${[...excludeOrigens].join(', ')}`);
+        if (includeOrigens) filterSummary.push(`incluir ${[...includeOrigens].join(', ')}`);
+        if (statuses) filterSummary.push(`status ${[...statuses].join(', ')}`);
+        if (states) filterSummary.push(`UF ${[...states].join(', ')}`);
+      }
       await histStore.setJSON(broadcastId, {
         id: broadcastId,
         sentAt: existing?.sentAt || new Date().toISOString(),
@@ -234,7 +296,7 @@ export default async (req) => {
         sent: (existing?.sent || 0) + sent,
         failed: (existing?.failed || 0) + failed,
         total,
-        filter: {
+        filter: resendFailedFrom ? {resendFailedFrom} : {
           excludeOrigens: [...excludeOrigens],
           includeOrigens: includeOrigens ? [...includeOrigens] : null,
           statuses: statuses ? [...statuses] : null,
@@ -243,6 +305,7 @@ export default async (req) => {
         filterSummary: filterSummary.join(' · ') || 'todos os leads',
         completed: !hasMore,
         lastBatchAt: new Date().toISOString(),
+        resendOf: resendFailedFrom || null,
       });
     } catch (e) {
       console.error('[broadcast] failed to save history:', e.message);
