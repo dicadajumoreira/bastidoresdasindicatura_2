@@ -33,6 +33,18 @@ function isValidEmail(e) {
   return at > 0 && dot > at + 1 && dot < e.length - 1 && !e.includes(' ');
 }
 
+function normPhone(p) {
+  // Normaliza pra só dígitos. Pra Brasil, números válidos têm 10-13 dígitos
+  // (DDD 2 + 8/9 dígitos, opcionalmente com 55 do país).
+  const digits = String(p || '').replace(/\D/g, '');
+  return digits;
+}
+
+function isValidPhone(p) {
+  const d = normPhone(p);
+  return d.length >= 10 && d.length <= 13;
+}
+
 export default async (req) => {
   const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
   const auth = req.headers.get('authorization') || '';
@@ -88,58 +100,67 @@ export default async (req) => {
       return json({error: 'Lote muito grande. Envie em chunks de até 500 por vez.'}, 400);
     }
 
-    let imported = 0;
+    let importedEmail = 0;
+    let importedPhone = 0;
     let duplicates = 0;
     let invalid = 0;
     const errors = [];
 
-    // Coleta os e-mails normalizados pra um lookup eficiente
+    // Aceita entradas com e-mail OU só telefone (vão pra canais diferentes
+    // no futuro: e-mail via Resend, WhatsApp via outro disparador).
     const candidates = [];
     for (const e of entries) {
       const email = normEmail(e.email);
-      if (!isValidEmail(email)) {
-        invalid++;
-        continue;
-      }
+      const phone = normPhone(e.whatsapp);
+      const hasEmail = isValidEmail(email);
+      const hasPhone = isValidPhone(phone);
+      if (!hasEmail && !hasPhone) { invalid++; continue; }
       candidates.push({
-        email,
+        email: hasEmail ? email : null,
+        whatsapp: hasPhone ? phone : null,
         nome: String(e.nome || '').trim(),
-        whatsapp: String(e.whatsapp || '').trim() || null,
         source: String(e.source || source),
         emailStatus: e.emailStatus || null,
       });
     }
 
-    // Salva em paralelo com concorrência baixa pra não estourar Blobs
+    // Salva em paralelo com concorrência baixa
     const CONCURRENCY = 10;
     for (let i = 0; i < candidates.length; i += CONCURRENCY) {
       const batch = candidates.slice(i, i + CONCURRENCY);
       const results = await Promise.allSettled(batch.map(async (c) => {
-        const key = `cold:${c.email}`;
+        // Chave: prefere e-mail (dedupe mais forte). Se só tem telefone, usa telefone.
+        const key = c.email ? `cold:e:${c.email}` : `cold:p:${c.whatsapp}`;
         try {
           const existing = await store.get(key, {type: 'json'});
           if (existing) return {status: 'dup'};
         } catch {}
+        const canal = c.email && c.whatsapp ? 'both'
+          : c.email ? 'email'
+          : 'whatsapp';
         const lead = {
           id: key,
           email: c.email,
-          nome: c.nome,
           whatsapp: c.whatsapp,
+          nome: c.nome,
           source: c.source,
           emailStatus: c.emailStatus,
           tipo: 'frio',
+          canal,
           importedAt: new Date().toISOString(),
           unsubscribed: false,
           frequencia: 'normal',
           convertedToHotAt: null,
         };
         await store.setJSON(key, lead);
-        return {status: 'imported'};
+        return {status: 'imported', canal: c.email ? 'email' : 'phone'};
       }));
       for (const r of results) {
         if (r.status === 'fulfilled') {
-          if (r.value.status === 'imported') imported++;
-          else if (r.value.status === 'dup') duplicates++;
+          if (r.value.status === 'imported') {
+            if (r.value.canal === 'email') importedEmail++;
+            else importedPhone++;
+          } else if (r.value.status === 'dup') duplicates++;
         } else {
           invalid++;
           if (errors.length < 5) errors.push(String(r.reason?.message || 'erro').slice(0, 200));
@@ -147,20 +168,75 @@ export default async (req) => {
       }
     }
 
-    return json({ok: true, imported, duplicates, invalid, total: entries.length, errors});
+    return json({
+      ok: true,
+      imported: importedEmail + importedPhone,
+      importedEmail,
+      importedPhone,
+      duplicates,
+      invalid,
+      total: entries.length,
+      errors,
+    });
   }
 
   // ====== DELETE ======
   if (req.method === 'DELETE') {
     const url = new URL(req.url);
     const email = (url.searchParams.get('email') || '').toLowerCase().trim();
-    if (!email) return json({error: 'Falta o e-mail'}, 400);
-    try {
-      await store.delete(`cold:${email}`);
-      return json({ok: true});
-    } catch (err) {
-      return json({error: err.message}, 500);
+    const sourceContains = (url.searchParams.get('sourceContains') || '').trim();
+    const phone = (url.searchParams.get('phone') || '').replace(/\D/g, '');
+
+    // Delete por e-mail único
+    if (email) {
+      try {
+        // Pode ter sido salvo com prefixo 'cold:' (antigo) ou 'cold:e:' (novo)
+        await store.delete(`cold:e:${email}`);
+        try { await store.delete(`cold:${email}`); } catch {}
+        return json({ok: true});
+      } catch (err) {
+        return json({error: err.message}, 500);
+      }
     }
+
+    // Delete por telefone único
+    if (phone) {
+      try {
+        await store.delete(`cold:p:${phone}`);
+        return json({ok: true});
+      } catch (err) {
+        return json({error: err.message}, 500);
+      }
+    }
+
+    // Delete em lote por origem (source contém X)
+    if (sourceContains) {
+      try {
+        const list = await store.list();
+        const keys = (list.blobs || []).map((b) => b.key);
+        let deleted = 0;
+        const CONCURRENCY = 15;
+        for (let i = 0; i < keys.length; i += CONCURRENCY) {
+          const batch = keys.slice(i, i + CONCURRENCY);
+          const matches = await Promise.allSettled(batch.map(async (k) => {
+            const v = await store.get(k, {type: 'json'});
+            if (v && v.source && v.source.includes(sourceContains)) {
+              await store.delete(k);
+              return true;
+            }
+            return false;
+          }));
+          for (const m of matches) {
+            if (m.status === 'fulfilled' && m.value === true) deleted++;
+          }
+        }
+        return json({ok: true, deleted});
+      } catch (err) {
+        return json({error: err.message}, 500);
+      }
+    }
+
+    return json({error: 'Especifique email, phone ou sourceContains'}, 400);
   }
 
   return json({error: 'Method not allowed'}, 405);

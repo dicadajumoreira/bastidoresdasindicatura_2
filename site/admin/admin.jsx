@@ -1834,54 +1834,97 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     setParsed(null);
     try {
       const data = await file.arrayBuffer();
-      const wb = window.XLSX.read(data, {type: 'array', raw: true});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      // Para CSV com ; e UTF-8, SheetJS lida automaticamente. Para XLSX também.
-      const rows = window.XLSX.utils.sheet_to_json(ws, {defval: '', raw: false});
-      if (!rows.length) { alert('Arquivo vazio ou sem dados.'); return; }
-      const headers = Object.keys(rows[0]);
-      // Auto-detect colunas
-      const findCol = (regex) => headers.find((h) => regex.test(h.toLowerCase().trim()));
-      const emailCol = findCol(/^e-?mail$/) || findCol(/email/);
-      const nameCol = findCol(/^nome$/) || findCol(/^name$/) || findCol(/nome/) || findCol(/name/);
-      const phoneCol = findCol(/^celular$/) || findCol(/^telefone$/) || findCol(/^phone$/) || findCol(/whatsapp/i) || findCol(/celular/) || findCol(/phone/);
-      const statusCol = findCol(/email_status/) || findCol(/status/);
-      setParsed({rows, headers, emailCol, nameCol, phoneCol, statusCol});
+      const ext = file.name.toLowerCase().split('.').pop();
+      // Pra CSV/TXT, força codepage 1252 (Windows-1252, superset de Latin-1)
+      // que é o padrão de exports de Excel e de sistemas de e-mail antigos.
+      // Sem isso, acentos viram lixo: "Rogério" → "RogÃ©rio".
+      // Pra XLSX, SheetJS detecta sozinho (sempre UTF-8 interno).
+      const opts = {type: 'array', raw: true};
+      if (ext === 'csv' || ext === 'txt') opts.codepage = 1252;
+      const wb = window.XLSX.read(data, opts);
+
+      const findCol = (headers, regex) => headers.find((h) => regex.test(String(h).toLowerCase().trim()));
+
+      const sheets = wb.SheetNames.map((sheetName) => {
+        const ws = wb.Sheets[sheetName];
+        const rows = window.XLSX.utils.sheet_to_json(ws, {defval: '', raw: false});
+        if (!rows.length) {
+          return {name: sheetName, rows: [], headers: [], validCount: 0, selected: false, emailCol: null};
+        }
+        const headers = Object.keys(rows[0]);
+        const emailCol = findCol(headers, /^e-?mail$/) || findCol(headers, /email/);
+        const nameCol = findCol(headers, /^nome$/) || findCol(headers, /^name$/) || findCol(headers, /nome completo/) || findCol(headers, /nome/) || findCol(headers, /name/);
+        const phoneCol = findCol(headers, /^celular$/) || findCol(headers, /^telefone$/) || findCol(headers, /^phone$/) || findCol(headers, /whatsapp/i) || findCol(headers, /celular/) || findCol(headers, /telefone/);
+        const statusCol = findCol(headers, /email_status/) || findCol(headers, /verifierstatus/) || findCol(headers, /status/);
+        const validCount = emailCol ? rows.filter((r) => {
+          const email = String(r[emailCol] || '').trim();
+          return email && email.includes('@');
+        }).length : 0;
+        return {
+          name: sheetName,
+          rows,
+          headers,
+          emailCol, nameCol, phoneCol, statusCol,
+          validCount,
+          selected: validCount > 0, // selecionada por default se tem e-mail
+        };
+      });
+
+      if (sheets.every((s) => s.rows.length === 0)) {
+        alert('Arquivo vazio ou sem dados.'); return;
+      }
+      setParsed({sheets});
     } catch (e) {
       alert('Falha ao ler o arquivo: ' + e.message);
     }
   };
 
-  const previewRows = parsed ? parsed.rows.slice(0, 5) : [];
-  const validRowCount = parsed ? parsed.rows.filter((r) => {
-    const email = String((parsed.emailCol ? r[parsed.emailCol] : '') || '').trim();
-    return email && email.includes('@');
-  }).length : 0;
+  const toggleSheet = (name) => {
+    setParsed((cur) => cur ? {
+      ...cur,
+      sheets: cur.sheets.map((s) => s.name === name ? {...s, selected: !s.selected} : s),
+    } : cur);
+  };
+
+  const totalValidToImport = parsed
+    ? parsed.sheets.filter((s) => s.selected).reduce((sum, s) => sum + s.validCount, 0)
+    : 0;
 
   const doImport = async () => {
     if (!parsed) return;
-    if (!parsed.emailCol) { alert('Não detectei coluna de e-mail. Esse arquivo precisa ter uma coluna com e-mails pra ser importado.'); return; }
-    if (!confirm(`Vai importar ${validRowCount} entradas com e-mail. Duplicatas (e-mail já cadastrado como frio) serão ignoradas. Continuar?`)) return;
+    const selected = parsed.sheets.filter((s) => s.selected && s.emailCol);
+    if (selected.length === 0) {
+      alert('Selecione pelo menos uma aba que tenha e-mail.');
+      return;
+    }
+    if (!confirm(`Vai importar ${totalValidToImport} entradas com e-mail de ${selected.length} aba${selected.length === 1 ? '' : 's'}. Duplicatas serão ignoradas. Continuar?`)) return;
 
     setImporting(true);
     setImportResult(null);
-    setImportProgress({sent: 0, imported: 0, duplicates: 0, invalid: 0, total: validRowCount});
+    setImportProgress({sent: 0, imported: 0, duplicates: 0, invalid: 0, total: totalValidToImport});
 
-    const entries = parsed.rows
-      .map((r) => ({
-        email: String(r[parsed.emailCol] || '').trim(),
-        nome: parsed.nameCol ? String(r[parsed.nameCol] || '').trim() : '',
-        whatsapp: parsed.phoneCol ? String(r[parsed.phoneCol] || '').trim() : '',
-        emailStatus: parsed.statusCol ? String(r[parsed.statusCol] || '').trim() : '',
-      }))
-      .filter((e) => e.email && e.email.includes('@'));
+    // Coleta todas as entries de todas as abas selecionadas, marcando a source com nome da aba
+    const allEntries = [];
+    for (const s of selected) {
+      for (const r of s.rows) {
+        const email = String(r[s.emailCol] || '').trim();
+        if (!email || !email.includes('@')) continue;
+        allEntries.push({
+          email,
+          nome: s.nameCol ? String(r[s.nameCol] || '').trim() : '',
+          whatsapp: s.phoneCol ? String(r[s.phoneCol] || '').trim() : '',
+          emailStatus: s.statusCol ? String(r[s.statusCol] || '').trim() : '',
+          source: `${fileName} · ${s.name}`,
+        });
+      }
+    }
 
     const CHUNK = 200;
     let totals = {imported: 0, duplicates: 0, invalid: 0};
     const errorsAcc = [];
     try {
-      for (let i = 0; i < entries.length; i += CHUNK) {
-        const chunk = entries.slice(i, i + CHUNK);
+      for (let i = 0; i < allEntries.length; i += CHUNK) {
+        const chunk = allEntries.slice(i, i + CHUNK);
         const res = await api('/api/cold-leads', {
           method: 'POST',
           body: JSON.stringify({entries: chunk, source: fileName}),
@@ -1894,9 +1937,9 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         } else {
           errorsAcc.push(res.error || 'erro');
         }
-        setImportProgress({sent: i + chunk.length, total: entries.length, ...totals});
+        setImportProgress({sent: i + chunk.length, total: allEntries.length, ...totals});
       }
-      setImportResult({ok: true, ...totals, total: entries.length, errors: errorsAcc.slice(0, 10)});
+      setImportResult({ok: true, ...totals, total: allEntries.length, errors: errorsAcc.slice(0, 10)});
       loadCold();
     } catch (e) {
       setImportResult({ok: false, error: e.message, ...totals});
@@ -1906,10 +1949,27 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     }
   };
 
-  const deleteCold = async (email) => {
-    if (!confirm(`Remover ${email} da base de leads frios?`)) return;
+  const deleteCold = async (lead) => {
+    const label = lead.email || lead.whatsapp;
+    if (!confirm(`Remover ${label} da base de leads frios?`)) return;
     try {
-      await api(`/api/cold-leads?email=${encodeURIComponent(email)}`, {method: 'DELETE'});
+      const qs = lead.email
+        ? `email=${encodeURIComponent(lead.email)}`
+        : `phone=${encodeURIComponent(lead.whatsapp)}`;
+      await api(`/api/cold-leads?${qs}`, {method: 'DELETE'});
+      loadCold(search);
+    } catch (e) { alert('Falha: ' + e.message); }
+  };
+
+  const deleteBySource = async () => {
+    const source = prompt(
+      'Digite parte do nome do arquivo importado pra apagar todos os leads daquele import.\n\nExemplo: pra apagar tudo do "addressbookreport_xxx.csv" você pode digitar "addressbookreport".'
+    );
+    if (!source || !source.trim()) return;
+    if (!confirm(`ATENÇÃO: vai apagar TODOS os leads frios cuja origem contém "${source}". Essa ação não dá pra desfazer. Continuar?`)) return;
+    try {
+      const res = await api(`/api/cold-leads?sourceContains=${encodeURIComponent(source.trim())}`, {method: 'DELETE'});
+      alert(`${res.deleted || 0} leads removidos.`);
       loadCold(search);
     } catch (e) { alert('Falha: ' + e.message); }
   };
@@ -1940,35 +2000,47 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
 
         {parsed && (
           <div className="ad-cold-preview">
-            <div className="ad-cold-detect">
-              <p><strong>{parsed.rows.length}</strong> linhas totais · <strong>{validRowCount}</strong> com e-mail válido</p>
-              <p>Colunas detectadas:
-                <span className="ad-cold-tag">e-mail: <code>{parsed.emailCol || '(não encontrei)'}</code></span>
-                <span className="ad-cold-tag">nome: <code>{parsed.nameCol || '—'}</code></span>
-                <span className="ad-cold-tag">telefone: <code>{parsed.phoneCol || '—'}</code></span>
-                {parsed.statusCol && <span className="ad-cold-tag">status: <code>{parsed.statusCol}</code></span>}
-              </p>
-            </div>
+            <p className="ad-bc-drafts-lead">
+              Arquivo tem <strong>{parsed.sheets.length} aba{parsed.sheets.length === 1 ? '' : 's'}</strong>. Marque as que quer importar:
+            </p>
 
-            <div className="ad-cold-prev-table-wrap">
-              <table className="ad-bc-history-table">
-                <thead>
-                  <tr>{parsed.headers.map((h) => <th key={h}>{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {previewRows.map((r, i) => (
-                    <tr key={i}>{parsed.headers.map((h) => <td key={h}>{String(r[h] || '').slice(0, 60)}</td>)}</tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="ad-cold-sheets">
+              {parsed.sheets.map((s) => (
+                <label key={s.name} className={'ad-cold-sheet' + (s.selected ? ' is-on' : '') + (!s.emailCol ? ' is-disabled' : '')}>
+                  <input
+                    type="checkbox"
+                    checked={s.selected && !!s.emailCol}
+                    disabled={!s.emailCol}
+                    onChange={() => toggleSheet(s.name)}
+                  />
+                  <div className="ad-cold-sheet-body">
+                    <p className="ad-cold-sheet-name">{s.name}</p>
+                    <p className="ad-cold-sheet-info">
+                      {s.rows.length === 0 ? <span style={{color:'rgba(247,245,242,0.4)'}}>vazia</span>
+                        : !s.emailCol ? <span style={{color:'#d97757'}}>sem coluna de e-mail · ignorada</span>
+                        : (
+                          <>
+                            <strong>{s.validCount}</strong> com e-mail válido de {s.rows.length} linhas
+                            <span className="ad-cold-tag" style={{marginLeft: 8}}>
+                              <code>{s.emailCol}</code>
+                              {s.nameCol && <> · nome: <code>{s.nameCol}</code></>}
+                              {s.phoneCol && <> · telefone: <code>{s.phoneCol}</code></>}
+                            </span>
+                          </>
+                        )
+                      }
+                    </p>
+                  </div>
+                </label>
+              ))}
             </div>
 
             <button
               className="ad-btn ad-btn-primary ad-btn-lg"
-              disabled={importing || !parsed.emailCol}
+              disabled={importing || totalValidToImport === 0}
               onClick={doImport}
             >
-              {importing ? 'Importando…' : `Importar ${validRowCount} entradas`}
+              {importing ? 'Importando…' : `Importar ${totalValidToImport} entradas das ${parsed.sheets.filter((s) => s.selected && s.emailCol).length} aba${parsed.sheets.filter((s) => s.selected && s.emailCol).length === 1 ? '' : 's'} marcadas`}
             </button>
 
             {importProgress && (
@@ -1987,9 +2059,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             {importResult && (
               <div className={'ad-bc-result ' + (importResult.ok ? 'is-ok' : 'is-err')}>
                 {importResult.ok ? (
-                  <>
-                    <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · {importResult.duplicates} duplicatas ignoradas · {importResult.invalid} inválidos</p>
-                  </>
+                  <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · {importResult.duplicates} duplicatas ignoradas · {importResult.invalid} inválidos</p>
                 ) : <p>Erro: {importResult.error}</p>}
                 {importResult.errors?.length > 0 && (
                   <details><summary>Erros</summary><ul>{importResult.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></details>
@@ -2014,6 +2084,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             onKeyDown={(e) => e.key === 'Enter' && loadCold(search)}
           />
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => loadCold(search)}>Buscar</button>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={deleteBySource} style={{color: '#d97757'}}>Limpar por origem…</button>
         </div>
         {loading ? <p className="ad-bc-empty">Carregando…</p>
           : !coldList || coldList.leads.length === 0 ? <p className="ad-bc-empty">Nenhum lead frio {search ? 'encontrado pra busca' : 'ainda. Importe uma planilha acima.'}</p>
@@ -2021,6 +2092,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             <table className="ad-bc-history-table">
               <thead>
                 <tr>
+                  <th>Canal</th>
                   <th>E-mail</th>
                   <th>Nome</th>
                   <th>WhatsApp</th>
@@ -2031,8 +2103,14 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
               </thead>
               <tbody>
                 {coldList.leads.map((l) => (
-                  <tr key={l.email}>
-                    <td className="ad-bc-history-subject">{l.email}</td>
+                  <tr key={l.id || l.email || l.whatsapp}>
+                    <td>
+                      {l.canal === 'both' ? <span style={{color: '#819470'}}>e-mail + WA</span>
+                        : l.canal === 'email' ? <span style={{color: 'var(--sand)'}}>e-mail</span>
+                        : l.canal === 'whatsapp' ? <span style={{color: '#B89579'}}>WhatsApp</span>
+                        : <span style={{color: 'rgba(247,245,242,0.4)'}}>—</span>}
+                    </td>
+                    <td className="ad-bc-history-subject">{l.email || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
                     <td>{l.nome || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
                     <td>{l.whatsapp || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
                     <td className="ad-bc-history-filter">{l.source}</td>
@@ -2044,7 +2122,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                         : <span style={{color:'rgba(247,245,242,0.6)'}}>frio</span>}
                     </td>
                     <td style={{textAlign:'right'}}>
-                      <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => deleteCold(l.email)}>Remover</button>
+                      <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => deleteCold(l)}>Remover</button>
                     </td>
                   </tr>
                 ))}
