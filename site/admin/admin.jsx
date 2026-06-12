@@ -2351,6 +2351,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         {loading ? <p className="ad-bc-empty">Carregando…</p>
           : !coldList || coldList.leads.length === 0 ? <p className="ad-bc-empty">Nenhum lead frio {search ? 'encontrado pra busca' : 'ainda. Importe uma planilha acima.'}</p>
           : (
+            <>
             <table className="ad-bc-history-table">
               <thead>
                 <tr>
@@ -2422,6 +2423,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                 <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setSelectedIds(new Set())}>Limpar seleção</button>
               </div>
             )}
+            </>
           )}
         {coldList && coldList.leads.length === 200 && (
           <p className="ad-bc-empty" style={{marginTop: 16}}>Mostrando primeiros 200. Use a busca pra filtrar.</p>
