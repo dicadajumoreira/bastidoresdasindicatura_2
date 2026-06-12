@@ -104,6 +104,80 @@
       background: var(--onix);
       min-height: 100vh;
     }
+
+    /* Cronômetro de encerramento das inscrições — barra fixa no topo */
+    .ck-countdown {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #d97757;
+      color: #F7F5F2;
+      padding: 12px 24px;
+      text-align: center;
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .ck-countdown-msg {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 6px;
+      opacity: 0.95;
+    }
+    .ck-countdown-clock {
+      display: inline-flex;
+      gap: 14px;
+      font-family: var(--font-display, 'Bodoni Moda', Georgia, serif);
+      font-style: italic;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    .ck-countdown-clock-part {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 48px;
+    }
+    .ck-countdown-num {
+      font-size: 30px;
+      font-weight: 500;
+      font-style: normal;
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      letter-spacing: 0.04em;
+    }
+    .ck-countdown-lbl {
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-family: var(--font-sans, sans-serif);
+      font-style: normal;
+      font-weight: 600;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+    .ck-countdown-sep {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 30px;
+      align-self: flex-start;
+      opacity: 0.55;
+      line-height: 1;
+    }
+    .ck-countdown.is-expired {
+      background: #1A1C29;
+      color: #DABDA9;
+    }
+    .ck-countdown.is-expired .ck-countdown-msg { font-size: 14px; letter-spacing: 0.1em; }
+    @media (max-width: 720px) {
+      .ck-countdown { padding: 10px 12px; }
+      .ck-countdown-msg { font-size: 10px; margin-bottom: 4px; }
+      .ck-countdown-num { font-size: 22px; }
+      .ck-countdown-clock-part { min-width: 36px; }
+      .ck-countdown-sep { font-size: 22px; }
+    }
+
     .ck-root {
       width: 100%;
       max-width: 1440px;
@@ -851,6 +925,53 @@
   <div id="root"></div>
 
   <script type="text/babel">
+    // Cronômetro até 23:59:59 do dia 12/06/2026 horário de Brasília (UTC-3).
+    // O fuso é fixo — não usa horário local do navegador. Mesmo se a pessoa
+    // estiver em outro fuso, vê o tempo correto até o encerramento.
+    const COUNTDOWN_TARGET_MS = Date.UTC(2026, 5, 13, 2, 59, 59); // 12/06 23:59:59 BRT = 13/06 02:59:59 UTC
+
+    const Countdown = () => {
+      const [now, setNow] = React.useState(() => Date.now());
+      React.useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+      }, []);
+      const diff = Math.max(0, COUNTDOWN_TARGET_MS - now);
+      if (diff <= 0) {
+        return (
+          <div className="ck-countdown is-expired">
+            <span className="ck-countdown-msg">Inscrições encerradas · O sorteio acontece amanhã às 12h no Instagram @dicadajumoreira</span>
+          </div>
+        );
+      }
+      const totalSeconds = Math.floor(diff / 1000);
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      const pad = (n) => String(n).padStart(2, '0');
+      return (
+        <div className="ck-countdown">
+          <span className="ck-countdown-msg">Encerra hoje, 23h59 (Brasília) · Sorteio amanhã às 12h</span>
+          <div className="ck-countdown-clock">
+            <span className="ck-countdown-clock-part">
+              <span className="ck-countdown-num">{pad(h)}</span>
+              <span className="ck-countdown-lbl">Horas</span>
+            </span>
+            <span className="ck-countdown-sep">:</span>
+            <span className="ck-countdown-clock-part">
+              <span className="ck-countdown-num">{pad(m)}</span>
+              <span className="ck-countdown-lbl">Min</span>
+            </span>
+            <span className="ck-countdown-sep">:</span>
+            <span className="ck-countdown-clock-part">
+              <span className="ck-countdown-num">{pad(s)}</span>
+              <span className="ck-countdown-lbl">Seg</span>
+            </span>
+          </div>
+        </div>
+      );
+    };
+
     const SorteioMBALanding = () => {
       const [data, setData] = React.useState(() => {
         const defaults = {nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: ''};
@@ -923,6 +1044,7 @@
       return (
         <div className="ck-stage">
           <div className="ck-root bs-root">
+            <Countdown />
             {/* Topbar */}
             <header className="ck-topbar">
               <a href="/" className="ck-back">
