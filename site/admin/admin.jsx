@@ -2094,6 +2094,55 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   };
 
   const [progress, setProgress] = React.useState(null); // {sent, failed, processed, total}
+  const [scheduledFor, setScheduledFor] = React.useState(''); // ISO string "YYYY-MM-DDTHH:mm" do <input type="datetime-local">
+  const [scheduledList, setScheduledList] = React.useState(null);
+
+  // Carrega lista de agendamentos pendentes
+  const loadScheduled = React.useCallback(async () => {
+    try {
+      const res = await api('/api/scheduled-broadcasts');
+      setScheduledList(res.scheduled || []);
+    } catch (e) { console.error('falha ao carregar agendamentos:', e); setScheduledList([]); }
+  }, []);
+  React.useEffect(() => { loadScheduled(); }, [loadScheduled]);
+
+  const schedule = async () => {
+    if (!scheduledFor) { alert('Escolha uma data e hora pro agendamento.'); return; }
+    setBusy(true); setResult(null);
+    try {
+      const filter = {
+        excludeOrigens: [...excludeOrigens],
+        statuses: statusFilter.size ? [...statusFilter] : undefined,
+      };
+      // datetime-local devolve "YYYY-MM-DDTHH:mm" no fuso local. Convertendo pra ISO.
+      const localDate = new Date(scheduledFor);
+      const res = await api('/api/scheduled-broadcasts', {
+        method: 'POST',
+        body: JSON.stringify({
+          subject, html, filter,
+          scheduledFor: localDate.toISOString(),
+          targetCount: targets.count,
+        }),
+      });
+      if (res.ok) {
+        setResult({type: 'schedule', ok: true, scheduledFor: res.scheduledFor});
+        setScheduledFor('');
+        loadScheduled();
+      } else {
+        setResult({type: 'schedule', ok: false, error: res.error});
+      }
+    } catch (e) {
+      setResult({type: 'schedule', ok: false, error: e.message});
+    } finally { setBusy(false); }
+  };
+
+  const cancelScheduled = async (id) => {
+    if (!confirm('Cancelar esse agendamento? A ação não dá pra desfazer.')) return;
+    try {
+      await api(`/api/scheduled-broadcasts?id=${encodeURIComponent(id)}`, {method: 'DELETE'});
+      loadScheduled();
+    } catch (e) { alert('Falha ao cancelar: ' + e.message); }
+  };
 
   const sendReal = async () => {
     setConfirmOpen(false);
@@ -2370,13 +2419,36 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
               </button>
             </div>
             <hr className="ad-bc-divider" />
-            <button
-              className="ad-btn ad-btn-primary ad-btn-lg"
-              disabled={busy || targets.count === 0}
-              onClick={() => setConfirmOpen(true)}
-            >
-              {busy ? 'Enviando…' : `Disparar pros ${targets.count} cadastros`}
-            </button>
+            <div className="ad-bc-schedule">
+              <label className="ad-bc-field">
+                <span className="ad-bc-label">Agendar pra (opcional)</span>
+                <input
+                  type="datetime-local"
+                  value={scheduledFor}
+                  onChange={(e) => setScheduledFor(e.target.value)}
+                />
+              </label>
+              <span className="ad-bc-hint">
+                Se deixar em branco, o disparo é imediato. Se preencher, o sistema agenda e dispara automaticamente na data/hora marcada (verifica a cada 5 minutos).
+              </span>
+            </div>
+            {scheduledFor ? (
+              <button
+                className="ad-btn ad-btn-primary ad-btn-lg"
+                disabled={busy || targets.count === 0}
+                onClick={schedule}
+              >
+                {busy ? 'Agendando…' : `Agendar pra ${new Date(scheduledFor).toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'})}`}
+              </button>
+            ) : (
+              <button
+                className="ad-btn ad-btn-primary ad-btn-lg"
+                disabled={busy || targets.count === 0}
+                onClick={() => setConfirmOpen(true)}
+              >
+                {busy ? 'Enviando…' : `Disparar agora pros ${targets.count} cadastros`}
+              </button>
+            )}
             {progress && progress.total > 0 && (
               <div className="ad-bc-progress">
                 <div className="ad-bc-progress-track">
@@ -2390,6 +2462,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             )}
             {result && (
               <div className={'ad-bc-result ' + (result.ok ? 'is-ok' : 'is-err')}>
+                {result.type === 'schedule' && result.ok && <p>✓ Agendado pra <strong>{new Date(result.scheduledFor).toLocaleString('pt-BR')}</strong>. O sistema vai disparar automaticamente.</p>}
                 {result.type === 'test' && result.ok && <p>✓ Teste enviado pra <strong>{testEmail}</strong>. Confere a caixa de entrada (ou spam).</p>}
                 {result.type === 'real' && result.ok && (
                   <>
@@ -2420,6 +2493,40 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
           </section>
         </div>
       </div>
+
+      {/* Agendamentos pendentes */}
+      {scheduledList !== null && scheduledList.length > 0 && (
+        <section className="ad-widget ad-bc-scheduled">
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">Agendados</span>
+            <h2 className="ad-widget-title">Disparos pendentes</h2>
+          </header>
+          <table className="ad-bc-history-table">
+            <thead>
+              <tr>
+                <th>Quando</th>
+                <th>Assunto</th>
+                <th>Filtro</th>
+                <th style={{textAlign:'right'}}>Destinatários</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {scheduledList.map((s) => (
+                <tr key={s.id}>
+                  <td className="ad-bc-history-date" style={{color: 'var(--sand)'}}>{new Date(s.scheduledFor).toLocaleString('pt-BR')}</td>
+                  <td className="ad-bc-history-subject">{s.subject}</td>
+                  <td className="ad-bc-history-filter">{s.filterSummary}</td>
+                  <td style={{textAlign:'right'}}>{s.targetCount != null ? s.targetCount : '—'}</td>
+                  <td style={{textAlign:'right'}}>
+                    <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => cancelScheduled(s.id)}>Cancelar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* Histórico de disparos já feitos */}
       <section className="ad-widget ad-bc-history">

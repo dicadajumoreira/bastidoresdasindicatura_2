@@ -2321,3 +2321,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   font-style: italic;
   margin: 0 0 12px;
 }
+
+/* Agendamento */
+.ad-bc-schedule {
+  background: rgba(218, 189, 169, 0.05);
+  border: 1px dashed rgba(218, 189, 169, 0.3);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.ad-bc-schedule .ad-bc-field { margin-bottom: 8px; }
+.ad-bc-schedule input[type="datetime-local"] {
+  background: rgba(247, 245, 242, 0.06);
+  border: 1px solid rgba(247, 245, 242, 0.22);
+  color: var(--offwhite, #F7F5F2);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  color-scheme: dark;
+}

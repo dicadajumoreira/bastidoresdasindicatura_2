@@ -20,6 +20,12 @@
 [functions]
   node_bundler = "esbuild"
 
+# Função agendada que processa broadcasts marcados pra disparar no horário.
+# Roda a cada 5 minutos. Como é "background" ela tem até 15min de execução,
+# o suficiente pra mandar centenas de e-mails respeitando rate limit do Resend.
+[functions."process-scheduled-broadcasts-background"]
+  schedule = "*/5 * * * *"
+
 
 # Edge Function que bypassa o pre-renderer do Netlify nas pretty URLs
 [[edge_functions]]
