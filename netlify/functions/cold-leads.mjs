@@ -102,7 +102,7 @@ export default async (req) => {
 
     let importedEmail = 0;
     let importedPhone = 0;
-    let duplicates = 0;
+    let merged = 0;
     let invalid = 0;
     const errors = [];
 
@@ -124,26 +124,73 @@ export default async (req) => {
       });
     }
 
+    // Função utilitária: localiza registro existente por e-mail OU telefone
+    const findExisting = async (c) => {
+      if (c.email) {
+        try {
+          const v = await store.get(`cold:e:${c.email}`, {type: 'json'});
+          if (v) return {key: `cold:e:${c.email}`, lead: v};
+        } catch {}
+      }
+      if (c.whatsapp) {
+        try {
+          const v = await store.get(`cold:p:${c.whatsapp}`, {type: 'json'});
+          if (v) return {key: `cold:p:${c.whatsapp}`, lead: v};
+        } catch {}
+      }
+      return null;
+    };
+
+    // Merge: complementa o registro existente com dados novos (não sobrescreve).
+    const mergeLead = (existing, c) => {
+      const sourcesOld = existing.sources || (existing.source ? [existing.source] : []);
+      const sourcesNew = sourcesOld.includes(c.source) ? sourcesOld : [...sourcesOld, c.source];
+      const out = {
+        ...existing,
+        email: existing.email || c.email,
+        whatsapp: existing.whatsapp || c.whatsapp,
+        nome: existing.nome && existing.nome.length > 0 ? existing.nome : c.nome,
+        // emailStatus: prefere existente, mas sobrescreve se o novo indicar bounce (info importante)
+        emailStatus: (c.emailStatus && /can't send|bounce|invalid/i.test(c.emailStatus))
+          ? c.emailStatus
+          : (existing.emailStatus || c.emailStatus),
+        sources: sourcesNew,
+        source: existing.source || c.source,
+        updatedAt: new Date().toISOString(),
+      };
+      out.canal = out.email && out.whatsapp ? 'both' : (out.email ? 'email' : 'whatsapp');
+      return out;
+    };
+
     // Salva em paralelo com concorrência baixa
-    const CONCURRENCY = 10;
+    const CONCURRENCY = 8;
     for (let i = 0; i < candidates.length; i += CONCURRENCY) {
       const batch = candidates.slice(i, i + CONCURRENCY);
       const results = await Promise.allSettled(batch.map(async (c) => {
-        // Chave: prefere e-mail (dedupe mais forte). Se só tem telefone, usa telefone.
+        const found = await findExisting(c);
+        if (found) {
+          const updated = mergeLead(found.lead, c);
+          // Se achei por telefone mas agora tem e-mail, migra a chave pra e-mail
+          if (found.key.startsWith('cold:p:') && c.email) {
+            const newKey = `cold:e:${c.email}`;
+            updated.id = newKey;
+            await store.setJSON(newKey, updated);
+            try { await store.delete(found.key); } catch {}
+          } else {
+            await store.setJSON(found.key, updated);
+          }
+          return {status: 'merged'};
+        }
+        // Novo registro
         const key = c.email ? `cold:e:${c.email}` : `cold:p:${c.whatsapp}`;
-        try {
-          const existing = await store.get(key, {type: 'json'});
-          if (existing) return {status: 'dup'};
-        } catch {}
-        const canal = c.email && c.whatsapp ? 'both'
-          : c.email ? 'email'
-          : 'whatsapp';
+        const canal = c.email && c.whatsapp ? 'both' : (c.email ? 'email' : 'whatsapp');
         const lead = {
           id: key,
           email: c.email,
           whatsapp: c.whatsapp,
           nome: c.nome,
           source: c.source,
+          sources: [c.source],
           emailStatus: c.emailStatus,
           tipo: 'frio',
           canal,
@@ -160,7 +207,7 @@ export default async (req) => {
           if (r.value.status === 'imported') {
             if (r.value.canal === 'email') importedEmail++;
             else importedPhone++;
-          } else if (r.value.status === 'dup') duplicates++;
+          } else if (r.value.status === 'merged') merged++;
         } else {
           invalid++;
           if (errors.length < 5) errors.push(String(r.reason?.message || 'erro').slice(0, 200));
@@ -173,7 +220,7 @@ export default async (req) => {
       imported: importedEmail + importedPhone,
       importedEmail,
       importedPhone,
-      duplicates,
+      merged,
       invalid,
       total: entries.length,
       errors,

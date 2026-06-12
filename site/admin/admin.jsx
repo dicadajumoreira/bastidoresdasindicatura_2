@@ -1901,7 +1901,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
 
     setImporting(true);
     setImportResult(null);
-    setImportProgress({sent: 0, imported: 0, duplicates: 0, invalid: 0, total: totalValidToImport});
+    setImportProgress({sent: 0, imported: 0, merged: 0, invalid: 0, total: totalValidToImport});
 
     // Coleta todas as entries de todas as abas selecionadas, marcando a source com nome da aba
     const allEntries = [];
@@ -1920,7 +1920,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     }
 
     const CHUNK = 200;
-    let totals = {imported: 0, duplicates: 0, invalid: 0};
+    let totals = {imported: 0, merged: 0, invalid: 0};
     const errorsAcc = [];
     try {
       for (let i = 0; i < allEntries.length; i += CHUNK) {
@@ -1931,7 +1931,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         });
         if (res.ok) {
           totals.imported += res.imported || 0;
-          totals.duplicates += res.duplicates || 0;
+          totals.merged += res.merged || 0;
           totals.invalid += res.invalid || 0;
           if (res.errors?.length) errorsAcc.push(...res.errors);
         } else {
@@ -2051,7 +2051,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                 <p className="ad-bc-progress-label">
                   Processando {importProgress.sent} de {importProgress.total} ·
                   <strong style={{color:'#819470'}}> {importProgress.imported} novos</strong> ·
-                  <span style={{color:'rgba(247,245,242,0.55)'}}> {importProgress.duplicates} duplicatas</span>
+                  <span style={{color:'var(--sand)'}}> {importProgress.merged} complementados</span>
                 </p>
               </div>
             )}
@@ -2059,7 +2059,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             {importResult && (
               <div className={'ad-bc-result ' + (importResult.ok ? 'is-ok' : 'is-err')}>
                 {importResult.ok ? (
-                  <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · {importResult.duplicates} duplicatas ignoradas · {importResult.invalid} inválidos</p>
+                  <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · <strong>{importResult.merged} complementados</strong> · {importResult.invalid} inválidos</p>
                 ) : <p>Erro: {importResult.error}</p>}
                 {importResult.errors?.length > 0 && (
                   <details><summary>Erros</summary><ul>{importResult.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></details>
