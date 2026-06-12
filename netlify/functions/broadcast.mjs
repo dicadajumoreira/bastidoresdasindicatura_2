@@ -95,7 +95,29 @@ export default async (req) => {
 
   try {
     const store = getStore({name: 'leads', consistency: 'strong'});
-    const {leads} = await buildLeads(store, {budgetMs: 3000});
+    // Tenta carregar TODOS os leads (refresca o índice se truncado).
+    // Em offsets > 0 confiamos no índice já populado: budget pequeno.
+    let leads;
+    let totalLeadsInStore;
+    let attempts = 0;
+    const maxAttempts = offset === 0 ? 4 : 1;
+    while (attempts < maxAttempts) {
+      attempts++;
+      const r = await buildLeads(store, {budgetMs: 5000});
+      leads = r.leads;
+      totalLeadsInStore = r.total;
+      if (!r.truncated && leads.length >= totalLeadsInStore) break;
+      // Se truncou, espera um pouquinho e tenta de novo pra index ficar mais cheio
+      await new Promise((res) => setTimeout(res, 250));
+    }
+    if (offset === 0 && leads.length < totalLeadsInStore * 0.95) {
+      // No primeiro call, se ainda falta carregar muita coisa, falha cedo
+      return json({
+        error: `Base de leads ainda não foi totalmente carregada (${leads.length} de ${totalLeadsInStore}). Aguarde alguns segundos e tente de novo (o índice está sendo construído em background).`,
+        leadsLoaded: leads.length,
+        totalInStore: totalLeadsInStore,
+      }, 503);
+    }
 
     // Dedupe por e-mail
     const byEmail = new Map();

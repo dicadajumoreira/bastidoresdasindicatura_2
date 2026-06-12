@@ -1981,7 +1981,7 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
   </td></tr>
 </table>`;
 
-const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
+const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, leadsLoadInfo, onReloadLeads}) => {
   const [subject, setSubject] = React.useState(MBA_DEFAULT_SUBJECT);
   const [html, setHtml] = React.useState(MBA_DEFAULT_HTML);
   const [excludeOrigens, setExcludeOrigens] = React.useState(() => new Set(['sorteio-mba']));
@@ -2027,29 +2027,45 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
     setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
   };
 
-  // Cálculo de destinatários no front (mesma lógica do backend)
+  // Cálculo de destinatários no front (mesma lógica do backend) + funil detalhado
   const targets = React.useMemo(() => {
-    if (!leadsAll || !leadsAll.length) return {count: 0, list: []};
+    if (!leadsAll || !leadsAll.length) {
+      return {count: 0, list: [], funnel: {totalLeads: 0, activeLeads: 0, withEmail: 0, uniqueEmails: 0, afterExclude: 0, afterStatus: 0}};
+    }
+    const totalLeads = leadsAll.length;
+    let activeLeads = 0;     // não estão na lixeira
+    let withEmail = 0;       // têm campo email com @
     const byEmail = new Map();
     for (const l of leadsAll) {
       if (l.deletedAt) continue;
+      activeLeads++;
       const email = String(l.email || '').trim().toLowerCase();
       if (!email || !email.includes('@')) continue;
+      withEmail++;
       if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});
       const e = byEmail.get(email);
       e.leads.push(l);
       e.origens.add(l.origem || 'mentoria');
     }
+    const uniqueEmails = byEmail.size;
+    let afterExclude = 0;
+    let afterStatus = 0;
     const list = [];
     for (const [email, entry] of byEmail) {
       let skip = false;
       for (const o of entry.origens) if (excludeOrigens.has(o)) { skip = true; break; }
       if (skip) continue;
+      afterExclude++;
       const rep = entry.leads.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
       if (statusFilter.size && !statusFilter.has(rep.status || 'novo')) continue;
+      afterStatus++;
       list.push({email, rep, origens: [...entry.origens]});
     }
-    return {count: list.length, list};
+    return {
+      count: list.length,
+      list,
+      funnel: {totalLeads, activeLeads, withEmail, uniqueEmails, afterExclude, afterStatus},
+    };
   }, [leadsAll, excludeOrigens, statusFilter]);
 
   const toggleOrigem = (o) => setExcludeOrigens((prev) => {
@@ -2289,9 +2305,53 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll}) => {
                 ))}
               </div>
             </div>
-            <div className="ad-bc-count">
-              <span className="ad-bc-count-n">{targets.count}</span>
-              <span className="ad-bc-count-lbl">{targets.count === 1 ? 'pessoa vai receber' : 'pessoas vão receber'}</span>
+            <div className="ad-bc-funnel">
+              <p className="ad-bc-funnel-title">
+                Funil de destinatários
+                <button type="button" className="ad-bc-reload" onClick={onReloadLeads} disabled={leadsLoading}>
+                  {leadsLoading ? 'Recarregando…' : '↻ Recarregar leads'}
+                </button>
+              </p>
+              {leadsLoadInfo && !leadsLoadInfo.error && (
+                <p className="ad-bc-funnel-info">
+                  Carregado: {leadsLoadInfo.loaded} de {leadsLoadInfo.total} leads {leadsLoadInfo.truncated && <span style={{color:'#d97757'}}>· truncado (a base é maior que a carregada — clica em Recarregar)</span>} · {leadsLoadInfo.calls} chamada{leadsLoadInfo.calls === 1 ? '' : 's'}
+                </p>
+              )}
+              <ul className="ad-bc-funnel-list">
+                <li>
+                  <span className="ad-bc-funnel-n">{targets.funnel.totalLeads}</span>
+                  <span className="ad-bc-funnel-lbl">cadastros totais (todos os formulários)</span>
+                </li>
+                <li>
+                  <span className="ad-bc-funnel-n">{targets.funnel.activeLeads}</span>
+                  <span className="ad-bc-funnel-lbl">ativos (excluindo lixeira)</span>
+                </li>
+                <li>
+                  <span className="ad-bc-funnel-n">{targets.funnel.withEmail}</span>
+                  <span className="ad-bc-funnel-lbl">com e-mail válido</span>
+                  {targets.funnel.activeLeads > targets.funnel.withEmail && (
+                    <span className="ad-bc-funnel-warn"> · {targets.funnel.activeLeads - targets.funnel.withEmail} sem e-mail</span>
+                  )}
+                </li>
+                <li>
+                  <span className="ad-bc-funnel-n">{targets.funnel.uniqueEmails}</span>
+                  <span className="ad-bc-funnel-lbl">pessoas únicas (mesmo e-mail = 1 só)</span>
+                </li>
+                <li>
+                  <span className="ad-bc-funnel-n">{targets.funnel.afterExclude}</span>
+                  <span className="ad-bc-funnel-lbl">após excluir origens marcadas</span>
+                </li>
+                {statusFilter.size > 0 && (
+                  <li>
+                    <span className="ad-bc-funnel-n">{targets.funnel.afterStatus}</span>
+                    <span className="ad-bc-funnel-lbl">após filtrar status</span>
+                  </li>
+                )}
+                <li className="ad-bc-funnel-final">
+                  <span className="ad-bc-funnel-n">{targets.count}</span>
+                  <span className="ad-bc-funnel-lbl">{targets.count === 1 ? 'pessoa vai receber' : 'pessoas vão receber'}</span>
+                </li>
+              </ul>
             </div>
           </section>
 
@@ -2423,29 +2483,44 @@ const App = () => {
   const [view, setView] = React.useState('overview');
   // Cache de leads compartilhado (usado pelo broadcast pra computar destinatários)
   const [leadsAll, setLeadsAll] = React.useState(null);
+  const [leadsLoading, setLeadsLoading] = React.useState(false);
+  const [leadsLoadInfo, setLeadsLoadInfo] = React.useState(null);
+
+  const reloadLeads = React.useCallback(async () => {
+    setLeadsLoading(true);
+    setLeadsLoadInfo(null);
+    try {
+      // Loop até pegar todos os leads (até 20 chamadas, max ~minutos)
+      let merged = [];
+      let total = 0;
+      let calls = 0;
+      let truncated = false;
+      for (let i = 0; i < 20; i++) {
+        calls++;
+        const res = await api('/api/leads');
+        if (!res.leads) break;
+        merged = res.leads;
+        total = res.total || merged.length;
+        truncated = !!res.truncated;
+        if (merged.length >= total) break;
+        if (!truncated) break;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      setLeadsAll(merged);
+      setLeadsLoadInfo({loaded: merged.length, total, truncated, calls});
+    } catch (e) {
+      console.error('falha ao carregar leads pro disparo:', e);
+      setLeadsAll([]);
+      setLeadsLoadInfo({error: e.message});
+    } finally {
+      setLeadsLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (!authed || view !== 'broadcast' || leadsAll) return;
-    (async () => {
-      try {
-        // Loop de paginação curto: pega todos os leads até total ser atingido
-        let merged = [];
-        let total = 0;
-        for (let i = 0; i < 10; i++) {
-          const res = await api('/api/leads');
-          if (!res.leads) break;
-          merged = res.leads;
-          total = res.total || merged.length;
-          if (merged.length >= total || !res.truncated) break;
-          await new Promise((r) => setTimeout(r, 300));
-        }
-        setLeadsAll(merged);
-      } catch (e) {
-        console.error('falha ao carregar leads pro disparo:', e);
-        setLeadsAll([]);
-      }
-    })();
-  }, [authed, view, leadsAll]);
+    reloadLeads();
+  }, [authed, view, leadsAll, reloadLeads]);
 
   if (!authed) return <Login onSuccess={() => { setAuthed(true); setView('overview'); }} />;
   if (view === 'overview') {
@@ -2460,6 +2535,9 @@ const App = () => {
       onLogout={() => setAuthed(false)}
       onBackToOverview={() => setView('overview')}
       leadsAll={leadsAll}
+      leadsLoading={leadsLoading}
+      leadsLoadInfo={leadsLoadInfo}
+      onReloadLeads={reloadLeads}
     />;
   }
   return <LeadsPanel onLogout={() => setAuthed(false)} onBackToOverview={() => setView('overview')} />;
