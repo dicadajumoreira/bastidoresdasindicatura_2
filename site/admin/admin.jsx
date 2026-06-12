@@ -2869,19 +2869,26 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   // Usa o MESMO broadcastId pra continuar acumulando no histórico, mesma
   // ordenação determinística dos destinatários (por email) garante que
   // não vai re-enviar pra quem já recebeu.
-  const resumeBroadcast = async (h) => {
+  // forceIncludeCold: passa pro backend pra incluir leads frios mesmo
+  // quando o filtro salvo não tem essa flag (caso de broadcasts antigos
+  // ou com histórico corrompido por tentativas anteriores).
+  const resumeBroadcast = async (h, forceIncludeCold = false) => {
     const processed = (h.sent || 0) + (h.failed || 0);
-    const remaining = h.total - processed;
-    if (!confirm(`Vai continuar este disparo a partir do destinatário ${processed + 1} (faltam ${remaining}). Mesmo broadcastId, sem duplicar pra quem já recebeu. Continuar?`)) return;
+    const knownTotal = Math.max(h.total || 0, processed);
+    const remaining = Math.max(0, knownTotal - processed);
+    const msg = remaining > 0
+      ? `Vai continuar este disparo a partir do destinatário ${processed + 1} (faltam ${remaining}). Mesmo broadcastId, sem duplicar pra quem já recebeu. Continuar?`
+      : `Esse disparo tá marcado como concluído (${processed} enviados de ${knownTotal}). Forçar continuação a partir do destinatário ${processed + 1}? Se incluir leads frios, vai tentar mandar pros ~3000 que faltaram.`;
+    if (!confirm(msg)) return;
     setBusy(true);
     setResult(null);
-    setProgress({sent: h.sent || 0, failed: h.failed || 0, processed, total: h.total});
+    setProgress({sent: h.sent || 0, failed: h.failed || 0, processed, total: knownTotal});
 
     const LIMIT_PER_CALL = 40;
     let offset = processed;
     let totalSent = h.sent || 0;
     let totalFailed = h.failed || 0;
-    let total = h.total;
+    let total = knownTotal;
     const errorsAcc = [];
     let failCount = 0;
 
@@ -2896,6 +2903,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             body: JSON.stringify({
               resumeFrom: h.id,
               offset, limit: LIMIT_PER_CALL,
+              forceIncludeCold: !!forceIncludeCold,
             }),
           });
         } catch (e) {
@@ -3226,25 +3234,34 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
           onClick={async () => {
             try {
               const res = await api('/api/broadcast-history');
-              const incompletes = (res.history || []).filter((h) => {
-                const processed = (h.sent || 0) + (h.failed || 0);
-                return h.total && processed < h.total && !h.resendOf;
-              });
-              if (incompletes.length === 0) {
-                alert('Nenhum disparo incompleto encontrado. Todos os disparos do histórico foram concluídos.');
+              // Mostra TODOS os disparos recentes — não filtra por "incompleto"
+              // porque o histórico pode estar corrompido (total reduzido por
+              // tentativas anteriores de Continuar que não funcionaram).
+              const all = (res.history || []).filter((h) => !h.resendOf);
+              if (all.length === 0) {
+                alert('Nenhum disparo encontrado no histórico.');
                 return;
               }
-              const list = incompletes.map((h, i) => {
+              const list = all.slice(0, 10).map((h, i) => {
                 const proc = (h.sent || 0) + (h.failed || 0);
-                return `${i + 1}. ${h.subject.slice(0, 50)} · ${proc}/${h.total} (${h.total - proc} faltam) · ${fmtDate(h.sentAt)}`;
+                return `${i + 1}. ${h.subject.slice(0, 40)} · ${proc} enviados · ${fmtDate(h.sentAt)}`;
               }).join('\n');
-              const choice = incompletes.length === 1
+              const choice = all.length === 1
                 ? '1'
-                : prompt(`Disparos incompletos:\n\n${list}\n\nDigite o número do que quer continuar:`, '1');
+                : prompt(`Disparos recentes:\n\n${list}\n\nDigite o número do que quer continuar:`, '1');
               if (!choice) return;
               const idx = parseInt(choice, 10) - 1;
-              if (idx < 0 || idx >= incompletes.length) { alert('Opção inválida.'); return; }
-              resumeBroadcast(incompletes[idx]);
+              if (idx < 0 || idx >= all.length) { alert('Opção inválida.'); return; }
+              const picked = all[idx];
+              // Pergunta se incluía leads frios (importante pra dar override
+              // em casos onde o filtro salvo não tem essa flag)
+              const includeCold = confirm(
+                'Esse disparo incluía leads frios da base de planilhas importadas?\n\n' +
+                '• OK = SIM, incluía leads frios\n' +
+                '• Cancelar = NÃO, era só leads quentes\n\n' +
+                'Dica: se o total era maior que ~6500 contatos, provavelmente incluía leads frios.'
+              );
+              resumeBroadcast(picked, includeCold);
             } catch (e) {
               alert('Falha ao buscar disparos: ' + e.message);
             }

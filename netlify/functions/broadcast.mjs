@@ -275,7 +275,12 @@ export default async (req) => {
       // salvo não registrou (bug histórico — broadcasts antes de junho/2026
       // não persistiam includeCold). Force includeCold=true pra
       // reconstruir os mesmos destinatários do disparo original.
+      //
+      // forceIncludeCold no body sobrescreve TUDO — a usuária pode forçar
+      // inclusão via UI mesmo quando a auto-detecção não captura (caso de
+      // histórico com total corrompido por tentativas anteriores).
       let effectiveIncludeCold = !!(body.filter && body.filter.includeCold);
+      if (body.forceIncludeCold) effectiveIncludeCold = true;
       if (body.resumeFrom && resumeOrigTotal > 0 && allTargets.length < resumeOrigTotal * 0.7) {
         effectiveIncludeCold = true;
       }
@@ -372,14 +377,24 @@ export default async (req) => {
       console.error('[broadcast] failed to save recipients log:', e.message);
     }
 
+    // Lê existing antes de calcular preservedTotal/hasMore
+    let existing = null;
+    try {
+      const histStorePre = getStore({name: 'broadcasts', consistency: 'strong'});
+      existing = await histStorePre.get(broadcastId, {type: 'json'});
+    } catch {}
+
+    // Preserva o MAIOR total já visto pra esse broadcastId. Protege contra
+    // resumes que computam allTargets menor (ex.: filtro salvo não tinha
+    // includeCold) e iam sobrescrever 11071 por 6500 e marcar como
+    // completo erroneamente.
+    const preservedTotal = Math.max(existing?.total || 0, total, resumeOrigTotal);
     const nextOffset = offset + processed;
-    const hasMore = nextOffset < total;
+    const hasMore = nextOffset < preservedTotal;
 
     // Atualiza histórico cumulativamente (best-effort)
     try {
       const histStore = getStore({name: 'broadcasts', consistency: 'strong'});
-      let existing = null;
-      try { existing = await histStore.get(broadcastId, {type: 'json'}); } catch {}
       const filterSummary = [];
       if (resendFailedFrom) {
         filterSummary.push(`reenvio dos que falharam · origem ${resendFailedFrom}`);
@@ -396,13 +411,13 @@ export default async (req) => {
         html,
         sent: (existing?.sent || 0) + sent,
         failed: (existing?.failed || 0) + failed,
-        total,
+        total: preservedTotal,
         filter: resendFailedFrom ? {resendFailedFrom} : {
           excludeOrigens: [...excludeOrigens],
           includeOrigens: includeOrigens ? [...includeOrigens] : null,
           statuses: statuses ? [...statuses] : null,
           states: states ? [...states] : null,
-          includeCold: !!(body.filter && body.filter.includeCold),
+          includeCold: !!(body.filter && body.filter.includeCold) || !!body.forceIncludeCold || !!(existing?.filter && existing.filter.includeCold),
         },
         filterSummary: filterSummary.join(' · ') || 'todos os leads',
         completed: !hasMore,
@@ -418,7 +433,7 @@ export default async (req) => {
       sent,
       failed,
       processed,
-      total,
+      total: preservedTotal,
       offset,
       nextOffset,
       hasMore,
