@@ -1866,17 +1866,28 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         const nameCol = findCol(headers, /^nome$/) || findCol(headers, /^name$/) || findCol(headers, /nome completo/) || findCol(headers, /nome/) || findCol(headers, /name/);
         const phoneCol = findCol(headers, /^celular$/) || findCol(headers, /^telefone$/) || findCol(headers, /^phone$/) || findCol(headers, /whatsapp/i) || findCol(headers, /celular/) || findCol(headers, /telefone/);
         const statusCol = findCol(headers, /email_status/) || findCol(headers, /verifierstatus/) || findCol(headers, /status/);
-        const validCount = emailCol ? rows.filter((r) => {
-          const email = String(r[emailCol] || '').trim();
-          return email && email.includes('@');
-        }).length : 0;
+        // Conta linhas com e-mail válido OU telefone válido (ambos servem
+        // como canal de contato — e-mail pro Resend, telefone pro WhatsApp).
+        let countEmail = 0, countPhone = 0, countBoth = 0;
+        for (const r of rows) {
+          const email = String(emailCol ? r[emailCol] || '' : '').trim();
+          const phoneRaw = String(phoneCol ? r[phoneCol] || '' : '').replace(/\D/g, '');
+          const hasEmail = email && email.includes('@');
+          const hasPhone = phoneRaw && phoneRaw.length >= 10;
+          if (hasEmail && hasPhone) countBoth++;
+          else if (hasEmail) countEmail++;
+          else if (hasPhone) countPhone++;
+        }
+        const validCount = countEmail + countPhone + countBoth;
         return {
           name: sheetName,
           rows,
           headers,
           emailCol, nameCol, phoneCol, statusCol,
           validCount,
-          selected: validCount > 0, // selecionada por default se tem e-mail
+          countEmail, countPhone, countBoth,
+          selected: validCount > 0, // selecionada por default se tem qualquer canal
+          hasContact: !!(emailCol || phoneCol), // serve pra checkbox ativa/desativa
         };
       });
 
@@ -1897,32 +1908,41 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
   };
 
   const totalValidToImport = parsed
-    ? parsed.sheets.filter((s) => s.selected).reduce((sum, s) => sum + s.validCount, 0)
+    ? parsed.sheets.filter((s) => s.selected && s.hasContact).reduce((sum, s) => sum + s.validCount, 0)
+    : 0;
+  const totalEmailToImport = parsed
+    ? parsed.sheets.filter((s) => s.selected && s.hasContact).reduce((sum, s) => sum + (s.countEmail || 0) + (s.countBoth || 0), 0)
+    : 0;
+  const totalPhoneOnlyToImport = parsed
+    ? parsed.sheets.filter((s) => s.selected && s.hasContact).reduce((sum, s) => sum + (s.countPhone || 0), 0)
     : 0;
 
   const doImport = async () => {
     if (!parsed) return;
-    const selected = parsed.sheets.filter((s) => s.selected && s.emailCol);
+    const selected = parsed.sheets.filter((s) => s.selected && s.hasContact);
     if (selected.length === 0) {
-      alert('Selecione pelo menos uma aba que tenha e-mail.');
+      alert('Selecione pelo menos uma aba que tenha e-mail ou telefone.');
       return;
     }
-    if (!confirm(`Vai importar ${totalValidToImport} entradas com e-mail de ${selected.length} aba${selected.length === 1 ? '' : 's'}. Duplicatas serão ignoradas. Continuar?`)) return;
+    if (!confirm(`Vai importar ${totalValidToImport} entradas (${totalEmailToImport} com e-mail · ${totalPhoneOnlyToImport} só com telefone) de ${selected.length} aba${selected.length === 1 ? '' : 's'}. Duplicatas vão ser MESCLADAS no registro existente. Continuar?`)) return;
 
     setImporting(true);
     setImportResult(null);
     setImportProgress({sent: 0, imported: 0, merged: 0, invalid: 0, total: totalValidToImport});
 
-    // Coleta todas as entries de todas as abas selecionadas, marcando a source com nome da aba
+    // Coleta entries de todas as abas selecionadas: e-mail OU telefone basta
     const allEntries = [];
     for (const s of selected) {
       for (const r of s.rows) {
-        const email = String(r[s.emailCol] || '').trim();
-        if (!email || !email.includes('@')) continue;
+        const email = String(s.emailCol ? r[s.emailCol] || '' : '').trim();
+        const phone = String(s.phoneCol ? r[s.phoneCol] || '' : '').replace(/\D/g, '');
+        const hasEmail = email && email.includes('@');
+        const hasPhone = phone && phone.length >= 10;
+        if (!hasEmail && !hasPhone) continue;
         allEntries.push({
-          email,
+          email: hasEmail ? email : '',
           nome: s.nameCol ? String(r[s.nameCol] || '').trim() : '',
-          whatsapp: s.phoneCol ? String(r[s.phoneCol] || '').trim() : '',
+          whatsapp: hasPhone ? phone : '',
           emailStatus: s.statusCol ? String(r[s.statusCol] || '').trim() : '',
           source: `${fileName} · ${s.name}`,
         });
@@ -2028,23 +2048,28 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
 
             <div className="ad-cold-sheets">
               {parsed.sheets.map((s) => (
-                <label key={s.name} className={'ad-cold-sheet' + (s.selected ? ' is-on' : '') + (!s.emailCol ? ' is-disabled' : '')}>
+                <label key={s.name} className={'ad-cold-sheet' + (s.selected ? ' is-on' : '') + (!s.hasContact ? ' is-disabled' : '')}>
                   <input
                     type="checkbox"
-                    checked={s.selected && !!s.emailCol}
-                    disabled={!s.emailCol}
+                    checked={s.selected && !!s.hasContact}
+                    disabled={!s.hasContact}
                     onChange={() => toggleSheet(s.name)}
                   />
                   <div className="ad-cold-sheet-body">
                     <p className="ad-cold-sheet-name">{s.name}</p>
                     <p className="ad-cold-sheet-info">
                       {s.rows.length === 0 ? <span style={{color:'rgba(247,245,242,0.4)'}}>vazia</span>
-                        : !s.emailCol ? <span style={{color:'#d97757'}}>sem coluna de e-mail · ignorada</span>
+                        : !s.hasContact ? <span style={{color:'#d97757'}}>sem coluna de e-mail nem telefone · ignorada</span>
                         : (
                           <>
-                            <strong>{s.validCount}</strong> com e-mail válido de {s.rows.length} linhas
+                            <strong>{s.validCount}</strong> contatos de {s.rows.length} linhas
+                            {' ('}
+                            {(s.countBoth || 0) > 0 && <span style={{color:'#819470'}}>{s.countBoth} e-mail+tel · </span>}
+                            {(s.countEmail || 0) > 0 && <span style={{color:'var(--sand)'}}>{s.countEmail} só e-mail · </span>}
+                            {(s.countPhone || 0) > 0 && <span style={{color:'#B89579'}}>{s.countPhone} só tel</span>}
+                            {')'}
                             <span className="ad-cold-tag" style={{marginLeft: 8}}>
-                              <code>{s.emailCol}</code>
+                              {s.emailCol && <>e-mail: <code>{s.emailCol}</code></>}
                               {s.nameCol && <> · nome: <code>{s.nameCol}</code></>}
                               {s.phoneCol && <> · telefone: <code>{s.phoneCol}</code></>}
                             </span>
@@ -2062,7 +2087,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
               disabled={importing || totalValidToImport === 0}
               onClick={doImport}
             >
-              {importing ? 'Importando…' : `Importar ${totalValidToImport} entradas das ${parsed.sheets.filter((s) => s.selected && s.emailCol).length} aba${parsed.sheets.filter((s) => s.selected && s.emailCol).length === 1 ? '' : 's'} marcadas`}
+              {importing ? 'Importando…' : `Importar ${totalValidToImport} contatos (${totalEmailToImport} com e-mail · ${totalPhoneOnlyToImport} só com telefone)`}
             </button>
 
             {importProgress && (
