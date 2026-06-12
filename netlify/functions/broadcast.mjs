@@ -43,8 +43,6 @@ const BROADCAST_FOOTER = `
         <p style="margin:0;font-size:12px;line-height:1.7;color:#8a8881">
           <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a>
           &nbsp;·&nbsp;
-          <a href="https://linkedin.com/in/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">LinkedIn @dicadajumoreira</a>
-          &nbsp;·&nbsp;
           <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
         </p>
       </td></tr>
