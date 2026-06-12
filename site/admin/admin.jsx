@@ -1835,13 +1835,23 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     try {
       const data = await file.arrayBuffer();
       const ext = file.name.toLowerCase().split('.').pop();
-      // Pra CSV/TXT, força codepage 1252 (Windows-1252, superset de Latin-1)
-      // que é o padrão de exports de Excel e de sistemas de e-mail antigos.
-      // Sem isso, acentos viram lixo: "Rogério" → "RogÃ©rio".
-      // Pra XLSX, SheetJS detecta sozinho (sempre UTF-8 interno).
-      const opts = {type: 'array', raw: true};
-      if (ext === 'csv' || ext === 'txt') opts.codepage = 1252;
-      const wb = window.XLSX.read(data, opts);
+      let wb;
+      if (ext === 'csv' || ext === 'txt') {
+        // Pra CSV/TXT, detecta encoding com TextDecoder do navegador.
+        // Tenta UTF-8 (padrão moderno). Se o arquivo for Windows-1252/Latin-1,
+        // o decoder lança erro e a gente cai no fallback.
+        let text;
+        try {
+          text = new TextDecoder('utf-8', {fatal: true}).decode(data);
+        } catch {
+          // Não é UTF-8 válido; assume Windows-1252 (export antigo de Excel/email)
+          text = new TextDecoder('windows-1252').decode(data);
+        }
+        wb = window.XLSX.read(text, {type: 'string', raw: true});
+      } else {
+        // XLSX/XLS: SheetJS lê os bytes binários direto (encoding interno UTF-8)
+        wb = window.XLSX.read(data, {type: 'array', raw: true});
+      }
 
       const findCol = (headers, regex) => headers.find((h) => regex.test(String(h).toLowerCase().trim()));
 
@@ -1976,6 +1986,16 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
     } catch (e) { alert('Falha: ' + e.message); }
   };
 
+  const fixEncoding = async () => {
+    if (!confirm('Vai escanear todos os leads frios e tentar consertar acentos quebrados (mojibake do tipo "RogÃ©rio" → "Rogério"). Pode demorar alguns segundos. Continuar?')) return;
+    try {
+      const res = await api('/api/cold-leads-fix-encoding', {method: 'POST', body: JSON.stringify({})});
+      const ex = res.examples?.length ? '\n\nExemplos:\n' + res.examples.map((e) => `${e.old} → ${e.new}`).join('\n') : '';
+      alert(`Escaneados: ${res.scanned}\nConsertados: ${res.fixed}${ex}`);
+      loadCold(search);
+    } catch (e) { alert('Falha: ' + e.message); }
+  };
+
   return (
     <div className="ad-broadcast">
       <header className="ad-broadcast-head">
@@ -2086,6 +2106,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             onKeyDown={(e) => e.key === 'Enter' && loadCold(search)}
           />
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => loadCold(search)}>Buscar</button>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={fixEncoding}>↻ Consertar acentos</button>
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={deleteBySource} style={{color: '#d97757'}}>Limpar por origem…</button>
         </div>
         {loading ? <p className="ad-bc-empty">Carregando…</p>
