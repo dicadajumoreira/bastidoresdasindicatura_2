@@ -3212,6 +3212,51 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
       </header>
 
+      {/* Botão sempre visível pra retomar disparo incompleto.
+          Garantido pra aparecer mesmo se o histórico ainda não carregou
+          ou se a detecção automática falhar. */}
+      <div style={{margin: '0 0 18px', padding: 16, background: 'rgba(217, 119, 87, 0.12)', border: '2px solid #d97757', textAlign: 'center'}}>
+        <p style={{margin: '0 0 10px', fontSize: 13, color: '#F7F5F2', fontWeight: 600, letterSpacing: '0.05em'}}>
+          Tem disparo pra retomar?
+        </p>
+        <button
+          className="ad-btn ad-btn-primary ad-btn-lg"
+          style={{width: '100%', maxWidth: 420}}
+          disabled={busy}
+          onClick={async () => {
+            try {
+              const res = await api('/api/broadcast-history');
+              const incompletes = (res.history || []).filter((h) => {
+                const processed = (h.sent || 0) + (h.failed || 0);
+                return h.total && processed < h.total && !h.resendOf;
+              });
+              if (incompletes.length === 0) {
+                alert('Nenhum disparo incompleto encontrado. Todos os disparos do histórico foram concluídos.');
+                return;
+              }
+              const list = incompletes.map((h, i) => {
+                const proc = (h.sent || 0) + (h.failed || 0);
+                return `${i + 1}. ${h.subject.slice(0, 50)} · ${proc}/${h.total} (${h.total - proc} faltam) · ${fmtDate(h.sentAt)}`;
+              }).join('\n');
+              const choice = incompletes.length === 1
+                ? '1'
+                : prompt(`Disparos incompletos:\n\n${list}\n\nDigite o número do que quer continuar:`, '1');
+              if (!choice) return;
+              const idx = parseInt(choice, 10) - 1;
+              if (idx < 0 || idx >= incompletes.length) { alert('Opção inválida.'); return; }
+              resumeBroadcast(incompletes[idx]);
+            } catch (e) {
+              alert('Falha ao buscar disparos: ' + e.message);
+            }
+          }}
+        >
+          ▶ Continuar disparo incompleto
+        </button>
+        <p style={{margin: '10px 0 0', fontSize: 11, color: 'rgba(247, 245, 242, 0.55)'}}>
+          Procura no histórico e retoma de onde parou
+        </p>
+      </div>
+
       {/* Disparos incompletos — destaque visível no topo */}
       {history && history.some((h) => {
         const processed = (h.sent || 0) + (h.failed || 0);
