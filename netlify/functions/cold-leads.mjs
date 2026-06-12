@@ -141,21 +141,22 @@ export default async (req) => {
       return null;
     };
 
-    // Merge: complementa o registro existente com dados novos (não sobrescreve).
+    // Merge: ATUALIZA o registro com as novas informações da lista importada.
+    // Regra: campo novo preenchido SOBRESCREVE o existente. Campo novo vazio
+    // mantém o existente (não apaga dado já cadastrado).
     const mergeLead = (existing, c) => {
       const sourcesOld = existing.sources || (existing.source ? [existing.source] : []);
       const sourcesNew = sourcesOld.includes(c.source) ? sourcesOld : [...sourcesOld, c.source];
       const out = {
         ...existing,
+        // e-mail só pode ser ADICIONADO se não existia (é parte da chave de dedupe)
         email: existing.email || c.email,
-        whatsapp: existing.whatsapp || c.whatsapp,
-        nome: existing.nome && existing.nome.length > 0 ? existing.nome : c.nome,
-        // emailStatus: prefere existente, mas sobrescreve se o novo indicar bounce (info importante)
-        emailStatus: (c.emailStatus && /can't send|bounce|invalid/i.test(c.emailStatus))
-          ? c.emailStatus
-          : (existing.emailStatus || c.emailStatus),
+        // demais campos: novo valor vence se preenchido
+        whatsapp: c.whatsapp || existing.whatsapp,
+        nome: (c.nome && c.nome.trim()) ? c.nome : existing.nome,
+        emailStatus: c.emailStatus || existing.emailStatus,
         sources: sourcesNew,
-        source: existing.source || c.source,
+        source: existing.source || c.source, // origem original preservada
         updatedAt: new Date().toISOString(),
       };
       out.canal = out.email && out.whatsapp ? 'both' : (out.email ? 'email' : 'whatsapp');
