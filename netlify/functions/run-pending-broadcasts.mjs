@@ -1,15 +1,17 @@
-// Netlify Scheduled Function (background) — processa disparos agendados.
-// Roda a cada 5 minutos. Função "background" pode rodar até 15min, suficiente
-// pra mandar centenas de e-mails respeitando o rate limit do Resend.
+// Netlify Function v2 · POST /api/run-pending-broadcasts
+// Aciona MANUALMENTE o processamento dos disparos pendentes.
+// É um plano B caso o cron não rode. Mesma lógica do
+// process-scheduled-broadcasts-background, só que disparada por HTTP
+// autenticado pelo admin.
 //
-// Schedule declarado no próprio arquivo (sintaxe moderna v2):
-//   export const config = { schedule: "*/5 * * * *" }
+// Body opcional: { id } pra rodar só 1 agendamento específico.
 
 import { getStore } from '@netlify/blobs';
+import { verify } from '../lib/auth-token.mjs';
 import { buildLeads } from '../lib/leads-index.mjs';
 
 export const config = {
-  schedule: '*/5 * * * *',
+  path: ['/api/run-pending-broadcasts', '/.netlify/functions/run-pending-broadcasts'],
 };
 
 const FROM = 'Bastidores da Sindicatura <contato@dicadajumoreira.com.br>';
@@ -34,58 +36,70 @@ const MATERIAL_NAMES = {
   'sorteio-mba': 'o Sorteio MBA IBMEC',
 };
 
-export default async () => {
+export default async (req) => {
+  const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
+  const auth = req.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!verify(token, secret)) return json({error: 'Não autorizado'}, 401);
+
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[scheduled-broadcasts] RESEND_API_KEY não setada, pulando');
-    return new Response('skipped', {status: 200});
+    return json({error: 'RESEND_API_KEY não configurada'}, 500);
   }
+
+  let body = {};
+  try { body = await req.json(); } catch {}
 
   const scheduleStore = getStore({name: 'broadcast-schedules', consistency: 'strong'});
   const leadsStore = getStore({name: 'leads', consistency: 'strong'});
   const historyStore = getStore({name: 'broadcasts', consistency: 'strong'});
+  const recipientsStore = getStore({name: 'broadcast-recipients', consistency: 'strong'});
 
+  // Lista pendentes
   let pending = [];
   try {
-    const list = await scheduleStore.list();
-    const keys = (list.blobs || []).map((b) => b.key);
-    const now = Date.now();
-    for (const k of keys) {
-      try {
-        const v = await scheduleStore.get(k, {type: 'json'});
-        if (v && v.status === 'pending' && new Date(v.scheduledFor).getTime() <= now) {
-          pending.push(v);
-        }
-      } catch {}
+    if (body.id) {
+      // Rodar agendamento específico
+      const v = await scheduleStore.get(body.id, {type: 'json'});
+      if (v && v.status === 'pending') pending.push(v);
+    } else {
+      const list = await scheduleStore.list();
+      const keys = (list.blobs || []).map((b) => b.key);
+      for (const k of keys) {
+        try {
+          const v = await scheduleStore.get(k, {type: 'json'});
+          if (v && v.status === 'pending') pending.push(v);
+        } catch {}
+      }
+      // Ordena por horário marcado, mais antigo primeiro
+      pending.sort((a, b) => (a.scheduledFor < b.scheduledFor ? -1 : 1));
     }
   } catch (err) {
-    console.error('[scheduled-broadcasts] failed to list:', err.message);
-    return new Response('list-failed', {status: 500});
+    return json({error: 'Falha ao listar pendentes: ' + err.message}, 500);
   }
 
-  console.log(`[scheduled-broadcasts] ${pending.length} agendamento(s) prontos pra processar`);
+  if (pending.length === 0) {
+    return json({ok: true, processed: 0, message: 'Nenhum disparo pendente encontrado.'});
+  }
 
+  const results = [];
   for (const schedule of pending) {
     try {
-      // Marca como em processamento (idempotência)
       await scheduleStore.setJSON(schedule.id, {...schedule, status: 'processing', processingAt: new Date().toISOString()});
-      await runBroadcast(schedule, leadsStore, historyStore);
-      // Marca como concluído (mantém no store por algum tempo pra auditoria)
-      await scheduleStore.setJSON(schedule.id, {...schedule, status: 'sent', sentAt: new Date().toISOString()});
+      const stats = await runBroadcast(schedule, leadsStore, historyStore, recipientsStore);
+      await scheduleStore.setJSON(schedule.id, {...schedule, status: 'sent', sentAt: new Date().toISOString(), stats});
+      results.push({id: schedule.id, ...stats});
     } catch (err) {
-      console.error(`[scheduled-broadcasts] erro processando ${schedule.id}:`, err.message);
-      try {
-        await scheduleStore.setJSON(schedule.id, {...schedule, status: 'failed', error: err.message, failedAt: new Date().toISOString()});
-      } catch {}
+      await scheduleStore.setJSON(schedule.id, {...schedule, status: 'failed', error: err.message, failedAt: new Date().toISOString()});
+      results.push({id: schedule.id, error: err.message});
     }
   }
 
-  return new Response(`processed ${pending.length}`, {status: 200});
+  return json({ok: true, processed: pending.length, results});
 };
 
-async function runBroadcast(schedule, leadsStore, historyStore) {
+async function runBroadcast(schedule, leadsStore, historyStore, recipientsStore) {
   const {subject, html, filter, id: broadcastId} = schedule;
 
-  // Carrega leads até completar (cron tem budget largo)
   let leads, totalInStore;
   for (let i = 0; i < 6; i++) {
     const r = await buildLeads(leadsStore, {budgetMs: 8000});
@@ -95,7 +109,6 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
     await new Promise((res) => setTimeout(res, 300));
   }
 
-  // Dedupe por e-mail
   const byEmail = new Map();
   for (const l of leads) {
     if (l.deletedAt) continue;
@@ -131,12 +144,10 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
     targets.push({email, rep, origens: [...entry.origens]});
   }
 
-  // Manda respeitando rate limit do Resend (5/s) com margem
   const RATE_BATCH = 4;
   const RATE_DELAY_MS = 1100;
   let sent = 0, failed = 0;
   const errors = [];
-  const recipientsStore = (await import('@netlify/blobs')).getStore({name: 'broadcast-recipients', consistency: 'strong'});
 
   for (let i = 0; i < targets.length; i += RATE_BATCH) {
     const batch = targets.slice(i, i + RATE_BATCH);
@@ -170,18 +181,14 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
         recipientsLog.push({email: t.email, nome: t.rep.nome || '', status: 'failed', sentAt, error: errMsg});
       }
     }
-    // Salva o log do lote
     try {
       await recipientsStore.setJSON(`${broadcastId}__${String(i).padStart(7, '0')}`, recipientsLog);
-    } catch (e) {
-      console.error('[scheduled-broadcasts] failed to save recipients log:', e.message);
-    }
+    } catch (e) {}
     if (i + RATE_BATCH < targets.length) {
       await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
     }
   }
 
-  // Salva histórico
   try {
     await historyStore.setJSON(broadcastId, {
       id: broadcastId,
@@ -196,12 +203,11 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
       completed: true,
       scheduled: true,
       scheduledFor: schedule.scheduledFor,
+      triggeredBy: 'manual',
     });
-  } catch (e) {
-    console.error('[scheduled-broadcasts] failed to save history:', e.message);
-  }
+  } catch (e) {}
 
-  console.log(`[scheduled-broadcasts] ${broadcastId}: ${sent} sent, ${failed} failed (de ${targets.length} targets)`);
+  return {sent, failed, total: targets.length, errors};
 }
 
 async function sendOne(payload) {
@@ -223,5 +229,12 @@ function personalize(template, vars) {
   return String(template == null ? '' : template).replace(/\{\{(\w+)\}\}/g, (_, k) => {
     const v = vars[k];
     return v == null ? '' : String(v);
+  });
+}
+
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {'Content-Type': 'application/json; charset=utf-8'},
   });
 }

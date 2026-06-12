@@ -73,11 +73,37 @@ const inferGender = (nome) => {
 /* ============================================================
    Helpers
    ============================================================ */
+// Formata data/hora SEMPRE no fuso de Brasília, independente do navegador.
 const fmtDate = (iso) => {
   if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }).replace(',', ' ·');
+  } catch { return ''; }
+};
+
+// Versão curta (sem ano) também em Brasília.
+const fmtDateShort = (iso) => {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit', month: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    }).replace(',', ' ·');
+  } catch { return ''; }
+};
+
+// Converte "YYYY-MM-DDTHH:mm" (do input datetime-local) em ISO UTC,
+// assumindo SEMPRE que o input está em horário de Brasília (UTC-3).
+// Brasília não usa horário de verão desde 2019, então o offset é fixo.
+const brasiliaInputToUtcIso = (local) => {
+  if (!local) return null;
+  // local format: "2026-06-13T22:30" — colamos o offset -03:00 antes de Date
+  return new Date(local + ':00-03:00').toISOString();
 };
 
 // Normalização para detecção de duplicidade
@@ -2125,13 +2151,14 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         excludeOrigens: [...excludeOrigens],
         statuses: statusFilter.size ? [...statusFilter] : undefined,
       };
-      // datetime-local devolve "YYYY-MM-DDTHH:mm" no fuso local. Convertendo pra ISO.
-      const localDate = new Date(scheduledFor);
+      // Trata o valor do datetime-local SEMPRE como horário de Brasília (UTC-3),
+      // ignorando o fuso do navegador da pessoa que está agendando.
+      const brasiliaIso = brasiliaInputToUtcIso(scheduledFor);
       const res = await api('/api/scheduled-broadcasts', {
         method: 'POST',
         body: JSON.stringify({
           subject, html, filter,
-          scheduledFor: localDate.toISOString(),
+          scheduledFor: brasiliaIso,
           targetCount: targets.count,
         }),
       });
@@ -2153,6 +2180,32 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
       await api(`/api/scheduled-broadcasts?id=${encodeURIComponent(id)}`, {method: 'DELETE'});
       loadScheduled();
     } catch (e) { alert('Falha ao cancelar: ' + e.message); }
+  };
+
+  const runScheduledNow = async (id) => {
+    if (!confirm('Executar esse agendamento agora? O disparo vai começar imediatamente.')) return;
+    setBusy(true);
+    try {
+      const res = await api('/api/run-pending-broadcasts', {
+        method: 'POST',
+        body: JSON.stringify({id}),
+      });
+      if (res.ok) {
+        const r = res.results?.[0];
+        if (r && !r.error) {
+          alert(`Disparo concluído: ${r.sent} enviados${r.failed ? `, ${r.failed} falharam` : ''}.`);
+        } else if (r && r.error) {
+          alert('Erro no disparo: ' + r.error);
+        } else {
+          alert(res.message || 'Nenhum agendamento foi processado.');
+        }
+        loadScheduled();
+        loadHistory();
+      } else {
+        alert('Erro: ' + (res.error || 'desconhecido'));
+      }
+    } catch (e) { alert('Falha: ' + e.message); }
+    finally { setBusy(false); }
   };
 
   const sendReal = async () => {
@@ -2432,15 +2485,20 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             <hr className="ad-bc-divider" />
             <div className="ad-bc-schedule">
               <label className="ad-bc-field">
-                <span className="ad-bc-label">Agendar pra (opcional)</span>
+                <span className="ad-bc-label">Agendar pra (horário de Brasília · opcional)</span>
                 <input
                   type="datetime-local"
                   value={scheduledFor}
                   onChange={(e) => setScheduledFor(e.target.value)}
                 />
               </label>
+              {scheduledFor && (
+                <p className="ad-bc-hint" style={{color: 'var(--sand)'}}>
+                  Vai disparar em: <strong>{fmtDate(brasiliaInputToUtcIso(scheduledFor))}</strong> (Brasília)
+                </p>
+              )}
               <span className="ad-bc-hint">
-                Se deixar em branco, o disparo é imediato. Se preencher, o sistema agenda e dispara automaticamente na data/hora marcada (verifica a cada 5 minutos).
+                Em branco = disparo imediato. Preenchido = sistema agenda e dispara automaticamente na data/hora marcada (verifica a cada 5 min). O input sempre é interpretado como <strong>horário de Brasília</strong> (UTC-3), independente do fuso do seu dispositivo.
               </span>
             </div>
             {scheduledFor ? (
@@ -2449,7 +2507,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 disabled={busy || targets.count === 0}
                 onClick={schedule}
               >
-                {busy ? 'Agendando…' : `Agendar pra ${new Date(scheduledFor).toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'})}`}
+                {busy ? 'Agendando…' : `Agendar pra ${scheduledFor ? fmtDateShort(brasiliaInputToUtcIso(scheduledFor)) : ''} (Brasília)`}
               </button>
             ) : (
               <button
@@ -2473,7 +2531,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             )}
             {result && (
               <div className={'ad-bc-result ' + (result.ok ? 'is-ok' : 'is-err')}>
-                {result.type === 'schedule' && result.ok && <p>✓ Agendado pra <strong>{new Date(result.scheduledFor).toLocaleString('pt-BR')}</strong>. O sistema vai disparar automaticamente.</p>}
+                {result.type === 'schedule' && result.ok && <p>✓ Agendado pra <strong>{fmtDate(result.scheduledFor)}</strong> (horário de Brasília). O sistema vai disparar automaticamente.</p>}
                 {result.type === 'test' && result.ok && <p>✓ Teste enviado pra <strong>{testEmail}</strong>. Confere a caixa de entrada (ou spam).</p>}
                 {result.type === 'real' && result.ok && (
                   <>
@@ -2525,12 +2583,13 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             <tbody>
               {scheduledList.map((s) => (
                 <tr key={s.id}>
-                  <td className="ad-bc-history-date" style={{color: 'var(--sand)'}}>{new Date(s.scheduledFor).toLocaleString('pt-BR')}</td>
+                  <td className="ad-bc-history-date" style={{color: 'var(--sand)'}}>{fmtDate(s.scheduledFor)}</td>
                   <td className="ad-bc-history-subject">{s.subject}</td>
                   <td className="ad-bc-history-filter">{s.filterSummary}</td>
                   <td style={{textAlign:'right'}}>{s.targetCount != null ? s.targetCount : '—'}</td>
-                  <td style={{textAlign:'right'}}>
-                    <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => cancelScheduled(s.id)}>Cancelar</button>
+                  <td style={{textAlign:'right', whiteSpace:'nowrap'}}>
+                    <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => runScheduledNow(s.id)} disabled={busy} style={{marginRight: 6}}>Executar agora</button>
+                    <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => cancelScheduled(s.id)} disabled={busy}>Cancelar</button>
                   </td>
                 </tr>
               ))}
@@ -2620,7 +2679,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                           </td>
                           <td className="ad-bc-history-subject">{r.email}</td>
                           <td>{r.nome || <span style={{color:'rgba(247,245,242,0.4)'}}>—</span>}</td>
-                          <td className="ad-bc-history-date">{r.sentAt ? new Date(r.sentAt).toLocaleString('pt-BR') : '—'}</td>
+                          <td className="ad-bc-history-date">{r.sentAt ? fmtDate(r.sentAt) : '—'}</td>
                         </tr>
                       ))}
                     </tbody>

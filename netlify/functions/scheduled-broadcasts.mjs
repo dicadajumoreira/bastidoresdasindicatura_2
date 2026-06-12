@@ -60,10 +60,12 @@ export default async (req) => {
     if (!html) return json({error: 'O corpo do e-mail é obrigatório'}, 400);
     if (!scheduledFor) return json({error: 'A data e hora do agendamento são obrigatórias'}, 400);
 
+    // scheduledFor chega já em ISO UTC (o frontend converte de Brasília → UTC).
     const scheduledDate = new Date(scheduledFor);
     if (isNaN(scheduledDate.getTime())) return json({error: 'Data/hora inválida'}, 400);
     if (scheduledDate.getTime() < Date.now() - 60000) {
-      return json({error: 'Não dá pra agendar pro passado. Confira a data e hora.'}, 400);
+      const brasiliaTime = new Date(scheduledDate).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});
+      return json({error: `Não dá pra agendar pro passado (horário interpretado: ${brasiliaTime} BRT). Confira a data e hora.`}, 400);
     }
 
     const filter = body.filter || {};
