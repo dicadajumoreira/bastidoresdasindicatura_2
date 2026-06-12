@@ -1,0 +1,105 @@
+# CLAUDE.md — Bastidores da Sindicatura
+
+Contexto e regras pra qualquer sessão futura do Claude trabalhar neste repositório.
+
+## O projeto
+
+Site institucional + sistema de captura de leads do **Bastidores da Sindicatura**, projeto editorial da Juliana Moreira (CEO Sindicompany / Condo Academy). Stack:
+
+- **Static site** em `site/`, JSX renderizado no browser por Babel standalone (sem build step)
+- **Netlify Functions v2** (`export default async (req) => Response`) em `netlify/functions/`
+- **Netlify Blobs** como armazenamento (stores: `leads`, `leads-backup`, `cold-leads`, `cold-leads-summary`, `broadcasts`, `broadcast-recipients`, `broadcast-schedules`)
+- **Resend** pra envio de e-mails (transacionais + disparo em massa)
+- **Edge function** `serve-html` (`netlify/edge-functions/serve-html.ts`) intercepta pretty URLs
+
+## Branch e deploy
+
+- Trabalhe na branch da sessão (ex.: `claude/<slug>`).
+- O Netlify deploya da branch **`main`**. Pra mudanças chegarem em produção, faça **fast-forward merge** da branch da sessão pra `main` e dê push em ambas. Sem PR (a usuária é não-técnica).
+- Sempre que mexer em `site/admin/admin.jsx` ou `admin.css`, bumpe a query string `?v=...` em `site/admin/index.html` pra invalidar cache do browser dela.
+
+## Regras invioláveis
+
+### 1. Política de privacidade em TODO formulário de captura
+
+**Toda página com formulário que captura dados pessoais DEVE ter, logo abaixo do botão de envio**, o consentimento:
+
+> Ao se inscrever você aceita a [política de privacidade](/politica-de-privacidade/).
+
+Padrão de markup:
+
+```jsx
+<p className="ck-micro" style={{marginTop: 6}}>
+  Ao se inscrever você aceita a{' '}
+  <a href="/politica-de-privacidade/" style={{color: 'var(--sand)', textDecoration: 'underline'}}>política de privacidade</a>.
+</p>
+```
+
+Páginas que entregam material via download direto (sem capturar dados) não precisam. Páginas do MBA (sorteio) usam variação estendida com o regulamento:
+
+> Ao se inscrever você aceita o [regulamento do sorteio](/regulamento-mba/) e a [política de privacidade](/politica-de-privacidade/).
+
+### 2. Não renomear identificadores internos de origem
+
+Cada material tem um **`origem`** salvo no banco (ex.: `'sorteio-mba'`, `'checklist'`, `'bombeiro'`). **Nunca renomeie** esses identificadores ao mudar uma URL pública. Mantém a continuidade dos cadastros e do histórico de disparos.
+
+Exemplo: a URL `/sorteio-mba/` foi renomeada pra `/mba/`, mas o `origem: 'sorteio-mba'` continua o mesmo em `submit.mjs`, `admin.jsx`, broadcast templates etc.
+
+### 3. Leads frios e quentes ficam separados
+
+Stores diferentes (`leads` vs `cold-leads`), com lógica de merge **apenas dos frios**. Nunca aplicar merge nos quentes — instrução explícita da Juliana.
+
+### 4. Horário sempre em Brasília (UTC-3)
+
+Agendamento de disparos, formatação de datas pra UI, qualquer coisa visível. O fuso do navegador do operador é irrelevante. Helpers em `admin.jsx`: `fmtDate`, `brasiliaInputToUtcIso`.
+
+### 5. Rate limit do Resend
+
+Marketing Pro permite ~5 req/s. Disparos em massa usam **envio sequencial** com 250ms entre cada (~4 req/s constantes) pra evitar rajadas que tropeçam o limit. Não alterar sem motivo.
+
+### 6. Página `/admin` é sensível a cache
+
+Bug histórico: cache antigo do browser segurou versão quebrada do admin.jsx e travou tudo. Já tem `no-cache` em `netlify.toml` e query string `?v=...`. Toda mudança no admin precisa do bump da query string.
+
+### 7. Controladora dos dados
+
+**HubStation · CNPJ 32.932.966/0001-53** é a controladora dos dados pessoais coletados. Sempre que mencionar a empresa na política de privacidade, regulamentos, ou termos legais, use esse nome e CNPJ.
+
+## Convenções
+
+- **Português coloquial** em mensagens UI e nos commits (a Juliana lê tudo).
+- **Sem emojis** em arquivos do código.
+- **Cache-bust de assets do admin**: bumpe `?v=20260612X` (incrementa letra) em `site/admin/index.html` ao mudar `admin.jsx` ou `admin.css`.
+- **Validar JSX antes de pushar**: babel cli vs babel-standalone do navegador podem divergir. Comando rápido:
+  ```
+  node -e "require('/tmp/node_modules/@babel/core').transformSync(require('fs').readFileSync('site/admin/admin.jsx','utf8'), {presets:['/tmp/node_modules/@babel/preset-react'], filename:'admin.jsx'}); console.log('OK')"
+  ```
+- **Funções Netlify de longa duração**: usar suffix `-background` no nome do arquivo pra ganhar 15min de runtime (ex.: `cold-leads-summary-build-background.mjs`).
+- **Pre-bilt indices**: pra evitar timeout em loops sobre Netlify Blobs grandes (~14k cold leads), construir índice resumo num blob único via background function. Ver `cold-leads-summary-build-background.mjs` como referência.
+
+## Disparo em massa (broadcast)
+
+- Frontend pagina chamando `/api/broadcast` com `offset` + `limit=40` em loop, cap de 600 iterações (~24k destinatários).
+- Botão **Continuar** no histórico retoma disparos incompletos via `resumeFrom: broadcastId`, mesmo broadcastId, ordenação determinística garante que não duplica.
+- Pra incluir leads frios, **`cold-leads-summary`** precisa estar construído. Existe botão "Reconstruir índice" no painel de leads frios.
+
+## Formulários de captura existentes
+
+| Página | Origem | Endpoint |
+|--|--|--|
+| `/checklist/` | `checklist` | submit.mjs |
+| `/ebook-ia/` | `ebook-ia` | submit.mjs |
+| `/sindico-profissional/` | `sindico-profissional` | submit.mjs |
+| `/sobrevivencia-whatsapp/` | `sobrevivencia-whatsapp` | submit.mjs |
+| `/50-frases/` | `50-frases` | submit.mjs |
+| `/nr1/` | `nr1` | submit.mjs |
+| `/conflitos/` | `conflitos` | submit.mjs |
+| `/saude-mental/` | `saude-mental` | submit.mjs |
+| `/gestao-sob-ataque/` | `gestao-sob-ataque` | submit.mjs |
+| `/mba/` | `sorteio-mba` | submit.mjs |
+| `/quiz/` | (por arquétipo) | submit.mjs |
+| Home (mentoria) | `mentoria` | submit.mjs (via bs-form.jsx) |
+
+Páginas de download direto (sem captura): `/bombeiro/` `/politico/` `/solitario/` `/burocrata/` `/estrategista/` `/sargento/`.
+
+Lista completa de origens válidas em `netlify/functions/submit.mjs` — `VALID_ORIGENS`.
