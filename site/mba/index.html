@@ -1110,7 +1110,32 @@
               </div>
 
               <div className="ck-form-wrap">
-                {sucesso ? (
+                {Date.now() >= COUNTDOWN_TARGET_MS ? (
+                  <div className="ck-mba-success" style={{borderColor: '#d97757'}}>
+                    <span className="ck-form-tag" style={{background: '#d97757'}}>Inscrições encerradas</span>
+                    <h2 className="ck-form-title">Acabou o tempo.</h2>
+                    <p className="ck-form-sub">
+                      As inscrições do sorteio da <strong>bolsa integral do MBA Executivo IBMEC</strong>{' '}
+                      foram encerradas em <strong>12/06/2026 às 23h59</strong> (horário de Brasília).
+                    </p>
+                    <div className="ck-mba-success-mark" style={{color: '#d97757'}}>
+                      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                        <circle cx="22" cy="22" r="20" stroke="currentColor" strokeWidth="1.5"/>
+                        <path d="M15 22h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <p className="ck-form-sub" style={{marginTop: 18}}>
+                      O sorteio acontece <strong>hoje, 13/06/2026 às 12h</strong>, ao vivo no Instagram{' '}
+                      <a href="https://instagram.com/dicadajumoreira" target="_blank" rel="noreferrer" style={{color: 'var(--sand)', fontWeight: 600}}>@dicadajumoreira</a>.
+                    </p>
+                    <p className="ck-micro" style={{marginTop: 18}}>
+                      <em>Patrocínio Condo Academy · Certificação IBMEC</em>
+                    </p>
+                    <p className="ck-micro" style={{marginTop: 12}}>
+                      Quer saber mais sobre o MBA? <a href="/mba/material.pdf" style={{color: 'var(--sand)', textDecoration: 'underline'}}>Baixe a apresentação completa em PDF</a>.
+                    </p>
+                  </div>
+                ) : sucesso ? (
                   <div className="ck-mba-success">
                     <span className="ck-form-tag">Inscrição confirmada</span>
                     <h2 className="ck-form-title">Boa sorte.</h2>

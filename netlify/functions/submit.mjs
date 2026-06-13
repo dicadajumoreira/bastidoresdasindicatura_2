@@ -41,6 +41,18 @@ export default async (req) => {
 
   // Validação por tipo de formulário
   const origem = VALID_ORIGENS.has(body.origem) ? body.origem : 'mentoria';
+
+  // ENCERRAMENTO: sorteio do MBA fechou às 23h59 de 12/06/2026 (Brasília).
+  // Bloqueia qualquer cadastro nessa origem depois disso, mesmo se alguém
+  // tentar burlar o frontend (edição local, Postman, etc).
+  const SORTEIO_MBA_CUTOFF_MS = Date.UTC(2026, 5, 13, 2, 59, 59); // 13/06 02:59:59 UTC = 12/06 23h59 BRT
+  if (origem === 'sorteio-mba' && Date.now() >= SORTEIO_MBA_CUTOFF_MS) {
+    return json({
+      error: 'As inscrições do sorteio do MBA Executivo IBMEC foram encerradas em 12/06/2026 às 23h59 (Brasília). O sorteio acontece ao vivo no Instagram @dicadajumoreira.',
+      closed: true,
+    }, 403);
+  }
+
   const required = MATERIAL_ORIGENS.has(origem)
     ? ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'instagram', 'atuacao']
     : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
