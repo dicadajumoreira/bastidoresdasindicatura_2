@@ -2686,8 +2686,6 @@ const SorteioPanel = ({onLogout, onBackToOverview}) => {
           </div>
           {winner && (
             <div className="ad-sorteio-meta">
-              {winner.email && <p>✉ {winner.email}</p>}
-              {winner.whatsapp && <p>☎ {winner.whatsapp}</p>}
               {(winner.cidade || winner.estado) && <p>📍 {winner.cidade}{winner.estado ? ` · ${winner.estado}` : ''}</p>}
             </div>
           )}
@@ -2724,7 +2722,8 @@ const SorteioPanel = ({onLogout, onBackToOverview}) => {
             {history.map((h, i) => (
               <li key={i} style={{padding: '12px 0', borderBottom: i < history.length - 1 ? '1px solid rgba(247,245,242,0.08)' : 'none'}}>
                 <p style={{margin: 0, fontSize: 16, color: 'var(--offwhite)'}}>
-                  <strong>{h.nome}</strong> {h.email && <span style={{color: 'rgba(247,245,242,0.6)', fontSize: 13}}>· {h.email}</span>}
+                  <strong>{h.nome}</strong>
+                  {(h.cidade || h.estado) && <span style={{color: 'rgba(247,245,242,0.6)', fontSize: 13}}> · {h.cidade}{h.estado ? `/${h.estado}` : ''}</span>}
                 </p>
                 <p style={{margin: '4px 0 0', fontSize: 11, color: 'rgba(247,245,242,0.45)', fontFamily: 'monospace'}}>
                   {fmtDate(h.drawnAt)}
