@@ -13,12 +13,9 @@ const BsTopbar = () => (
         <span className="bs-rule"></span>
         por Juliana Moreira
       </span>
-      <nav className="bs-topnav">
-        <a href="#manifesto">Manifesto</a>
-        <a href="#sobre">Juliana</a>
-        <a href="#estrutura">Estrutura</a>
-        <a href="#vagas">Vagas</a>
-      </nav>
+      {/* Nav unificado agora vive em /bs-members-link.js como widget
+          flutuante em TODAS as páginas. Mantido espaço pra preservar
+          o flex layout do topbar. */}
     </div>
   </header>
 );
