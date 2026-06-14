@@ -2375,6 +2375,11 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                               {s.emailCol && <>e-mail: <code>{s.emailCol}</code></>}
                               {s.nameCol && <> · nome: <code>{s.nameCol}</code></>}
                               {s.phoneCol && <> · telefone: <code>{s.phoneCol}</code></>}
+                              {s.instagramCol && <> · @ Instagram: <code>{s.instagramCol}</code></>}
+                              {s.cidadeCol && <> · cidade: <code>{s.cidadeCol}</code></>}
+                              {s.estadoCol && <> · UF: <code>{s.estadoCol}</code></>}
+                              {s.atuacaoCol && <> · atuação: <code>{s.atuacaoCol}</code></>}
+                              {s.dataNascCol && <> · nascimento: <code>{s.dataNascCol}</code></>}
                             </span>
                           </>
                         )
