@@ -1,30 +1,87 @@
-// Lib compartilhada: consulta o índice de e-mails dos membros.
-// O índice é construído por members-email-index-build-background.mjs
-// e fica no blob 'members-email-index/index'.
+// Lib compartilhada: encontra um lead quente por e-mail.
+// Estratégia híbrida pra ser SEMPRE rápido:
+//   1. Tenta o índice (cache em 1 blob). Se hit, retorna na hora.
+//   2. Se cache não existe ou e-mail não está nele, faz scan direto
+//      com paralelismo ALTO (BATCH=60). Early exit na primeira match.
+//   3. Após scan, se encontrou, atualiza incrementalmente o índice
+//      pra próxima consulta ser instantânea.
+//
+// Cabe folgado nos 10s da function pra ~6.5k leads. Pra bases maiores,
+// rodar a função members-email-index-build-background manualmente.
 
 import { getStore } from '@netlify/blobs';
 
-// Retorna { lead: {id, nome, ...} | null, indexMissing: boolean }
-// indexMissing=true significa que o índice não foi construído ainda
-// (a função login/request deve disparar o build em background)
 export async function findLeadByEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return {lead: null, indexMissing: false};
 
+  const indexStore = getStore({name: 'members-email-index', consistency: 'strong'});
+
+  // 1) Cache hit
+  let index = null;
   try {
-    const indexStore = getStore({name: 'members-email-index', consistency: 'strong'});
-    const index = await indexStore.get('index', {type: 'json'});
-    if (!index || !index.byEmail) return {lead: null, indexMissing: true};
-    const entry = index.byEmail[normalized];
-    if (!entry) return {lead: null, indexMissing: false};
-    // Respeita inativo/descadastrado: índice traz os dados, mas a
-    // checagem é feita aqui pra centralizar a regra de elegibilidade.
-    if (entry.unsubscribed || entry.ativo === false) {
-      return {lead: null, indexMissing: false};
+    index = await indexStore.get('index', {type: 'json'});
+    if (index && index.byEmail && index.byEmail[normalized]) {
+      const entry = index.byEmail[normalized];
+      if (entry.unsubscribed || entry.ativo === false) {
+        return {lead: null, indexMissing: false};
+      }
+      return {lead: entry, indexMissing: false};
     }
-    return {lead: entry, indexMissing: false};
   } catch (err) {
-    console.error('[members-email-index] read failed:', err.message);
-    return {lead: null, indexMissing: true};
+    console.error('[members-email-index] cache read failed:', err.message);
   }
+
+  // 2) Scan direto com paralelismo alto
+  let lead = null;
+  try {
+    const leads = getStore({name: 'leads', consistency: 'strong'});
+    const list = await leads.list();
+    const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
+    const CONC = 60;
+    const deadline = Date.now() + 7500; // 7.5s budget (deixa folga pro resto)
+    for (let i = 0; i < keys.length && !lead; i += CONC) {
+      if (Date.now() > deadline) {
+        return {lead: null, indexMissing: true};
+      }
+      const batch = keys.slice(i, i + CONC);
+      const got = await Promise.allSettled(batch.map((k) => leads.get(k, {type: 'json'})));
+      for (const r of got) {
+        if (r.status !== 'fulfilled' || !r.value) continue;
+        const v = r.value;
+        if (v.deletedAt) continue;
+        if (String(v.email || '').toLowerCase() !== normalized) continue;
+        if (v.unsubscribed || v.ativo === false) {
+          return {lead: null, indexMissing: false};
+        }
+        lead = {
+          id: v.id,
+          nome: v.nome || '',
+          unsubscribed: !!v.unsubscribed,
+          ativo: v.ativo !== false,
+          createdAt: v.createdAt,
+        };
+        break;
+      }
+    }
+  } catch (err) {
+    console.error('[members-email-index] scan failed:', err.message);
+  }
+
+  // 3) Atualiza cache incrementalmente pra próxima vez ser instantânea
+  if (lead) {
+    try {
+      const current = index && index.byEmail
+        ? index
+        : {builtAt: new Date().toISOString(), byEmail: {}, count: 0};
+      current.byEmail[normalized] = lead;
+      current.count = Object.keys(current.byEmail).length;
+      current.lastIncrementalAt = new Date().toISOString();
+      await indexStore.setJSON('index', current);
+    } catch (err) {
+      console.error('[members-email-index] cache write failed:', err.message);
+    }
+  }
+
+  return {lead, indexMissing: false};
 }

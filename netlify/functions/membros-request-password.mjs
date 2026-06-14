@@ -26,10 +26,6 @@ export default async (req) => {
   if (!email || !email.includes('@')) return json({error: 'E-mail inválido'}, 400);
 
   const lookup = await findLeadByEmail(email);
-  if (lookup.indexMissing) {
-    triggerIndexBuild(req).catch(() => {});
-    return json({error: 'Estamos preparando o sistema pela primeira vez. Aguarde 1-2 minutos e tente novamente.', indexMissing: true}, 503);
-  }
   const lead = lookup.lead;
 
   if (!lead) return json({ok: true, sent: false});

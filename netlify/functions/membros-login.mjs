@@ -35,13 +35,8 @@ export default async (req) => {
     credentials = await pwStore.get(email, {type: 'json'});
   } catch {}
 
-  // 2) Procura o cadastro do lead via índice
+  // 2) Procura o cadastro do lead via índice (com fallback pra scan)
   const lookup = await findLeadByEmail(email);
-  if (lookup.indexMissing) {
-    // Dispara build em background
-    triggerIndexBuild(req).catch(() => {});
-    return json({error: 'Estamos preparando seu acesso pela primeira vez. Aguarde 1-2 minutos e tente novamente.', indexMissing: true}, 503);
-  }
   const lead = lookup.lead;
 
   // 3) Valida
