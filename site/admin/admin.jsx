@@ -2060,7 +2060,11 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         const cidadeCol = findCol(headers, /^cidade$/) || findCol(headers, /cidade/) || findCol(headers, /municipio/) || findCol(headers, /município/);
         const estadoCol = findCol(headers, /^(uf|estado)$/) || findCol(headers, /^estado$/) || findCol(headers, /uf/);
         const atuacaoCol = findCol(headers, /^atua/) || findCol(headers, /atuação/) || findCol(headers, /atuacao/) || findCol(headers, /cargo/) || findCol(headers, /função/) || findCol(headers, /funcao/);
-        const dataNascCol = findCol(headers, /nascimento/) || findCol(headers, /data.*nasc/) || findCol(headers, /dt.*nasc/) || findCol(headers, /birth/);
+        const dataNascCol = findCol(headers, /nascimento/)
+          || findCol(headers, /anivers[aá]rio/)
+          || findCol(headers, /data.*nasc/)
+          || findCol(headers, /dt.*nasc/)
+          || findCol(headers, /birth/);
         // Conta linhas com e-mail válido OU telefone válido (ambos servem
         // como canal de contato — e-mail pro Resend, telefone pro WhatsApp).
         let countEmail = 0, countPhone = 0, countBoth = 0;
