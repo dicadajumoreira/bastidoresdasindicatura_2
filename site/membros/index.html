@@ -272,14 +272,155 @@
     }
 
     @media (max-width: 720px) {
-      .mb-topbar { padding: 16px 20px; }
+      .mb-topbar { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
       .mb-hero { padding: 40px 20px 24px; }
       .mb-filters { padding: 0 20px; }
       .mb-grid { padding: 0 20px 64px; gap: 14px; }
       .mb-login-card { padding: 36px 26px; }
       .mb-login-title { font-size: 32px; }
       .mb-user-name { display: none; }
+      .mb-mentoria-banner { padding: 28px 22px; margin: 24px 20px 0; }
+      .mb-mentoria-title { font-size: 26px; }
+      .mb-profile-card { padding: 32px 22px; margin: 0 20px 64px; }
+      .mb-profile-row { grid-template-columns: 1fr; }
+      .mb-nav { gap: 14px; }
     }
+
+    /* === NAV DA ÁREA LOGADA === */
+    .mb-nav {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+    .mb-nav-link {
+      background: none;
+      border: none;
+      color: rgba(247, 245, 242, 0.6);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-weight: 600;
+      padding: 6px 0;
+      border-bottom: 1px solid transparent;
+      transition: all 140ms;
+    }
+    .mb-nav-link:hover { color: var(--offwhite, #F7F5F2); }
+    .mb-nav-link.is-on {
+      color: var(--sand, #DABDA9);
+      border-bottom-color: var(--sand, #DABDA9);
+    }
+
+    /* === BANNER MENTORIA === */
+    .mb-mentoria-banner {
+      max-width: 1080px;
+      margin: 32px auto 8px;
+      padding: 38px 44px;
+      background: linear-gradient(135deg, rgba(218, 189, 169, 0.16) 0%, rgba(184, 149, 121, 0.10) 100%);
+      border: 1px solid rgba(218, 189, 169, 0.40);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .mb-mentoria-banner::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, rgba(218, 189, 169, 0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .mb-mentoria-text { flex: 1; min-width: 280px; position: relative; }
+    .mb-mentoria-eyebrow {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--sand, #DABDA9);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .mb-mentoria-title {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(28px, 4vw, 38px);
+      line-height: 1.05;
+      margin: 0 0 12px;
+      color: var(--offwhite);
+    }
+    .mb-mentoria-title em { font-style: normal; color: var(--sand, #DABDA9); }
+    .mb-mentoria-lead {
+      margin: 0 0 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: rgba(247, 245, 242, 0.78);
+      max-width: 520px;
+    }
+    .mb-mentoria-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--sand, #DABDA9);
+      color: var(--onix, #1A1C29);
+      border: 1px solid var(--sand);
+      padding: 16px 26px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-decoration: none;
+      font-family: inherit;
+      transition: all 140ms;
+      white-space: nowrap;
+      position: relative;
+    }
+    .mb-mentoria-cta:hover { background: var(--offwhite, #F7F5F2); }
+
+    /* === PROFILE VIEW === */
+    .mb-profile-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 40px 96px;
+    }
+    .mb-profile-card {
+      background: rgba(247, 245, 242, 0.03);
+      border: 1px solid rgba(247, 245, 242, 0.12);
+      padding: 40px 44px;
+    }
+    .mb-profile-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .mb-profile-row .mb-field { margin-bottom: 0; }
+    .mb-profile-section { margin-bottom: 22px; }
+    .mb-profile-meta {
+      margin: 12px 0 28px;
+      font-size: 12px;
+      color: rgba(247, 245, 242, 0.45);
+      letter-spacing: 0.06em;
+    }
+    .mb-profile-meta strong { color: rgba(247, 245, 242, 0.7); font-weight: 600; }
+    .mb-select {
+      width: 100%;
+      box-sizing: border-box;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(247, 245, 242, 0.25);
+      padding: 12px 0;
+      color: var(--offwhite);
+      font-size: 16px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .mb-select:focus { outline: none; border-bottom-color: var(--sand, #DABDA9); }
+    .mb-select option { background: var(--onix); color: var(--offwhite); }
   </style>
 </head>
 <body>
@@ -371,6 +512,13 @@
 
       const [filtro, setFiltro] = React.useState('todos');
 
+      // 'loggedView' controla qual tela mostrar após login: biblioteca ou perfil
+      const [loggedView, setLoggedView] = React.useState('library');
+      const [profileData, setProfileData] = React.useState(null);
+      const [profileBusy, setProfileBusy] = React.useState(false);
+      const [profileErr, setProfileErr] = React.useState('');
+      const [profileMsg, setProfileMsg] = React.useState('');
+
       React.useEffect(() => {
         const url = new URL(window.location.href);
         const action = url.searchParams.get('action');
@@ -451,8 +599,49 @@
         sessionStorage.removeItem(STORAGE_KEY);
         setMember(null);
         setMode('login');
+        setLoggedView('library');
+        setProfileData(null);
         setLoginEmail(''); setLoginPassword(''); setLoginErr('');
       };
+
+      const openProfile = async () => {
+        setLoggedView('profile');
+        setProfileErr(''); setProfileMsg('');
+        if (profileData) return; // já carregou nesta sessão
+        setProfileBusy(true);
+        const {ok, data} = await post('/.netlify/functions/membros-get-profile', {token: member.token});
+        setProfileBusy(false);
+        if (!ok) { setProfileErr(data.error || 'Falha ao carregar.'); return; }
+        // input type=date espera YYYY-MM-DD; banco salva MM-DD-YYYY
+        const raw = String(data.lead.data_nascimento || '');
+        const m = raw.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        const dateForInput = m ? `${m[3]}-${m[1]}-${m[2]}` : raw;
+        setProfileData({...data.lead, data_nascimento: dateForInput});
+      };
+
+      const saveProfile = async (e) => {
+        e.preventDefault();
+        setProfileErr(''); setProfileMsg('');
+        setProfileBusy(true);
+        const {ok, data} = await post('/.netlify/functions/membros-update-profile', {
+          token: member.token,
+          ...profileData,
+        });
+        setProfileBusy(false);
+        if (!ok) { setProfileErr(data.error || 'Falha ao salvar.'); return; }
+        setProfileMsg('Cadastro atualizado.');
+        // Atualiza session com o novo nome
+        if (data.lead.nome !== member.nome) {
+          const session = {...member, nome: data.lead.nome};
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+          setMember(session);
+        }
+      };
+
+      const setProfileField = (k, v) => setProfileData((d) => ({...d, [k]: v}));
+
+      const ATUACOES = ['Síndico profissional', 'Síndico morador', 'Gestor condominial', 'Administradora', 'Conselheiro', 'Outro'];
+      const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
       // Catálogo dinâmico baseado no perfil do membro:
       // - sem quiz feito → grupo Arquétipos mostra só o QUIZ_CARD
@@ -582,6 +771,25 @@
 
       // === ÁREA LOGADA ===
       const firstName = String(member.nome || '').trim().split(/\s+/)[0] || 'aí';
+
+      const MentoriaBanner = () => (
+        <section className="mb-mentoria-banner">
+          <div className="mb-mentoria-text">
+            <span className="mb-mentoria-eyebrow">Mentoria Executiva · Turma 01 · 2026</span>
+            <h2 className="mb-mentoria-title">Quer ir <em>além</em> dos materiais?</h2>
+            <p className="mb-mentoria-lead">
+              A Mentoria Bastidores da Sindicatura é pra quem decidiu profissionalizar a gestão de vez. Encontros semanais, método estruturado e uma comunidade pequena que se conhece. Vagas limitadas.
+            </p>
+          </div>
+          <a className="mb-mentoria-cta" href="/#contato">
+            Reservar minha aplicação
+            <svg width="14" height="10" viewBox="0 0 18 12" fill="none">
+              <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
+        </section>
+      );
+
       return (
         <div className="mb-shell">
           <header className="mb-topbar">
@@ -590,62 +798,150 @@
               <span className="mb-brand-l2">Área de Membros</span>
             </div>
             <div className="mb-user">
+              <nav className="mb-nav">
+                <button className={'mb-nav-link' + (loggedView === 'library' ? ' is-on' : '')} onClick={() => setLoggedView('library')}>Biblioteca</button>
+                <button className={'mb-nav-link' + (loggedView === 'profile' ? ' is-on' : '')} onClick={openProfile}>Meu cadastro</button>
+              </nav>
               <span className="mb-user-name">Olá, <strong>{firstName}</strong></span>
               <button className="mb-logout" onClick={logout}>Sair</button>
             </div>
           </header>
 
-          <section className="mb-hero">
-            <span className="mb-hero-eyebrow">{visibleMateriais.length} materiais disponíveis pra você</span>
-            <h1 className="mb-hero-title">A sua <em>biblioteca.</em></h1>
-            <p className="mb-hero-lead">
-              Aqui está tudo que publicamos até hoje. Clica num card pra abrir o PDF ou ver a página completa.
-              {userPerfil && arquetipoCard && <> O e-book do seu arquétipo <em>{arquetipoCard.titulo}</em> também está liberado abaixo.</>}
-              {!userPerfil && <> O e-book da série Arquétipos é liberado depois que você faz o quiz.</>}
-            </p>
-          </section>
+          <MentoriaBanner />
 
-          <div className="mb-filters">
-            {FILTROS.map((f) => (
-              <button key={f.id} className={'mb-filter' + (filtro === f.id ? ' is-on' : '')} onClick={() => setFiltro(f.id)}>{f.label}</button>
-            ))}
-          </div>
+          {loggedView === 'library' && (
+            <>
+              <section className="mb-hero">
+                <span className="mb-hero-eyebrow">{visibleMateriais.length} materiais disponíveis pra você</span>
+                <h1 className="mb-hero-title">A sua <em>biblioteca.</em></h1>
+                <p className="mb-hero-lead">
+                  Aqui está tudo que publicamos até hoje. Clica num card pra abrir o PDF ou ver a página completa.
+                  {userPerfil && arquetipoCard && <> O e-book do seu arquétipo <em>{arquetipoCard.titulo}</em> também está liberado abaixo.</>}
+                  {!userPerfil && <> O e-book da série Arquétipos é liberado depois que você faz o quiz.</>}
+                </p>
+              </section>
 
-          <div className="mb-grid">
-            {filtered.length === 0 && <p className="mb-empty">Nenhum material nesta categoria ainda.</p>}
-            {filtered.map((m) => (
-              <article key={m.volume} className="mb-card" style={m.isQuiz ? {borderColor: 'rgba(218,189,169,0.5)'} : {}}>
-                <span className="mb-card-volume">{m.volume}</span>
-                <span className="mb-card-eyebrow">{m.eyebrow}</span>
-                <h2 className="mb-card-title">{m.titulo}</h2>
-                <p className="mb-card-desc">{m.desc}</p>
-                <div className="mb-card-actions">
-                  {m.isQuiz ? (
-                    <a className="mb-card-btn" href={m.landing} target="_blank" rel="noreferrer" style={{background: 'var(--sand)', color: 'var(--onix)', border: '1px solid var(--sand)'}}>
-                      Fazer o Quiz
-                      <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
-                        <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </a>
-                  ) : (
-                    <>
-                      <a className="mb-card-btn" href={m.pdf} target="_blank" rel="noreferrer">
-                        Abrir PDF
-                        <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
-                          <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </a>
-                      {m.landing && (
-                        <a className="mb-card-btn is-secondary" href={m.landing} target="_blank" rel="noreferrer">
-                          Página
+              <div className="mb-filters">
+                {FILTROS.map((f) => (
+                  <button key={f.id} className={'mb-filter' + (filtro === f.id ? ' is-on' : '')} onClick={() => setFiltro(f.id)}>{f.label}</button>
+                ))}
+              </div>
+
+              <div className="mb-grid">
+                {filtered.length === 0 && <p className="mb-empty">Nenhum material nesta categoria ainda.</p>}
+                {filtered.map((m) => (
+                  <article key={m.volume} className="mb-card" style={m.isQuiz ? {borderColor: 'rgba(218,189,169,0.5)'} : {}}>
+                    <span className="mb-card-volume">{m.volume}</span>
+                    <span className="mb-card-eyebrow">{m.eyebrow}</span>
+                    <h2 className="mb-card-title">{m.titulo}</h2>
+                    <p className="mb-card-desc">{m.desc}</p>
+                    <div className="mb-card-actions">
+                      {m.isQuiz ? (
+                        <a className="mb-card-btn" href={m.landing} target="_blank" rel="noreferrer" style={{background: 'var(--sand)', color: 'var(--onix)', border: '1px solid var(--sand)'}}>
+                          Fazer o Quiz
+                          <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                            <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
                         </a>
+                      ) : (
+                        <>
+                          <a className="mb-card-btn" href={m.pdf} target="_blank" rel="noreferrer">
+                            Abrir PDF
+                            <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                              <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </a>
+                          {m.landing && (
+                            <a className="mb-card-btn is-secondary" href={m.landing} target="_blank" rel="noreferrer">
+                              Página
+                            </a>
+                          )}
+                        </>
                       )}
-                    </>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+
+          {loggedView === 'profile' && (
+            <>
+              <section className="mb-hero">
+                <span className="mb-hero-eyebrow">Atualizar dados</span>
+                <h1 className="mb-hero-title">Meu <em>cadastro.</em></h1>
+                <p className="mb-hero-lead">
+                  Mantém seus dados atualizados pra continuar recebendo os materiais e novidades certas. O e-mail é a sua chave de acesso e não pode ser alterado por aqui.
+                </p>
+              </section>
+
+              <div className="mb-profile-wrap">
+                <div className="mb-profile-card">
+                  {profileBusy && !profileData && <p className="mb-empty">Carregando seu cadastro…</p>}
+                  {profileErr && <div className="mb-msg-err" style={{marginBottom: 20}}>{profileErr}</div>}
+                  {profileData && (
+                    <form onSubmit={saveProfile}>
+                      <p className="mb-profile-meta">
+                        <strong>E-mail:</strong> {profileData.email}
+                        {profileData.createdAt && <> · Cadastro de {new Date(profileData.createdAt).toLocaleDateString('pt-BR')}</>}
+                      </p>
+
+                      <label className="mb-field">
+                        <span className="mb-label">Nome completo</span>
+                        <input className="mb-input" type="text" value={profileData.nome} onChange={(e) => setProfileField('nome', e.target.value)} required />
+                      </label>
+
+                      <div className="mb-profile-row mb-profile-section">
+                        <label className="mb-field">
+                          <span className="mb-label">Cidade</span>
+                          <input className="mb-input" type="text" value={profileData.cidade} onChange={(e) => setProfileField('cidade', e.target.value)} />
+                        </label>
+                        <label className="mb-field">
+                          <span className="mb-label">Estado (UF)</span>
+                          <select className="mb-select" value={profileData.estado} onChange={(e) => setProfileField('estado', e.target.value)}>
+                            <option value="">UF</option>
+                            {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="mb-profile-row mb-profile-section">
+                        <label className="mb-field">
+                          <span className="mb-label">WhatsApp</span>
+                          <input className="mb-input" type="tel" value={profileData.whatsapp} onChange={(e) => setProfileField('whatsapp', e.target.value)} placeholder="(11) 99999-9999" />
+                        </label>
+                        <label className="mb-field">
+                          <span className="mb-label">Instagram</span>
+                          <input className="mb-input" type="text" value={profileData.instagram} onChange={(e) => setProfileField('instagram', e.target.value.replace(/^@+/, ''))} placeholder="seuusuario" />
+                        </label>
+                      </div>
+
+                      <div className="mb-profile-row mb-profile-section">
+                        <label className="mb-field">
+                          <span className="mb-label">Atuação</span>
+                          <select className="mb-select" value={profileData.atuacao} onChange={(e) => setProfileField('atuacao', e.target.value)}>
+                            <option value="">Selecione</option>
+                            {ATUACOES.map((a) => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </label>
+                        <label className="mb-field">
+                          <span className="mb-label">Data de nascimento</span>
+                          <input className="mb-input" type="date" value={profileData.data_nascimento} onChange={(e) => setProfileField('data_nascimento', e.target.value)} />
+                        </label>
+                      </div>
+
+                      <button type="submit" className="mb-cta" disabled={profileBusy}>
+                        {profileBusy ? 'Salvando…' : 'Salvar alterações'}
+                      </button>
+
+                      {profileMsg && <div className="mb-msg-ok">{profileMsg}</div>}
+                      {profileErr && <div className="mb-msg-err">{profileErr}</div>}
+                    </form>
                   )}
                 </div>
-              </article>
-            ))}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       );
     };
