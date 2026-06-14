@@ -1,11 +1,14 @@
 // Bastidores · FORMULÁRIO OFICIAL DE APLICAÇÃO (multi-etapas)
 // Substitui o formulário simples anterior. 6 etapas + tela final de obrigada.
 
+const UFS_BS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
 const BsForm = () => {
   const [step, setStep] = React.useState(0);
   const [data, setData] = React.useState(() => {
     const defaults = {
-      nome: '', cidade: '', whatsapp: '', email: '', instagram: '', atuacao: '',
+      nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '',
+      atuacao: '', data_nascimento: '',
       tempoMercado: '', qtdCondominios: '',
       maiorDesafio: '', desgaste: '', areas: [],
       desenvolvimento: '', objetivo: '', onde2anos: '',
@@ -15,7 +18,7 @@ const BsForm = () => {
     try {
       const saved = JSON.parse(localStorage.getItem('bs-lead') || '{}');
       // Só pré-preenche campos comuns (não areas/modalidade/compromisso/etc.)
-      const common = ['nome', 'cidade', 'whatsapp', 'email', 'instagram', 'atuacao', 'tempoMercado', 'qtdCondominios'];
+      const common = ['nome', 'cidade', 'estado', 'whatsapp', 'email', 'instagram', 'atuacao', 'data_nascimento', 'tempoMercado', 'qtdCondominios'];
       const filtered = Object.fromEntries(common.map((k) => [k, saved[k] || '']).filter(([_, v]) => v));
       return {...defaults, ...filtered};
     } catch { return defaults; }
@@ -43,7 +46,7 @@ const BsForm = () => {
 
   // Validação simples por etapa
   const canAdvance = () => {
-    if (step === 1) return data.nome && data.cidade && data.whatsapp && data.email && data.instagram;
+    if (step === 1) return data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.instagram && data.data_nascimento;
     if (step === 2) return data.atuacao && data.tempoMercado && data.qtdCondominios;
     if (step === 3) return data.maiorDesafio && data.desgaste && data.areas.length > 0;
     if (step === 4) return data.desenvolvimento && data.objetivo && data.onde2anos;
@@ -228,10 +231,19 @@ const BsForm = () => {
             <span className="bs-label">Nome completo</span>
             <input type="text" value={data.nome} onChange={(e) => setField('nome', e.target.value)} required placeholder="Como devo te chamar?" />
           </label>
-          <label className="bs-field">
-            <span className="bs-label">Cidade / Estado</span>
-            <input type="text" value={data.cidade} onChange={(e) => setField('cidade', e.target.value)} required placeholder="Ex.: São Paulo, SP" />
-          </label>
+          <div className="bs-field-grid">
+            <label className="bs-field">
+              <span className="bs-label">Cidade</span>
+              <input type="text" value={data.cidade} onChange={(e) => setField('cidade', e.target.value)} required placeholder="Sua cidade" />
+            </label>
+            <label className="bs-field">
+              <span className="bs-label">Estado (UF)</span>
+              <select value={data.estado} onChange={(e) => setField('estado', e.target.value)} required>
+                <option value="" disabled>UF</option>
+                {UFS_BS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+              </select>
+            </label>
+          </div>
           <div className="bs-field-grid">
             <label className="bs-field">
               <span className="bs-label">WhatsApp</span>
@@ -242,10 +254,16 @@ const BsForm = () => {
               <input type="email" value={data.email} onChange={(e) => setField('email', e.target.value)} required placeholder="seu@email.com" />
             </label>
           </div>
-          <label className="bs-field">
-            <span className="bs-label">Instagram</span>
-            <input type="text" value={data.instagram} onChange={(e) => setField('instagram', e.target.value)} required placeholder="@seuusuario" />
-          </label>
+          <div className="bs-field-grid">
+            <label className="bs-field">
+              <span className="bs-label">Instagram</span>
+              <input type="text" value={data.instagram} onChange={(e) => setField('instagram', e.target.value)} required placeholder="@seuusuario" />
+            </label>
+            <label className="bs-field">
+              <span className="bs-label">Data de nascimento</span>
+              <input type="date" value={data.data_nascimento} onChange={(e) => setField('data_nascimento', e.target.value)} required />
+            </label>
+          </div>
         </div>
       )}
 

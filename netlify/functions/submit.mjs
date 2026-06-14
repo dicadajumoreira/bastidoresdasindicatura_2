@@ -53,9 +53,11 @@ export default async (req) => {
     }, 403);
   }
 
-  const required = MATERIAL_ORIGENS.has(origem)
-    ? ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'instagram', 'atuacao']
-    : ['nome', 'email', 'whatsapp', 'cidade', 'modalidade'];
+  // Campos obrigatórios padronizados em TODOS os formulários:
+  // nome, cidade, estado, e-mail, WhatsApp, Instagram, atuação, data de nascimento.
+  // Mentoria adicionalmente exige 'modalidade'; quiz adiciona perfil/perfil_nome.
+  const baseRequired = ['nome', 'cidade', 'estado', 'email', 'whatsapp', 'instagram', 'atuacao', 'data_nascimento'];
+  const required = origem === 'mentoria' ? [...baseRequired, 'modalidade'] : baseRequired;
 
   for (const k of required) {
     if (!body[k] || String(body[k]).trim() === '') {

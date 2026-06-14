@@ -509,7 +509,7 @@
   <script type="text/babel">
     const SaudeMentalLanding = () => {
       const [data, setData] = React.useState(() => {
-        const defaults = {nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: ''};
+        const defaults = {nome: '', cidade: '', estado: '', whatsapp: '', email: '', instagram: '', atuacao: '', data_nascimento: ''};
         try {
           const saved = JSON.parse(localStorage.getItem('bs-lead') || '{}');
           return {...defaults, ...Object.fromEntries(Object.entries(saved).filter(([k]) => k in defaults))};
@@ -522,7 +522,7 @@
 
       const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
-      const canSend = data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.instagram && data.atuacao && !submitting;
+      const canSend = data.nome && data.cidade && data.estado && data.whatsapp && data.email && data.instagram && data.atuacao && data.data_nascimento && !submitting;
 
       const submit = async (e) => {
         e.preventDefault();
@@ -678,6 +678,10 @@
                       <option>Conselheiro</option>
                       <option>Outro</option>
                     </select>
+                  </label>
+                  <label className="ck-field">
+                    <span className="ck-label">Data de nascimento</span>
+                    <input type="date" required value={data.data_nascimento} onChange={(e) => setField('data_nascimento', e.target.value)} />
                   </label>
 
                   <button type="submit" className="ck-cta" disabled={!canSend}>

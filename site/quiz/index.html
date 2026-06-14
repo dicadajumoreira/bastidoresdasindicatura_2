@@ -851,7 +851,7 @@
       const [qIdx, setQIdx] = React.useState(0); // 0..9
       const [answers, setAnswers] = React.useState({}); // {1: 'A', 2: 'B', ...}
       const [form, setForm] = React.useState(() => {
-        const defaults = {nome:'', cidade:'', estado:'', whatsapp:'', email:'', instagram:'', atuacao:''};
+        const defaults = {nome:'', cidade:'', estado:'', whatsapp:'', email:'', instagram:'', atuacao:'', data_nascimento:''};
         try {
           const saved = JSON.parse(localStorage.getItem('bs-lead') || '{}');
           return {...defaults, ...Object.fromEntries(Object.entries(saved).filter(([k]) => k in defaults))};
@@ -884,7 +884,7 @@
 
       const setField = (k, v) => setForm((f) => ({...f, [k]: v}));
 
-      const canSendForm = form.nome && form.cidade && form.estado && form.whatsapp && form.email && form.instagram && form.atuacao;
+      const canSendForm = form.nome && form.cidade && form.estado && form.whatsapp && form.email && form.instagram && form.atuacao && form.data_nascimento;
 
       const calcPerfil = () => {
         const counts = {A:0, B:0, C:0, D:0, E:0, F:0};
@@ -1094,6 +1094,11 @@
                 <option>Conselheiro</option>
                 <option>Outro</option>
               </select>
+            </div>
+
+            <div className="qz-field">
+              <span className="qz-label">Data de nascimento</span>
+              <input type="date" className="qz-input" required value={form.data_nascimento} onChange={(e) => setField('data_nascimento', e.target.value)} />
             </div>
 
             <div className="qz-form-actions">
