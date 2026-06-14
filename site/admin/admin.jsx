@@ -3161,6 +3161,82 @@ const MBA_FINAL_CHANCE_HTML = `<table cellpadding="0" cellspacing="0" border="0"
   </td></tr>
 </table>`;
 
+// Convite pra Área de Membros — pra disparar pros leads quentes que já
+// têm acesso. Apresenta a área, lista os tipos de material e instrui
+// como criar a senha.
+const MEMBROS_INVITE_SUBJECT = 'Sua biblioteca tá pronta · Acesse a Área de Membros do Bastidores';
+const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:32px 16px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
+      <tr><td style="padding:32px 40px 18px;border-bottom:1px solid #E8E2D8">
+        <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;letter-spacing:-.01em">Bastidores da Sindicatura</p>
+        <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">Área de Membros · Novidade</p>
+      </td></tr>
+      <tr><td style="padding:40px">
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Acesso exclusivo</p>
+        <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">{{nome}}, sua <em>biblioteca</em> tá pronta.</h1>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          Lancei uma <strong>Área de Membros</strong> exclusiva pra quem já se cadastrou em algum formulário do Bastidores. Lá ficam reunidos, num só lugar, <strong>todos os materiais</strong> que publicamos até hoje.
+        </p>
+
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
+          <tr><td style="padding:18px 22px">
+            <p style="margin:0 0 10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">O que tem dentro</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guias editoriais</strong> · Saúde Mental, Conflitos, Gestão sob Ataque, NR-1, 50 Frases</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>E-books</strong> · Síndico Profissional, IA em Condomínios</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Manuais e checklists</strong> · WhatsApp do condomínio, Organização de assembleia</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Série Arquétipos</strong> · Bombeiro, Político, Solitário, Burocrata, Estrategista, Sargento</p>
+            <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guia do MBA</strong> · Apresentação completa da formação Condo Academy + IBMEC</p>
+          </td></tr>
+        </table>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 24px">
+          São <strong>16 materiais</strong> reunidos num só painel, com filtros por categoria e download direto em PDF.
+        </p>
+
+        <p style="text-align:center;margin:0 0 12px">
+          <a href="https://bastidoresdasindicatura.com.br/membros/" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:16px 32px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Acessar minha biblioteca</a>
+        </p>
+        <p style="text-align:center;font-size:12px;line-height:1.6;color:#8a8881;margin:0 0 28px">
+          Use o e-mail <strong>{{email}}</strong> e clique em "Criar minha senha" no primeiro acesso.
+        </p>
+
+        <hr style="border:none;border-top:1px dashed #E8E2D8;margin:24px 0">
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#1A1C29;margin:0 0 8px">Como funciona o primeiro acesso</p>
+        <ol style="margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.7;color:#1A1C29">
+          <li>Abre <a href="https://bastidoresdasindicatura.com.br/membros/" style="color:#B89579">bastidoresdasindicatura.com.br/membros/</a></li>
+          <li>Clica em "Criar / esqueci minha senha"</li>
+          <li>Informa este e-mail e recebe um link de criação na hora</li>
+          <li>Escolhe uma senha (mínimo de 6 caracteres)</li>
+          <li>Pronto: já está dentro, com tudo no painel</li>
+        </ol>
+
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#B89579;margin:24px 0 0;text-align:center">
+          A biblioteca é sua. Use sem pressa.
+        </p>
+
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
+          <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+          <p style="margin:12px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+            <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+            <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+          </p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
+        </p>
+        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
+
 const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, leadsLoadInfo, onReloadLeads}) => {
   const [subject, setSubject] = React.useState(MBA_DEFAULT_SUBJECT);
   const [html, setHtml] = React.useState(MBA_DEFAULT_HTML);
@@ -3240,6 +3316,19 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setHtml(MBA_FINAL_CHANCE_HTML);
     setExcludeOrigens(new Set(['sorteio-mba']));
     setStatusFilter(new Set());
+    setResult(null);
+    setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
+  };
+
+  // Convite pra Área de Membros: dispara pra TODOS os leads quentes
+  // (qualquer cadastro do site). Sem exclusões. NÃO inclui leads frios
+  // — eles não têm acesso à área e o e-mail seria inútil pra eles.
+  const loadMembrosInviteDraft = () => {
+    setSubject(MEMBROS_INVITE_SUBJECT);
+    setHtml(MEMBROS_INVITE_HTML);
+    setExcludeOrigens(new Set());
+    setStatusFilter(new Set());
+    setIncludeCold(false);
     setResult(null);
     setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
   };
@@ -3791,6 +3880,20 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
           Cada material já publicado tem um rascunho pré-formatado. Clica em um deles pra carregar no compositor abaixo. O filtro já vem marcado pra excluir quem <em>já tem</em> o material, ou seja, só vai pros leads que ainda não receberam.
         </p>
         <div className="ad-bc-drafts-grid">
+          <button
+            type="button"
+            className="ad-bc-draft"
+            onClick={loadMembrosInviteDraft}
+            style={{borderColor: '#819470', background: 'rgba(129, 148, 112, 0.08)'}}
+          >
+            <div className="ad-bc-draft-head">
+              <span className="ad-bc-draft-eyebrow" style={{color: '#819470', fontWeight: 800}}>Área de Membros · CONVITE</span>
+            </div>
+            <h3 className="ad-bc-draft-title">Convite pra entrar na biblioteca</h3>
+            <p className="ad-bc-draft-meta">
+              {leadsAll ? `Pra todos os ${targets.funnel.uniqueEmails || '...'} leads quentes · CTA: Acessar minha biblioteca` : 'Carregando…'}
+            </p>
+          </button>
           <button
             type="button"
             className="ad-bc-draft"

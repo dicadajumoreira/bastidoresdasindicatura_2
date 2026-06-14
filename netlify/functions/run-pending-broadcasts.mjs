@@ -169,6 +169,7 @@ async function runBroadcast(schedule, leadsStore, historyStore, recipientsStore)
     const primaryOrigem = t.origens[0];
     const vars = {
       nome: firstName || 'aí',
+      email: t.email,
       material: MATERIAL_NAMES[primaryOrigem] || 'o material',
     };
     try {

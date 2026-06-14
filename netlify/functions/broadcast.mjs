@@ -149,8 +149,8 @@ export default async (req) => {
       await sendOne({
         from: FROM,
         to: [body.test.email],
-        subject: personalize(subject, {nome: 'Teste', material: 'o material'}),
-        html: personalize(html + BROADCAST_FOOTER, {nome: 'Teste', material: 'o material'})
+        subject: personalize(subject, {nome: 'Teste', email: body.test.email, material: 'o material'}),
+        html: personalize(html + BROADCAST_FOOTER, {nome: 'Teste', email: body.test.email, material: 'o material'})
           .replace(/\{\{unsubscribe_url\}\}/g, unsubUrl),
         reply_to: 'contato@dicadajumoreira.com.br',
       });
@@ -347,6 +347,7 @@ export default async (req) => {
       const primaryOrigem = t.origens[0];
       const vars = {
         nome: firstName || 'aí',
+        email: t.email,
         material: MATERIAL_NAMES[primaryOrigem] || 'o material',
       };
       const unsubUrl = makeUnsubscribeUrl(t.email, 'broadcast') || '';
