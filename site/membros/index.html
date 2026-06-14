@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Área de Membros · Bastidores da Sindicatura</title>
+  <meta name="description" content="Acesso aos materiais publicados do Bastidores da Sindicatura. Login pelo e-mail cadastrado." />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="canonical" href="https://bastidoresdasindicatura.com.br/membros/" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../tokens.css" />
+  <link rel="stylesheet" href="../bastidores.css" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+
+  <style>
+    html, body { margin: 0; padding: 0; background: var(--onix); min-height: 100vh; color: var(--offwhite); }
+    body { font-family: var(--font-sans, Georgia, serif); -webkit-font-smoothing: antialiased; }
+
+    .mb-login-stage {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+    }
+    .mb-login-card {
+      background: rgba(247, 245, 242, 0.04);
+      border: 1px solid rgba(247, 245, 242, 0.14);
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 100%;
+    }
+    .mb-login-eyebrow {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--sand, #DABDA9);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .mb-login-title {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 40px;
+      line-height: 1.05;
+      margin: 0 0 16px;
+      color: var(--offwhite);
+    }
+    .mb-login-title em { font-style: normal; color: var(--sand, #DABDA9); }
+    .mb-login-lead {
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(247, 245, 242, 0.7);
+      margin: 0 0 28px;
+    }
+    .mb-field { display: block; margin-bottom: 20px; }
+    .mb-label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(247, 245, 242, 0.55);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .mb-input {
+      width: 100%;
+      box-sizing: border-box;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(247, 245, 242, 0.25);
+      padding: 12px 0;
+      color: var(--offwhite);
+      font-size: 16px;
+      font-family: inherit;
+    }
+    .mb-input:focus { outline: none; border-bottom-color: var(--sand, #DABDA9); }
+    .mb-input::placeholder { color: rgba(247, 245, 242, 0.3); font-style: italic; }
+
+    .mb-cta {
+      width: 100%;
+      background: var(--sand, #DABDA9);
+      color: var(--onix, #1A1C29);
+      border: none;
+      padding: 16px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 140ms;
+    }
+    .mb-cta:hover { opacity: 0.85; }
+    .mb-cta:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .mb-link-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .mb-link {
+      background: none;
+      border: none;
+      color: var(--sand, #DABDA9);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .mb-link:hover { color: var(--offwhite); }
+
+    .mb-msg-ok {
+      background: rgba(129, 148, 112, 0.12);
+      border-left: 3px solid #819470;
+      padding: 16px 20px;
+      margin: 20px 0 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .mb-msg-err {
+      background: rgba(217, 119, 87, 0.12);
+      border-left: 3px solid #d97757;
+      padding: 16px 20px;
+      margin: 20px 0 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .mb-login-back {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(247, 245, 242, 0.45);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .mb-login-back:hover { color: var(--sand, #DABDA9); }
+
+    /* === ÁREA LOGADA === */
+    .mb-shell { min-height: 100vh; }
+    .mb-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 40px; border-bottom: 1px solid rgba(247, 245, 242, 0.08);
+    }
+    .mb-brand { display: flex; flex-direction: column; }
+    .mb-brand-l1 {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic; font-size: 18px; color: var(--offwhite);
+    }
+    .mb-brand-l2 {
+      font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase;
+      color: var(--sand, #DABDA9); font-weight: 700; margin-top: 2px;
+    }
+    .mb-user { display: flex; align-items: center; gap: 16px; }
+    .mb-user-name { font-size: 13px; color: rgba(247, 245, 242, 0.75); }
+    .mb-user-name strong { color: var(--offwhite); }
+    .mb-logout {
+      background: transparent; border: 1px solid rgba(247, 245, 242, 0.18);
+      color: rgba(247, 245, 242, 0.7); padding: 8px 14px; font-size: 11px;
+      letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer;
+      font-weight: 600; font-family: inherit;
+    }
+    .mb-logout:hover { color: var(--offwhite); border-color: var(--sand, #DABDA9); }
+
+    .mb-hero { padding: 64px 40px 32px; max-width: 920px; margin: 0 auto; }
+    .mb-hero-eyebrow {
+      display: block; font-size: 11px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--sand, #DABDA9);
+      font-weight: 700; margin-bottom: 16px;
+    }
+    .mb-hero-title {
+      font-family: 'Bodoni Moda', Georgia, serif; font-style: italic;
+      font-weight: 400; font-size: clamp(40px, 6vw, 64px);
+      line-height: 1.0; margin: 0 0 18px; color: var(--offwhite);
+    }
+    .mb-hero-title em { font-style: normal; color: var(--sand, #DABDA9); }
+    .mb-hero-lead {
+      font-size: 16px; line-height: 1.6;
+      color: rgba(247, 245, 242, 0.7); margin: 0 0 12px; max-width: 580px;
+    }
+
+    .mb-filters {
+      display: flex; gap: 8px; padding: 0 40px;
+      max-width: 1080px; margin: 16px auto 24px; flex-wrap: wrap;
+    }
+    .mb-filter {
+      background: transparent; border: 1px solid rgba(247, 245, 242, 0.14);
+      color: rgba(247, 245, 242, 0.65); padding: 8px 14px;
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      cursor: pointer; font-family: inherit; font-weight: 600;
+      transition: all 120ms;
+    }
+    .mb-filter:hover { color: var(--offwhite); border-color: var(--sand, #DABDA9); }
+    .mb-filter.is-on { background: var(--sand, #DABDA9); color: var(--onix); border-color: var(--sand, #DABDA9); }
+
+    .mb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 22px; padding: 0 40px 96px;
+      max-width: 1080px; margin: 0 auto;
+    }
+    .mb-card {
+      background: rgba(247, 245, 242, 0.03);
+      border: 1px solid rgba(247, 245, 242, 0.12);
+      padding: 28px 26px 24px;
+      display: flex; flex-direction: column;
+      transition: all 180ms;
+      position: relative; overflow: hidden;
+    }
+    .mb-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: var(--sand, #DABDA9);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform 260ms;
+    }
+    .mb-card:hover { background: rgba(247, 245, 242, 0.06); border-color: rgba(218, 189, 169, 0.4); }
+    .mb-card:hover::before { transform: scaleX(1); }
+
+    .mb-card-eyebrow {
+      display: block; font-size: 10px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--sand, #DABDA9);
+      font-weight: 700; margin-bottom: 8px;
+    }
+    .mb-card-volume {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 11px; color: rgba(247, 245, 242, 0.4);
+      letter-spacing: 0.04em; margin-bottom: 4px;
+    }
+    .mb-card-title {
+      font-family: 'Bodoni Moda', Georgia, serif; font-style: italic;
+      font-weight: 400; font-size: 22px; line-height: 1.1;
+      color: var(--offwhite); margin: 0 0 12px;
+    }
+    .mb-card-desc {
+      font-size: 13px; line-height: 1.55;
+      color: rgba(247, 245, 242, 0.65); margin: 0 0 24px; flex: 1;
+    }
+    .mb-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mb-card-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--onix, #1A1C29); color: var(--offwhite);
+      border: 1px solid var(--offwhite); padding: 10px 16px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+      text-transform: uppercase; text-decoration: none; cursor: pointer;
+      font-family: inherit; transition: all 140ms;
+    }
+    .mb-card-btn:hover { background: var(--offwhite); color: var(--onix); }
+    .mb-card-btn.is-secondary { background: transparent; }
+    .mb-empty {
+      text-align: center; padding: 48px 24px;
+      color: rgba(247, 245, 242, 0.5); font-style: italic;
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 720px) {
+      .mb-topbar { padding: 16px 20px; }
+      .mb-hero { padding: 40px 20px 24px; }
+      .mb-filters { padding: 0 20px; }
+      .mb-grid { padding: 0 20px 64px; gap: 14px; }
+      .mb-login-card { padding: 36px 26px; }
+      .mb-login-title { font-size: 32px; }
+      .mb-user-name { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const STORAGE_KEY = 'bs-membros-token';
+
+    const MATERIAIS = [
+      {volume:'V19', eyebrow:'Volume 19 · Guia da Formação', titulo:'MBA Executivo em Gestão Condominial', desc:'Guia da formação completa: 6 módulos, 360 horas, comunidade Condo Academy e certificação IBMEC.', pdf:'/mba/material.pdf', landing:'/mba/', tags:['mba']},
+      {volume:'V09', eyebrow:'Volume 09 · Guia editorial', titulo:'Saúde Mental do Síndico', desc:'O custo emocional invisível da profissão. 10 capítulos, autoavaliação com +50 itens e plano de 30 dias.', pdf:'/saude-mental/material.pdf', landing:'/saude-mental/', tags:['guia']},
+      {volume:'V08', eyebrow:'Volume 08 · Guia editorial', titulo:'Conflitos absurdos em condomínio', desc:'Os casos mais absurdos de conflito real em condomínio, com método pra desarmar antes de virarem crise.', pdf:'/conflitos/material.pdf', landing:'/conflitos/', tags:['guia']},
+      {volume:'V07', eyebrow:'Volume 07 · Guia editorial', titulo:'Gestão sob Ataque', desc:'20 capítulos pra atravessar boatos, grupos inflamados e tentativas de destituição.', pdf:'/gestao-sob-ataque/material.pdf', landing:'/gestao-sob-ataque/', tags:['guia']},
+      {volume:'V06', eyebrow:'Volume 06 · Guia editorial', titulo:'NR-1 nos Condomínios', desc:'Tudo sobre a NR-1 aplicada à realidade condominial. O que muda e como se adequar.', pdf:'/nr1/material.pdf', landing:'/nr1/', tags:['guia']},
+      {volume:'V05', eyebrow:'Volume 05 · Guia editorial', titulo:'50 Frases pra responder sem perder a cabeça', desc:'50 respostas prontas para os comentários, cobranças e provocações mais comuns.', pdf:'/50-frases/material.pdf', landing:'/50-frases/', tags:['guia']},
+      {volume:'V04', eyebrow:'Volume 04 · Manual', titulo:'Sobrevivência ao WhatsApp do Condomínio', desc:'O guia prático pra parar de ser refém do grupo. Comunicação, protocolo e quando responder.', pdf:'/sobrevivencia-whatsapp/material.pdf', landing:'/sobrevivencia-whatsapp/', tags:['manual']},
+      {volume:'V03', eyebrow:'Volume 03 · E-book', titulo:'Síndico Profissional', desc:'O caminho pra construir uma carreira sólida como síndico profissional.', pdf:'/sindico-profissional/material.pdf', landing:'/sindico-profissional/', tags:['ebook']},
+      {volume:'V02', eyebrow:'Volume 02 · E-book', titulo:'Inteligência Artificial em Condomínios', desc:'Casos de uso, ferramentas e protocolos pra integrar IA na gestão condominial.', pdf:'/ebook-ia/material.pdf', landing:'/ebook-ia/', tags:['ebook']},
+      {volume:'V01', eyebrow:'Volume 01 · Checklist', titulo:'Como organizar uma assembleia', desc:'Checklist completo: do edital ao registro. Cabe no bolso, evita refazer.', pdf:'/checklist/material.pdf', landing:'/checklist/', tags:['checklist']},
+      {volume:'V12', eyebrow:'Série Arquétipos · 12', titulo:'O Bombeiro', desc:'Diagnóstico pra síndicos que vivem correndo atrás de problema. Matriz de prioridades, método 30-30-30.', pdf:'/bombeiro/material.pdf', landing:'/bombeiro/', tags:['arquetipos']},
+      {volume:'V13', eyebrow:'Série Arquétipos · 13', titulo:'O Político', desc:'Pra síndicos bem-intencionados que estão perdendo autoridade na busca por consenso.', pdf:'/politico/material.pdf', landing:'/politico/', tags:['arquetipos']},
+      {volume:'V14', eyebrow:'Série Arquétipos · 14', titulo:'O Solitário', desc:'Pra síndicos dedicados que viraram o gargalo da gestão. Delegação, processo e fim do modo herói.', pdf:'/solitario/material.pdf', landing:'/solitario/', tags:['arquetipos']},
+      {volume:'V15', eyebrow:'Série Arquétipos · 15', titulo:'O Burocrata', desc:'Pra síndicos organizados que escrevem comunicado impecável e ninguém lê.', pdf:'/burocrata/material.pdf', landing:'/burocrata/', tags:['arquetipos']},
+      {volume:'V16', eyebrow:'Série Arquétipos · 16', titulo:'O Estrategista', desc:'Pra quem já opera em modo estratégico e quer sustentar esse jeito de trabalhar.', pdf:'/estrategista/material.pdf', landing:'/estrategista/', tags:['arquetipos']},
+      {volume:'V17', eyebrow:'Série Arquétipos · 17', titulo:'O Sargento', desc:'Pra síndicos firmes que confundem autoridade com medo.', pdf:'/sargento/material.pdf', landing:'/sargento/', tags:['arquetipos']},
+    ];
+
+    const FILTROS = [
+      {id:'todos', label:'Todos'},
+      {id:'guia', label:'Guias'},
+      {id:'ebook', label:'E-books'},
+      {id:'manual', label:'Manuais'},
+      {id:'checklist', label:'Checklists'},
+      {id:'arquetipos', label:'Arquétipos'},
+      {id:'mba', label:'MBA'},
+    ];
+
+    const post = async (path, body) => {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({error: 'Resposta inválida'}));
+      return {ok: res.ok, data};
+    };
+
+    const App = () => {
+      // 'mode' controla qual tela mostrar antes do login:
+      //  'login'   - e-mail + senha
+      //  'request' - pedir link de criação/redefinição
+      //  'set'     - tela de criar nova senha (vem do magic link)
+      const [mode, setMode] = React.useState('login');
+      const [member, setMember] = React.useState(null);
+      const [loading, setLoading] = React.useState(true);
+
+      // login form
+      const [loginEmail, setLoginEmail] = React.useState('');
+      const [loginPassword, setLoginPassword] = React.useState('');
+      const [loginBusy, setLoginBusy] = React.useState(false);
+      const [loginErr, setLoginErr] = React.useState('');
+
+      // request form
+      const [reqEmail, setReqEmail] = React.useState('');
+      const [reqBusy, setReqBusy] = React.useState(false);
+      const [reqSent, setReqSent] = React.useState(false);
+      const [reqErr, setReqErr] = React.useState('');
+
+      // set password form
+      const [pwdToken, setPwdToken] = React.useState('');
+      const [newPwd, setNewPwd] = React.useState('');
+      const [confirmPwd, setConfirmPwd] = React.useState('');
+      const [pwdBusy, setPwdBusy] = React.useState(false);
+      const [pwdErr, setPwdErr] = React.useState('');
+      const [pwdDone, setPwdDone] = React.useState(false);
+
+      const [filtro, setFiltro] = React.useState('todos');
+
+      React.useEffect(() => {
+        const url = new URL(window.location.href);
+        const action = url.searchParams.get('action');
+        const tokenFromUrl = url.searchParams.get('t');
+
+        if (action === 'set-password' && tokenFromUrl) {
+          setPwdToken(tokenFromUrl);
+          setMode('set');
+          setLoading(false);
+          window.history.replaceState({}, '', '/membros/');
+          return;
+        }
+
+        // Tenta restaurar sessão
+        try {
+          const saved = sessionStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const data = JSON.parse(saved);
+            if (data.email && data.token && data.exp && Date.now() < data.exp) {
+              setMember(data);
+            }
+          }
+        } catch {}
+        setLoading(false);
+      }, []);
+
+      const doLogin = async (e) => {
+        e.preventDefault();
+        setLoginErr('');
+        setLoginBusy(true);
+        const {ok, data} = await post('/.netlify/functions/membros-login', {
+          email: loginEmail.trim().toLowerCase(),
+          password: loginPassword,
+        });
+        setLoginBusy(false);
+        if (!ok || !data.ok) {
+          setLoginErr(data.error || 'E-mail ou senha inválidos.');
+          return;
+        }
+        const session = {email: data.email, nome: data.nome, token: data.token, exp: Date.now() + 7 * 24 * 60 * 60 * 1000};
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+        setMember(session);
+      };
+
+      const doRequest = async (e) => {
+        e.preventDefault();
+        setReqErr('');
+        setReqBusy(true);
+        const {ok, data} = await post('/.netlify/functions/membros-request-password', {
+          email: reqEmail.trim().toLowerCase(),
+        });
+        setReqBusy(false);
+        if (!ok) {
+          setReqErr(data.error || 'Falha ao enviar. Tenta de novo.');
+          return;
+        }
+        setReqSent(true);
+      };
+
+      const doSetPassword = async (e) => {
+        e.preventDefault();
+        setPwdErr('');
+        if (newPwd.length < 6) { setPwdErr('A senha precisa ter pelo menos 6 caracteres.'); return; }
+        if (newPwd !== confirmPwd) { setPwdErr('As senhas não coincidem.'); return; }
+        setPwdBusy(true);
+        const {ok, data} = await post('/.netlify/functions/membros-set-password', {
+          token: pwdToken, password: newPwd,
+        });
+        setPwdBusy(false);
+        if (!ok) {
+          setPwdErr(data.error || 'Falha ao salvar a senha.');
+          return;
+        }
+        setPwdDone(true);
+      };
+
+      const logout = () => {
+        sessionStorage.removeItem(STORAGE_KEY);
+        setMember(null);
+        setMode('login');
+        setLoginEmail(''); setLoginPassword(''); setLoginErr('');
+      };
+
+      const filtered = filtro === 'todos' ? MATERIAIS : MATERIAIS.filter((m) => m.tags.includes(filtro));
+
+      // === LOADING ===
+      if (loading) {
+        return <div className="mb-login-stage"><p style={{color: 'rgba(247,245,242,0.5)', fontStyle: 'italic'}}>Carregando…</p></div>;
+      }
+
+      // === SET PASSWORD (vindo do magic link) ===
+      if (mode === 'set' && !member) {
+        return (
+          <div className="mb-login-stage">
+            <div className="mb-login-card">
+              <span className="mb-login-eyebrow">Bastidores da Sindicatura</span>
+              <h1 className="mb-login-title">{pwdDone ? <>Senha <em>criada.</em></> : <>Criar <em>senha.</em></>}</h1>
+              {pwdDone ? (
+                <>
+                  <p className="mb-login-lead">
+                    Sua senha foi salva. Agora você já pode entrar na Área de Membros normalmente.
+                  </p>
+                  <button className="mb-cta" onClick={() => { setMode('login'); setPwdDone(false); }}>
+                    Ir pro login
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="mb-login-lead">
+                    Escolha uma senha pra usar daqui pra frente quando entrar na Área de Membros. Mínimo de 6 caracteres.
+                  </p>
+                  <form onSubmit={doSetPassword}>
+                    <label className="mb-field">
+                      <span className="mb-label">Nova senha</span>
+                      <input className="mb-input" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} required minLength={6} autoComplete="new-password" />
+                    </label>
+                    <label className="mb-field">
+                      <span className="mb-label">Confirmar nova senha</span>
+                      <input className="mb-input" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} required minLength={6} autoComplete="new-password" />
+                    </label>
+                    <button type="submit" className="mb-cta" disabled={pwdBusy}>
+                      {pwdBusy ? 'Salvando…' : 'Salvar senha'}
+                    </button>
+                    {pwdErr && <div className="mb-msg-err">{pwdErr}</div>}
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // === REQUEST (pedir magic link pra criar/redefinir senha) ===
+      if (mode === 'request' && !member) {
+        return (
+          <div className="mb-login-stage">
+            <div className="mb-login-card">
+              <span className="mb-login-eyebrow">Bastidores da Sindicatura</span>
+              <h1 className="mb-login-title">Criar/redefinir <em>senha.</em></h1>
+              <p className="mb-login-lead">
+                Informe o e-mail que você usou pra se cadastrar. A gente envia um link pra você escolher uma senha nova.
+              </p>
+              <form onSubmit={doRequest}>
+                <label className="mb-field">
+                  <span className="mb-label">Seu e-mail</span>
+                  <input className="mb-input" type="email" value={reqEmail} onChange={(e) => setReqEmail(e.target.value)} required disabled={reqSent} />
+                </label>
+                <button type="submit" className="mb-cta" disabled={reqBusy || reqSent}>
+                  {reqBusy ? 'Enviando…' : reqSent ? 'Link enviado' : 'Enviar link de criação'}
+                </button>
+                {reqSent && (
+                  <div className="mb-msg-ok">
+                    Se este e-mail estiver cadastrado, você vai receber um link em alguns minutos. Confira a caixa de entrada (e o spam). O link expira em 30 minutos.
+                  </div>
+                )}
+                {reqErr && <div className="mb-msg-err">{reqErr}</div>}
+              </form>
+              <div className="mb-link-row">
+                <button className="mb-link" onClick={() => setMode('login')}>← Voltar pro login</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // === LOGIN ===
+      if (!member) {
+        return (
+          <div className="mb-login-stage">
+            <div className="mb-login-card">
+              <span className="mb-login-eyebrow">Bastidores da Sindicatura</span>
+              <h1 className="mb-login-title">Área de <em>Membros.</em></h1>
+              <p className="mb-login-lead">
+                Acesse com seu e-mail cadastrado e a senha que você escolheu.
+              </p>
+              <form onSubmit={doLogin}>
+                <label className="mb-field">
+                  <span className="mb-label">E-mail</span>
+                  <input className="mb-input" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="seu@email.com" required autoComplete="email" />
+                </label>
+                <label className="mb-field">
+                  <span className="mb-label">Senha</span>
+                  <input className="mb-input" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="••••••" required autoComplete="current-password" />
+                </label>
+                <button type="submit" className="mb-cta" disabled={loginBusy}>
+                  {loginBusy ? 'Entrando…' : 'Entrar'}
+                </button>
+                {loginErr && <div className="mb-msg-err">{loginErr}</div>}
+              </form>
+              <div className="mb-link-row">
+                <button className="mb-link" onClick={() => setMode('request')}>Criar / esqueci minha senha</button>
+                <a href="/" className="mb-link" style={{textDecoration: 'none'}}>← Voltar pro site</a>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // === ÁREA LOGADA ===
+      const firstName = String(member.nome || '').trim().split(/\s+/)[0] || 'aí';
+      return (
+        <div className="mb-shell">
+          <header className="mb-topbar">
+            <div className="mb-brand">
+              <span className="mb-brand-l1">Bastidores da Sindicatura</span>
+              <span className="mb-brand-l2">Área de Membros</span>
+            </div>
+            <div className="mb-user">
+              <span className="mb-user-name">Olá, <strong>{firstName}</strong></span>
+              <button className="mb-logout" onClick={logout}>Sair</button>
+            </div>
+          </header>
+
+          <section className="mb-hero">
+            <span className="mb-hero-eyebrow">{MATERIAIS.length} materiais disponíveis</span>
+            <h1 className="mb-hero-title">A sua <em>biblioteca.</em></h1>
+            <p className="mb-hero-lead">
+              Aqui está tudo que publicamos até hoje: guias, e-books, manuais, a série Arquétipos e o material do MBA. Clica num card pra abrir o PDF ou ver a página completa.
+            </p>
+          </section>
+
+          <div className="mb-filters">
+            {FILTROS.map((f) => (
+              <button key={f.id} className={'mb-filter' + (filtro === f.id ? ' is-on' : '')} onClick={() => setFiltro(f.id)}>{f.label}</button>
+            ))}
+          </div>
+
+          <div className="mb-grid">
+            {filtered.length === 0 && <p className="mb-empty">Nenhum material nesta categoria ainda.</p>}
+            {filtered.map((m) => (
+              <article key={m.volume} className="mb-card">
+                <span className="mb-card-volume">{m.volume}</span>
+                <span className="mb-card-eyebrow">{m.eyebrow}</span>
+                <h2 className="mb-card-title">{m.titulo}</h2>
+                <p className="mb-card-desc">{m.desc}</p>
+                <div className="mb-card-actions">
+                  <a className="mb-card-btn" href={m.pdf} target="_blank" rel="noreferrer">
+                    Abrir PDF
+                    <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                      <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </a>
+                  {m.landing && (
+                    <a className="mb-card-btn is-secondary" href={m.landing} target="_blank" rel="noreferrer">
+                      Página
+                    </a>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
