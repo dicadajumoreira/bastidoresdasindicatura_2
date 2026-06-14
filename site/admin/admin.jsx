@@ -3186,8 +3186,7 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guias editoriais</strong> · Saúde Mental, Conflitos, Gestão sob Ataque, NR-1, 50 Frases</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>E-books</strong> · Síndico Profissional, IA em Condomínios</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Manuais e checklists</strong> · WhatsApp do condomínio, Organização de assembleia</p>
-            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Série Arquétipos</strong> · Bombeiro, Político, Solitário, Burocrata, Estrategista, Sargento</p>
-            <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guia do MBA</strong> · Apresentação completa da formação Condo Academy + IBMEC</p>
+            <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Série Arquétipos</strong> · Bombeiro, Político, Solitário, Burocrata, Estrategista, Sargento (libera depois do quiz)</p>
           </td></tr>
         </table>
 
