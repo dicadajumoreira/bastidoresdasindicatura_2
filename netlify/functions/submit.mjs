@@ -110,12 +110,16 @@ export default async (req) => {
       const idxStore = getStore({name: 'members-email-index', consistency: 'strong'});
       const idx = await idxStore.get('index', {type: 'json'});
       if (idx && idx.byEmail) {
+        const existing = idx.byEmail[emailNorm];
         idx.byEmail[emailNorm] = {
           id: lead.id,
-          nome: lead.nome || '',
+          nome: lead.nome || (existing?.nome || ''),
           unsubscribed: !!lead.unsubscribed,
           ativo: lead.ativo !== false,
           createdAt: lead.createdAt,
+          // Preserva perfil existente se a aplicação atual não tem
+          perfil: lead.perfil || existing?.perfil || null,
+          perfil_nome: lead.perfil_nome || existing?.perfil_nome || null,
         };
         idx.count = Object.keys(idx.byEmail).length;
         idx.lastIncrementalAt = new Date().toISOString();

@@ -26,21 +26,29 @@ export async function findLeadByEmail(email) {
       if (entry.unsubscribed || entry.ativo === false) {
         return {lead: null, indexMissing: false};
       }
-      return {lead: entry, indexMissing: false};
+      // Garante que perfil/perfil_nome venham sempre presentes (null se faltam)
+      return {lead: {perfil: null, perfil_nome: null, ...entry}, indexMissing: false};
     }
   } catch (err) {
     console.error('[members-email-index] cache read failed:', err.message);
   }
 
-  // 2) Scan direto com paralelismo alto
+  // 2) Scan direto com paralelismo alto. Junta dados de TODOS os
+  //    cadastros do mesmo e-mail (uma pessoa pode ter feito o quiz E
+  //    pedido outros materiais — precisamos do perfil do quiz quando
+  //    existe).
   let lead = null;
+  let perfil = null;
+  let perfil_nome = null;
+  let anyInactive = false;
   try {
     const leads = getStore({name: 'leads', consistency: 'strong'});
     const list = await leads.list();
     const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
     const CONC = 60;
     const deadline = Date.now() + 7500; // 7.5s budget (deixa folga pro resto)
-    for (let i = 0; i < keys.length && !lead; i += CONC) {
+    let foundActive = false;
+    for (let i = 0; i < keys.length; i += CONC) {
       if (Date.now() > deadline) {
         return {lead: null, indexMissing: true};
       }
@@ -51,18 +59,32 @@ export async function findLeadByEmail(email) {
         const v = r.value;
         if (v.deletedAt) continue;
         if (String(v.email || '').toLowerCase() !== normalized) continue;
-        if (v.unsubscribed || v.ativo === false) {
-          return {lead: null, indexMissing: false};
+        if (v.unsubscribed || v.ativo === false) { anyInactive = true; continue; }
+        foundActive = true;
+        if (!lead) {
+          lead = {
+            id: v.id,
+            nome: v.nome || '',
+            unsubscribed: !!v.unsubscribed,
+            ativo: v.ativo !== false,
+            createdAt: v.createdAt,
+          };
         }
-        lead = {
-          id: v.id,
-          nome: v.nome || '',
-          unsubscribed: !!v.unsubscribed,
-          ativo: v.ativo !== false,
-          createdAt: v.createdAt,
-        };
-        break;
+        if (!perfil && v.perfil) perfil = v.perfil;
+        if (!perfil_nome && v.perfil_nome) perfil_nome = v.perfil_nome;
       }
+      // Early-exit quando já temos lead E perfil (caso comum: quem fez o
+      // quiz tem tudo em UMA aplicação)
+      if (lead && perfil_nome) break;
+    }
+    if (lead) {
+      lead.perfil = perfil;
+      lead.perfil_nome = perfil_nome;
+    }
+    // Se TODAS as aplicações do e-mail estão inativas, retornamos null
+    // pra bloquear o login.
+    if (!foundActive && anyInactive) {
+      return {lead: null, indexMissing: false};
     }
   } catch (err) {
     console.error('[members-email-index] scan failed:', err.message);

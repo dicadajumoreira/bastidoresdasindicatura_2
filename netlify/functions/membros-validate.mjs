@@ -38,7 +38,12 @@ export default async (req) => {
     return json({error: 'Cadastro não encontrado ou desativado'}, 403);
   }
 
-  return json({ok: true, email, nome: lookup.lead.nome || ''});
+  return json({
+    ok: true, email,
+    nome: lookup.lead.nome || '',
+    perfil: lookup.lead.perfil || null,
+    perfil_nome: lookup.lead.perfil_nome || null,
+  });
 };
 
 function json(obj, status = 200) {

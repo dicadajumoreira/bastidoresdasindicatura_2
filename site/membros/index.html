@@ -298,13 +298,27 @@
       {volume:'V03', eyebrow:'Volume 03 · E-book', titulo:'Síndico Profissional', desc:'O caminho pra construir uma carreira sólida como síndico profissional.', pdf:'/sindico-profissional/material.pdf', landing:'/sindico-profissional/', tags:['ebook']},
       {volume:'V02', eyebrow:'Volume 02 · E-book', titulo:'Inteligência Artificial em Condomínios', desc:'Casos de uso, ferramentas e protocolos pra integrar IA na gestão condominial.', pdf:'/ebook-ia/material.pdf', landing:'/ebook-ia/', tags:['ebook']},
       {volume:'V01', eyebrow:'Volume 01 · Checklist', titulo:'Como organizar uma assembleia', desc:'Checklist completo: do edital ao registro. Cabe no bolso, evita refazer.', pdf:'/checklist/material.pdf', landing:'/checklist/', tags:['checklist']},
-      {volume:'V12', eyebrow:'Série Arquétipos · 12', titulo:'O Bombeiro', desc:'Diagnóstico pra síndicos que vivem correndo atrás de problema. Matriz de prioridades, método 30-30-30.', pdf:'/bombeiro/material.pdf', landing:'/bombeiro/', tags:['arquetipos']},
-      {volume:'V13', eyebrow:'Série Arquétipos · 13', titulo:'O Político', desc:'Pra síndicos bem-intencionados que estão perdendo autoridade na busca por consenso.', pdf:'/politico/material.pdf', landing:'/politico/', tags:['arquetipos']},
-      {volume:'V14', eyebrow:'Série Arquétipos · 14', titulo:'O Solitário', desc:'Pra síndicos dedicados que viraram o gargalo da gestão. Delegação, processo e fim do modo herói.', pdf:'/solitario/material.pdf', landing:'/solitario/', tags:['arquetipos']},
-      {volume:'V15', eyebrow:'Série Arquétipos · 15', titulo:'O Burocrata', desc:'Pra síndicos organizados que escrevem comunicado impecável e ninguém lê.', pdf:'/burocrata/material.pdf', landing:'/burocrata/', tags:['arquetipos']},
-      {volume:'V16', eyebrow:'Série Arquétipos · 16', titulo:'O Estrategista', desc:'Pra quem já opera em modo estratégico e quer sustentar esse jeito de trabalhar.', pdf:'/estrategista/material.pdf', landing:'/estrategista/', tags:['arquetipos']},
-      {volume:'V17', eyebrow:'Série Arquétipos · 17', titulo:'O Sargento', desc:'Pra síndicos firmes que confundem autoridade com medo.', pdf:'/sargento/material.pdf', landing:'/sargento/', tags:['arquetipos']},
+      {volume:'V12', eyebrow:'Série Arquétipos · 12', titulo:'O Bombeiro', desc:'Diagnóstico pra síndicos que vivem correndo atrás de problema. Matriz de prioridades, método 30-30-30.', pdf:'/bombeiro/material.pdf', landing:'/bombeiro/', tags:['arquetipos'], arquetipoKey:'bombeiro'},
+      {volume:'V13', eyebrow:'Série Arquétipos · 13', titulo:'O Político', desc:'Pra síndicos bem-intencionados que estão perdendo autoridade na busca por consenso.', pdf:'/politico/material.pdf', landing:'/politico/', tags:['arquetipos'], arquetipoKey:'politico'},
+      {volume:'V14', eyebrow:'Série Arquétipos · 14', titulo:'O Solitário', desc:'Pra síndicos dedicados que viraram o gargalo da gestão. Delegação, processo e fim do modo herói.', pdf:'/solitario/material.pdf', landing:'/solitario/', tags:['arquetipos'], arquetipoKey:'solitario'},
+      {volume:'V15', eyebrow:'Série Arquétipos · 15', titulo:'O Burocrata', desc:'Pra síndicos organizados que escrevem comunicado impecável e ninguém lê.', pdf:'/burocrata/material.pdf', landing:'/burocrata/', tags:['arquetipos'], arquetipoKey:'burocrata'},
+      {volume:'V16', eyebrow:'Série Arquétipos · 16', titulo:'O Estrategista', desc:'Pra quem já opera em modo estratégico e quer sustentar esse jeito de trabalhar.', pdf:'/estrategista/material.pdf', landing:'/estrategista/', tags:['arquetipos'], arquetipoKey:'estrategista'},
+      {volume:'V17', eyebrow:'Série Arquétipos · 17', titulo:'O Sargento', desc:'Pra síndicos firmes que confundem autoridade com medo.', pdf:'/sargento/material.pdf', landing:'/sargento/', tags:['arquetipos'], arquetipoKey:'sargento'},
     ];
+
+    // Card especial mostrado no lugar dos 6 arquétipos quando o membro
+    // ainda não fez o quiz. Ao fazer o quiz, o backend grava perfil_nome
+    // e este card é substituído pelo arquétipo correspondente.
+    const QUIZ_CARD = {
+      volume: 'Quiz',
+      eyebrow: 'Arquétipos · Descubra seu perfil',
+      titulo: 'Que tipo de síndico você é?',
+      desc: 'Faça o quiz de 10 perguntas pra descobrir seu arquétipo de gestão. No fim, libero aqui o e-book do seu perfil — só pra você.',
+      pdf: null,
+      landing: '/quiz/',
+      tags: ['arquetipos'],
+      isQuiz: true,
+    };
 
     const FILTROS = [
       {id:'todos', label:'Todos'},
@@ -440,7 +454,18 @@
         setLoginEmail(''); setLoginPassword(''); setLoginErr('');
       };
 
-      const filtered = filtro === 'todos' ? MATERIAIS : MATERIAIS.filter((m) => m.tags.includes(filtro));
+      // Catálogo dinâmico baseado no perfil do membro:
+      // - sem quiz feito → grupo Arquétipos mostra só o QUIZ_CARD
+      // - quiz feito → grupo Arquétipos mostra SÓ o arquétipo correspondente
+      const userPerfil = member && (member.perfil_nome || member.perfil) ? String(member.perfil_nome || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') : null;
+      const arquetipoCard = userPerfil
+        ? MATERIAIS.find((m) => m.tags.includes('arquetipos') && m.arquetipoKey === userPerfil)
+        : null;
+      const visibleMateriais = [
+        ...MATERIAIS.filter((m) => !m.tags.includes('arquetipos')),
+        ...(arquetipoCard ? [arquetipoCard] : (userPerfil ? [] : [QUIZ_CARD])),
+      ];
+      const filtered = filtro === 'todos' ? visibleMateriais : visibleMateriais.filter((m) => m.tags.includes(filtro));
 
       // === LOADING ===
       if (loading) {
@@ -571,10 +596,12 @@
           </header>
 
           <section className="mb-hero">
-            <span className="mb-hero-eyebrow">{MATERIAIS.length} materiais disponíveis</span>
+            <span className="mb-hero-eyebrow">{visibleMateriais.length} materiais disponíveis pra você</span>
             <h1 className="mb-hero-title">A sua <em>biblioteca.</em></h1>
             <p className="mb-hero-lead">
-              Aqui está tudo que publicamos até hoje: guias, e-books, manuais, a série Arquétipos e o material do MBA. Clica num card pra abrir o PDF ou ver a página completa.
+              Aqui está tudo que publicamos até hoje. Clica num card pra abrir o PDF ou ver a página completa.
+              {userPerfil && arquetipoCard && <> O e-book do seu arquétipo <em>{arquetipoCard.titulo}</em> também está liberado abaixo.</>}
+              {!userPerfil && <> O e-book da série Arquétipos é liberado depois que você faz o quiz.</>}
             </p>
           </section>
 
@@ -587,22 +614,33 @@
           <div className="mb-grid">
             {filtered.length === 0 && <p className="mb-empty">Nenhum material nesta categoria ainda.</p>}
             {filtered.map((m) => (
-              <article key={m.volume} className="mb-card">
+              <article key={m.volume} className="mb-card" style={m.isQuiz ? {borderColor: 'rgba(218,189,169,0.5)'} : {}}>
                 <span className="mb-card-volume">{m.volume}</span>
                 <span className="mb-card-eyebrow">{m.eyebrow}</span>
                 <h2 className="mb-card-title">{m.titulo}</h2>
                 <p className="mb-card-desc">{m.desc}</p>
                 <div className="mb-card-actions">
-                  <a className="mb-card-btn" href={m.pdf} target="_blank" rel="noreferrer">
-                    Abrir PDF
-                    <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
-                      <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </a>
-                  {m.landing && (
-                    <a className="mb-card-btn is-secondary" href={m.landing} target="_blank" rel="noreferrer">
-                      Página
+                  {m.isQuiz ? (
+                    <a className="mb-card-btn" href={m.landing} target="_blank" rel="noreferrer" style={{background: 'var(--sand)', color: 'var(--onix)', border: '1px solid var(--sand)'}}>
+                      Fazer o Quiz
+                      <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                        <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
                     </a>
+                  ) : (
+                    <>
+                      <a className="mb-card-btn" href={m.pdf} target="_blank" rel="noreferrer">
+                        Abrir PDF
+                        <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                          <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </a>
+                      {m.landing && (
+                        <a className="mb-card-btn is-secondary" href={m.landing} target="_blank" rel="noreferrer">
+                          Página
+                        </a>
+                      )}
+                    </>
                   )}
                 </div>
               </article>

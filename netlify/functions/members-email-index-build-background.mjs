@@ -44,14 +44,35 @@ export default async (req) => {
         const existing = byEmail[email];
         const isActive = !(v.unsubscribed || v.ativo === false);
         const existingActive = existing && !(existing.unsubscribed || existing.ativo === false);
+        const base = {
+          id: v.id,
+          nome: v.nome || '',
+          unsubscribed: !!v.unsubscribed,
+          ativo: v.ativo !== false,
+          createdAt: v.createdAt,
+          perfil: v.perfil || null,
+          perfil_nome: v.perfil_nome || null,
+        };
         if (!existing) {
-          byEmail[email] = {id: v.id, nome: v.nome || '', unsubscribed: !!v.unsubscribed, ativo: v.ativo !== false, createdAt: v.createdAt};
+          byEmail[email] = base;
         } else if (isActive && !existingActive) {
-          // Substitui registro inativo por ativo
-          byEmail[email] = {id: v.id, nome: v.nome || '', unsubscribed: !!v.unsubscribed, ativo: v.ativo !== false, createdAt: v.createdAt};
-        } else if (isActive === existingActive && v.createdAt && (!existing.createdAt || v.createdAt > existing.createdAt)) {
-          // Empate em estado: pega o mais recente
-          byEmail[email] = {id: v.id, nome: v.nome || existing.nome, unsubscribed: !!v.unsubscribed, ativo: v.ativo !== false, createdAt: v.createdAt};
+          byEmail[email] = base;
+          // Preserva perfil de outros registros do mesmo e-mail se ainda não tem
+          if (!base.perfil_nome && existing.perfil_nome) byEmail[email].perfil_nome = existing.perfil_nome;
+          if (!base.perfil && existing.perfil) byEmail[email].perfil = existing.perfil;
+        } else if (isActive === existingActive) {
+          // Mantém o registro existente como base, mas COMPLETA com perfil
+          // se o novo trouxer e o existente não tem.
+          if (!existing.perfil_nome && base.perfil_nome) byEmail[email].perfil_nome = base.perfil_nome;
+          if (!existing.perfil && base.perfil) byEmail[email].perfil = base.perfil;
+          // E também pega o mais recente em caso de empate
+          if (v.createdAt && (!existing.createdAt || v.createdAt > existing.createdAt)) {
+            byEmail[email] = {...base,
+              perfil: existing.perfil || base.perfil,
+              perfil_nome: existing.perfil_nome || base.perfil_nome,
+              nome: v.nome || existing.nome,
+            };
+          }
         }
       }
       if (i % (CONC * 8) === 0) {

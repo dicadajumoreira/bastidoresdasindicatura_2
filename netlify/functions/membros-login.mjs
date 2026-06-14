@@ -49,7 +49,12 @@ export default async (req) => {
   const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const token = sign({email, type: 'membros-session', exp}, secret);
 
-  return json({ok: true, token, email, nome: lead.nome || ''});
+  return json({
+    ok: true, token, email,
+    nome: lead.nome || '',
+    perfil: lead.perfil || null,
+    perfil_nome: lead.perfil_nome || null,
+  });
 };
 
 async function triggerIndexBuild(req) {
