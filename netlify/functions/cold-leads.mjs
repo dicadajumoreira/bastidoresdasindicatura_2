@@ -33,6 +33,18 @@ function isValidEmail(e) {
   const dot = e.lastIndexOf('.');
   return at > 0 && dot > at + 1 && dot < e.length - 1 && !e.includes(' ');
 }
+// Aceita YYYY-MM-DD ou MM-DD-YYYY ou DD/MM/YYYY e devolve MM-DD-YYYY.
+// Se não bater nenhum padrão, devolve o original (tolerante a imports).
+function normalizeDataNasc(v) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  let m;
+  if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return `${m[2]}-${m[3]}-${m[1]}`;
+  if ((m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/))) return s;
+  if ((m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/))) return `${m[2]}-${m[1]}-${m[3]}`;
+  return s;
+}
+
 function normPhone(p) {
   return String(p || '').replace(/\D/g, '');
 }
@@ -130,6 +142,11 @@ export default async (req) => {
         email: hasEmail ? email : null,
         whatsapp: hasPhone ? phone : null,
         nome: String(e.nome || '').trim(),
+        instagram: String(e.instagram || '').trim().replace(/^@+/, ''),
+        cidade: String(e.cidade || '').trim(),
+        estado: String(e.estado || '').trim().toUpperCase().slice(0, 2),
+        atuacao: String(e.atuacao || '').trim(),
+        data_nascimento: String(e.data_nascimento || '').trim(),
         source: String(e.source || source),
         emailStatus: e.emailStatus || null,
       });
@@ -203,6 +220,7 @@ export default async (req) => {
           cidade: primary.cidade || others.find((o) => o.cidade)?.cidade || '',
           estado: primary.estado || others.find((o) => o.estado)?.estado || '',
           atuacao: primary.atuacao || others.find((o) => o.atuacao)?.atuacao || '',
+          data_nascimento: primary.data_nascimento || others.find((o) => o.data_nascimento)?.data_nascimento || '',
           notes: [primary.notes, ...others.map((o) => o.notes)].filter(Boolean).join('\n---\n'),
           canal: mergedEmails.length && mergedPhones.length ? 'both' : (mergedEmails.length ? 'email' : 'whatsapp'),
           updatedAt: new Date().toISOString(),
@@ -256,6 +274,7 @@ export default async (req) => {
         cidade: body.cidade !== undefined ? String(body.cidade || '').trim() : existing.cidade,
         estado: body.estado !== undefined ? String(body.estado || '').trim().toUpperCase().slice(0, 2) : existing.estado,
         atuacao: body.atuacao !== undefined ? String(body.atuacao || '').trim() : existing.atuacao,
+        data_nascimento: body.data_nascimento !== undefined ? normalizeDataNasc(body.data_nascimento) : (existing.data_nascimento || ''),
         notes: body.notes !== undefined ? String(body.notes || '') : existing.notes,
         // ativo/inativo é o conceito visível pra usuária. Mapeia pra
         // unsubscribed (legado) E ativo (novo campo explícito).
@@ -454,6 +473,11 @@ async function upsertLead(store, c) {
       emails: newEmails,
       whatsapps: newPhones,
       nome: (c.nome && c.nome.trim()) ? c.nome : existingLead.nome,
+      instagram: (c.instagram && c.instagram.trim()) ? c.instagram : (existingLead.instagram || ''),
+      cidade: (c.cidade && c.cidade.trim()) ? c.cidade : (existingLead.cidade || ''),
+      estado: (c.estado && c.estado.trim()) ? c.estado : (existingLead.estado || ''),
+      atuacao: (c.atuacao && c.atuacao.trim()) ? c.atuacao : (existingLead.atuacao || ''),
+      data_nascimento: (c.data_nascimento && String(c.data_nascimento).trim()) ? normalizeDataNasc(c.data_nascimento) : (existingLead.data_nascimento || ''),
       emailStatus: c.emailStatus || existingLead.emailStatus,
       sources: newSources,
       updatedAt: new Date().toISOString(),
@@ -481,6 +505,11 @@ async function upsertLead(store, c) {
     emails,
     whatsapps,
     nome: c.nome,
+    instagram: c.instagram || '',
+    cidade: c.cidade || '',
+    estado: c.estado || '',
+    atuacao: c.atuacao || '',
+    data_nascimento: normalizeDataNasc(c.data_nascimento || ''),
     source: c.source,
     sources: [c.source],
     emailStatus: c.emailStatus,
@@ -488,6 +517,7 @@ async function upsertLead(store, c) {
     canal: emails.length && whatsapps.length ? 'both' : (emails.length ? 'email' : 'whatsapp'),
     importedAt: new Date().toISOString(),
     unsubscribed: false,
+    ativo: true,
     frequencia: 'normal',
     convertedToHotAt: null,
   };

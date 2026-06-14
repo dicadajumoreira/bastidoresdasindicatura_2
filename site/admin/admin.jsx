@@ -1849,6 +1849,12 @@ const ColdLeadEditModal = ({lead, onClose, onSave}) => {
     cidade: lead.cidade || '',
     estado: lead.estado || '',
     atuacao: lead.atuacao || '',
+    // Aceita MM-DD-YYYY ou YYYY-MM-DD no banco e converte pro input type=date (YYYY-MM-DD)
+    data_nascimento: (() => {
+      const s = String(lead.data_nascimento || '').trim();
+      const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+      return m ? `${m[3]}-${m[1]}-${m[2]}` : s;
+    })(),
     notes: lead.notes || '',
     // 'ativo' agrega o estado: inativo = unsubscribed OU ativo===false
     ativo: !(lead.unsubscribed || lead.ativo === false),
@@ -1941,6 +1947,11 @@ const ColdLeadEditModal = ({lead, onClose, onSave}) => {
               <option value="">—</option>
               {COLD_ATUACOES.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
+          </label>
+
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">Data de nascimento</span>
+            <input type="date" value={form.data_nascimento} onChange={(e) => setField('data_nascimento', e.target.value)} />
           </label>
 
           <label className="ad-bc-field">
@@ -2045,6 +2056,11 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
         const nameCol = findCol(headers, /^nome$/) || findCol(headers, /^name$/) || findCol(headers, /nome completo/) || findCol(headers, /nome/) || findCol(headers, /name/);
         const phoneCol = findCol(headers, /^celular$/) || findCol(headers, /^telefone$/) || findCol(headers, /^phone$/) || findCol(headers, /whatsapp/i) || findCol(headers, /celular/) || findCol(headers, /telefone/);
         const statusCol = findCol(headers, /email_status/) || findCol(headers, /verifierstatus/) || findCol(headers, /status/);
+        const instagramCol = findCol(headers, /^@?\s*instagram$/) || findCol(headers, /instagram/) || findCol(headers, /^@$/) || findCol(headers, /^arroba$/);
+        const cidadeCol = findCol(headers, /^cidade$/) || findCol(headers, /cidade/) || findCol(headers, /municipio/) || findCol(headers, /município/);
+        const estadoCol = findCol(headers, /^(uf|estado)$/) || findCol(headers, /^estado$/) || findCol(headers, /uf/);
+        const atuacaoCol = findCol(headers, /^atua/) || findCol(headers, /atuação/) || findCol(headers, /atuacao/) || findCol(headers, /cargo/) || findCol(headers, /função/) || findCol(headers, /funcao/);
+        const dataNascCol = findCol(headers, /nascimento/) || findCol(headers, /data.*nasc/) || findCol(headers, /dt.*nasc/) || findCol(headers, /birth/);
         // Conta linhas com e-mail válido OU telefone válido (ambos servem
         // como canal de contato — e-mail pro Resend, telefone pro WhatsApp).
         let countEmail = 0, countPhone = 0, countBoth = 0;
@@ -2063,6 +2079,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
           rows,
           headers,
           emailCol, nameCol, phoneCol, statusCol,
+          instagramCol, cidadeCol, estadoCol, atuacaoCol, dataNascCol,
           validCount,
           countEmail, countPhone, countBoth,
           selected: validCount > 0, // selecionada por default se tem qualquer canal
@@ -2122,6 +2139,11 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
           email: hasEmail ? email : '',
           nome: s.nameCol ? String(r[s.nameCol] || '').trim() : '',
           whatsapp: hasPhone ? phone : '',
+          instagram: s.instagramCol ? String(r[s.instagramCol] || '').trim() : '',
+          cidade: s.cidadeCol ? String(r[s.cidadeCol] || '').trim() : '',
+          estado: s.estadoCol ? String(r[s.estadoCol] || '').trim() : '',
+          atuacao: s.atuacaoCol ? String(r[s.atuacaoCol] || '').trim() : '',
+          data_nascimento: s.dataNascCol ? String(r[s.dataNascCol] || '').trim() : '',
           emailStatus: s.statusCol ? String(r[s.statusCol] || '').trim() : '',
           source: `${fileName} · ${s.name}`,
         });
