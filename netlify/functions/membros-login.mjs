@@ -5,11 +5,12 @@
 // Resposta: { ok: true, token, email, nome } ou { error }
 //
 // Importante: a resposta de "credenciais inválidas" e "e-mail não cadastrado"
-// é IDÊNTICA (mesma mensagem) pra não permitir enumerar a base.
+// é IDÊNTICA pra não permitir enumerar a base.
 
 import { getStore } from '@netlify/blobs';
 import { sign } from '../lib/auth-token.mjs';
 import { verifyPassword } from '../lib/password.mjs';
+import { findLeadByEmail } from '../lib/members-email-index.mjs';
 
 export const config = {
   path: ['/api/membros-login', '/.netlify/functions/membros-login'],
@@ -34,30 +35,17 @@ export default async (req) => {
     credentials = await pwStore.get(email, {type: 'json'});
   } catch {}
 
-  // 2) Procura o cadastro do lead
-  let lead = null;
-  try {
-    const store = getStore({name: 'leads', consistency: 'strong'});
-    const list = await store.list();
-    const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
-    for (let i = 0; i < keys.length && !lead; i += 12) {
-      const batch = keys.slice(i, i + 12);
-      const got = await Promise.allSettled(batch.map((k) => store.get(k, {type: 'json'})));
-      for (const r of got) {
-        if (r.status !== 'fulfilled' || !r.value) continue;
-        const v = r.value;
-        if (v.deletedAt) continue;
-        if (v.unsubscribed || v.ativo === false) continue;
-        if (String(v.email || '').toLowerCase() === email) { lead = v; break; }
-      }
-    }
-  } catch (err) {
-    console.error('[membros-login] leads scan failed:', err.message);
+  // 2) Procura o cadastro do lead via índice
+  const lookup = await findLeadByEmail(email);
+  if (lookup.indexMissing) {
+    // Dispara build em background
+    triggerIndexBuild(req).catch(() => {});
+    return json({error: 'Estamos preparando seu acesso pela primeira vez. Aguarde 1-2 minutos e tente novamente.', indexMissing: true}, 503);
   }
+  const lead = lookup.lead;
 
   // 3) Valida
   if (!lead || !credentials || !verifyPassword(password, credentials.passwordHash)) {
-    // Mensagem genérica pra não vazar existência do cadastro
     return json({error: 'E-mail ou senha inválidos. Se ainda não criou senha, use a opção "Criar minha senha".'}, 401);
   }
 
@@ -68,6 +56,17 @@ export default async (req) => {
 
   return json({ok: true, token, email, nome: lead.nome || ''});
 };
+
+async function triggerIndexBuild(req) {
+  try {
+    const origin = new URL(req.url).origin;
+    fetch(`${origin}/.netlify/functions/members-email-index-build-background`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({}),
+    }).catch(() => {});
+  } catch {}
+}
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {

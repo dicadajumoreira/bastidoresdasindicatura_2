@@ -1,12 +1,12 @@
 // Netlify Function v2 · POST /api/membros-validate
-// Valida um token de magic link da área de membros. Devolve nome e e-mail
+// Valida um token de sessão da área de membros. Devolve nome e e-mail
 // do membro pra UI personalizar a saudação.
 //
 // Body: { token }
 // Resposta: { ok, email, nome }
 
-import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
+import { findLeadByEmail } from '../lib/members-email-index.mjs';
 
 export const config = {
   path: ['/api/membros-validate', '/.netlify/functions/membros-validate'],
@@ -28,35 +28,17 @@ export default async (req) => {
   }
 
   const email = String(payload.email).toLowerCase();
-
-  // Busca o nome pra personalizar a área de membros
-  let nome = '';
-  try {
-    const store = getStore({name: 'leads', consistency: 'strong'});
-    const list = await store.list();
-    const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
-    for (let i = 0; i < keys.length && !nome; i += 12) {
-      const batch = keys.slice(i, i + 12);
-      const got = await Promise.allSettled(batch.map((k) => store.get(k, {type: 'json'})));
-      for (const r of got) {
-        if (r.status !== 'fulfilled' || !r.value) continue;
-        const v = r.value;
-        if (v.deletedAt) continue;
-        if (v.unsubscribed || v.ativo === false) continue;
-        if (String(v.email || '').toLowerCase() === email) {
-          nome = v.nome || '';
-          break;
-        }
-      }
-    }
-  } catch {}
-
-  if (!nome) {
-    // Token válido mas o cadastro foi removido/inativado depois
+  const lookup = await findLeadByEmail(email);
+  if (lookup.indexMissing) {
+    // Caso raríssimo: token válido + índice sumiu. Devolve dados do
+    // payload pra não derrubar a sessão.
+    return json({ok: true, email, nome: ''});
+  }
+  if (!lookup.lead) {
     return json({error: 'Cadastro não encontrado ou desativado'}, 403);
   }
 
-  return json({ok: true, email, nome});
+  return json({ok: true, email, nome: lookup.lead.nome || ''});
 };
 
 function json(obj, status = 200) {

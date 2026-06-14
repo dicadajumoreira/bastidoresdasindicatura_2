@@ -6,8 +6,8 @@
 // Resposta: { ok: true, sent: boolean } — sempre 200 mesmo se e-mail
 // não estiver cadastrado (pra não vazar a base).
 
-import { getStore } from '@netlify/blobs';
 import { sign } from '../lib/auth-token.mjs';
+import { findLeadByEmail } from '../lib/members-email-index.mjs';
 
 export const config = {
   path: ['/api/membros-request-password', '/.netlify/functions/membros-request-password'],
@@ -25,26 +25,12 @@ export default async (req) => {
   const email = String(body.email || '').trim().toLowerCase();
   if (!email || !email.includes('@')) return json({error: 'E-mail inválido'}, 400);
 
-  // Procura o cadastro
-  let lead = null;
-  try {
-    const store = getStore({name: 'leads', consistency: 'strong'});
-    const list = await store.list();
-    const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
-    for (let i = 0; i < keys.length && !lead; i += 12) {
-      const batch = keys.slice(i, i + 12);
-      const got = await Promise.allSettled(batch.map((k) => store.get(k, {type: 'json'})));
-      for (const r of got) {
-        if (r.status !== 'fulfilled' || !r.value) continue;
-        const v = r.value;
-        if (v.deletedAt) continue;
-        if (v.unsubscribed || v.ativo === false) continue;
-        if (String(v.email || '').toLowerCase() === email) { lead = v; break; }
-      }
-    }
-  } catch (err) {
-    console.error('[membros-request-password] leads scan failed:', err.message);
+  const lookup = await findLeadByEmail(email);
+  if (lookup.indexMissing) {
+    triggerIndexBuild(req).catch(() => {});
+    return json({error: 'Estamos preparando o sistema pela primeira vez. Aguarde 1-2 minutos e tente novamente.', indexMissing: true}, 503);
   }
+  const lead = lookup.lead;
 
   if (!lead) return json({ok: true, sent: false});
 
@@ -77,6 +63,17 @@ export default async (req) => {
 
   return json({ok: true, sent: true});
 };
+
+async function triggerIndexBuild(req) {
+  try {
+    const origin = new URL(req.url).origin;
+    fetch(`${origin}/.netlify/functions/members-email-index-build-background`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({}),
+    }).catch(() => {});
+  } catch {}
+}
 
 function buildHtml({nome, url}) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head>

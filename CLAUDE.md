@@ -65,6 +65,23 @@ Bug histórico: cache antigo do browser segurou versão quebrada do admin.jsx e 
 
 **HubStation · CNPJ 32.932.966/0001-53** é a controladora dos dados pessoais coletados. Sempre que mencionar a empresa na política de privacidade, regulamentos, ou termos legais, use esse nome e CNPJ.
 
+### 8. Área de Membros · botão flutuante em TODA página pública
+
+A `/membros/` é a área restrita pra leads quentes (quem se cadastrou em qualquer formulário do site). **Toda página pública (atual e futura) DEVE incluir** o script global do botão flutuante, logo antes de `</body>`:
+
+```html
+  <script src="/bs-members-link.js" defer></script>
+</body>
+```
+
+O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o membro está logado, layout mobile.
+
+**Quem é membro:** apenas leads quentes ativos (store `leads`, com `unsubscribed: false` e `ativo !== false`). Leads frios NÃO viram membros automaticamente — só depois que preencherem qualquer formulário do site.
+
+**Login:** e-mail + senha (senha hasheada em scrypt na store `member-passwords`). Primeiro acesso passa por magic link de "Criar senha".
+
+**Índice de e-mails:** a função background `members-email-index-build-background.mjs` constrói o blob `members-email-index/index` com mapeamento email → {id, nome}. Submit.mjs atualiza incrementalmente.
+
 ## Convenções
 
 - **Português coloquial** em mensagens UI e nos commits (a Juliana lê tudo).

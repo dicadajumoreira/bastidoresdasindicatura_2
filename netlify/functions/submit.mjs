@@ -102,7 +102,31 @@ export default async (req) => {
     await backup.setJSON(id, lead);
   } catch { /* o principal já está salvo */ }
 
-  // 3) Disparo de e-mails via Resend (best-effort, em paralelo, com
+  // 3) Atualiza o índice de e-mails da área de membros (best-effort).
+  //    Se o índice não existir ainda, deixa pra próxima rebuild.
+  try {
+    const emailNorm = String(lead.email || '').trim().toLowerCase();
+    if (emailNorm && emailNorm.includes('@')) {
+      const idxStore = getStore({name: 'members-email-index', consistency: 'strong'});
+      const idx = await idxStore.get('index', {type: 'json'});
+      if (idx && idx.byEmail) {
+        idx.byEmail[emailNorm] = {
+          id: lead.id,
+          nome: lead.nome || '',
+          unsubscribed: !!lead.unsubscribed,
+          ativo: lead.ativo !== false,
+          createdAt: lead.createdAt,
+        };
+        idx.count = Object.keys(idx.byEmail).length;
+        idx.lastIncrementalAt = new Date().toISOString();
+        await idxStore.setJSON('index', idx);
+      }
+    }
+  } catch (err) {
+    console.error('[submit] member index update failed:', err.message);
+  }
+
+  // 4) Disparo de e-mails via Resend (best-effort, em paralelo, com
   //    timeout próprio dentro do módulo). Se falhar, NÃO derruba o
   //    cadastro nem atrasa demais a resposta pro front.
   try {
