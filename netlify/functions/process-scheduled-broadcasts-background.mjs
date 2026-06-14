@@ -103,10 +103,12 @@ async function runBroadcast(schedule, leadsStore, historyStore) {
     await new Promise((res) => setTimeout(res, 300));
   }
 
-  // Dedupe por e-mail
+  // Dedupe por e-mail. Pula leads inativos.
   const byEmail = new Map();
   for (const l of leads) {
     if (l.deletedAt) continue;
+    if (l.unsubscribed) continue;
+    if (l.ativo === false) continue;
     const email = String(l.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) continue;
     if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});

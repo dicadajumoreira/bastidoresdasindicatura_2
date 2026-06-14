@@ -21,7 +21,7 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'Invalid JSON'}, 400); }
 
-  const { id, status, notes, deleted } = body || {};
+  const { id, status, notes, deleted, ativo } = body || {};
   if (!id) return json({error: 'id obrigatório'}, 400);
   if (status && !VALID_STATUS.has(status)) return json({error: 'status inválido'}, 400);
 
@@ -34,11 +34,22 @@ export default async (req) => {
     ? {deleted, deletedAt: deleted ? new Date().toISOString() : null}
     : {};
 
+  // Ativo/inativo: quando inativa (ativo:false), também marca
+  // unsubscribed:true pra compatibilidade com checks legados.
+  const ativoPatch = typeof ativo === 'boolean'
+    ? {
+        ativo,
+        unsubscribed: !ativo,
+        ...(ativo ? {} : {unsubscribedAt: current.unsubscribedAt || new Date().toISOString()}),
+      }
+    : {};
+
   const updated = {
     ...current,
     ...(status ? {status} : {}),
     ...(typeof notes === 'string' ? {notes} : {}),
     ...deletePatch,
+    ...ativoPatch,
     updatedAt: new Date().toISOString(),
   };
 

@@ -49,8 +49,13 @@ export default async (req) => {
       const lead = await safeGet(cold, `lead:${ptr.leadId}`);
       if (lead) {
         const updated = {...lead};
-        if (action === 'unsubscribe') updated.unsubscribed = true;
-        else updated.frequencia = 'menor';
+        if (action === 'unsubscribe') {
+          updated.unsubscribed = true;
+          updated.ativo = false;
+          updated.unsubscribedAt = updated.unsubscribedAt || new Date().toISOString();
+        } else {
+          updated.frequencia = 'menor';
+        }
         updated.updatedAt = new Date().toISOString();
         await cold.setJSON(`lead:${ptr.leadId}`, updated);
         updates.push('cold');
@@ -60,8 +65,13 @@ export default async (req) => {
       const old = await safeGet(cold, `cold:e:${email}`);
       if (old) {
         const updated = {...old};
-        if (action === 'unsubscribe') updated.unsubscribed = true;
-        else updated.frequencia = 'menor';
+        if (action === 'unsubscribe') {
+          updated.unsubscribed = true;
+          updated.ativo = false;
+          updated.unsubscribedAt = updated.unsubscribedAt || new Date().toISOString();
+        } else {
+          updated.frequencia = 'menor';
+        }
         updated.updatedAt = new Date().toISOString();
         await cold.setJSON(`cold:e:${email}`, updated);
         updates.push('cold');
@@ -85,9 +95,13 @@ export default async (req) => {
         if (!v) return false;
         if (String(v.email || '').toLowerCase() !== email) return false;
         const updated = {...v};
-        if (action === 'unsubscribe') updated.unsubscribed = true;
-        else updated.frequencia = 'menor';
-        updated.unsubscribedAt = updated.unsubscribedAt || new Date().toISOString();
+        if (action === 'unsubscribe') {
+          updated.unsubscribed = true;
+          updated.ativo = false;
+          updated.unsubscribedAt = updated.unsubscribedAt || new Date().toISOString();
+        } else {
+          updated.frequencia = 'menor';
+        }
         await hot.setJSON(k, updated);
         return true;
       }));

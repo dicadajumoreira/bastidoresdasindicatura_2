@@ -67,7 +67,8 @@ export default async (req) => {
           entries.push({
             email,
             nome: lead.nome || '',
-            unsubscribed: !!lead.unsubscribed,
+            // Inativo se descadastrou via /sair OU se foi marcado inativo no admin
+            unsubscribed: !!lead.unsubscribed || lead.ativo === false,
             frequencia: lead.frequencia || 'normal',
             status: lead.emailStatus || null,
           });

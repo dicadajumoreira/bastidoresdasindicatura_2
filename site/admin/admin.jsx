@@ -515,7 +515,17 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
       <header className="ad-detail-head">
         <div>
           <span className="ad-tag-sm">Aplicação · {fmtDate(lead.createdAt)}</span>
-          <h2 className="ad-detail-name">{lead.nome}</h2>
+          <h2 className="ad-detail-name">
+            {lead.nome}
+            {(lead.ativo === false || lead.unsubscribed) && (
+              <span style={{
+                marginLeft: 12, fontSize: 12, padding: '4px 10px',
+                background: 'rgba(217,119,87,0.15)', color: '#d97757',
+                borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
+                fontWeight: 700, verticalAlign: 'middle',
+              }}>Inativo</span>
+            )}
+          </h2>
           <p className="ad-detail-sub">
             <span className="ad-detail-origem">{ORIGEM_LABELS[lead.origem || 'mentoria']}</span>
             {lead.cidade ? <> · {lead.cidade}</> : null}
@@ -725,9 +735,29 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
             </div>
           </>
         ) : (
-          <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
-            Excluir aplicação
-          </button>
+          <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+            <button
+              className="ad-btn ad-btn-ghost ad-btn-sm"
+              onClick={async () => {
+                const isAtivo = !(lead.ativo === false || lead.unsubscribed);
+                const label = isAtivo ? 'Inativar este cadastro? Vai parar de receber e-mails.' : 'Reativar este cadastro? Vai voltar a receber e-mails.';
+                if (!window.confirm(label)) return;
+                try {
+                  const res = await api('/api/update-status', {
+                    method: 'POST',
+                    body: JSON.stringify({id: lead.id, ativo: !isAtivo}),
+                  });
+                  onUpdated(res.lead);
+                } catch (err) { alert(err.message); }
+              }}
+              style={{color: (lead.ativo === false || lead.unsubscribed) ? '#819470' : '#d97757'}}
+            >
+              {(lead.ativo === false || lead.unsubscribed) ? '↻ Reativar cadastro' : '⊘ Inativar cadastro'}
+            </button>
+            <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
+              Excluir aplicação
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -1820,7 +1850,8 @@ const ColdLeadEditModal = ({lead, onClose, onSave}) => {
     estado: lead.estado || '',
     atuacao: lead.atuacao || '',
     notes: lead.notes || '',
-    unsubscribed: !!lead.unsubscribed,
+    // 'ativo' agrega o estado: inativo = unsubscribed OU ativo===false
+    ativo: !(lead.unsubscribed || lead.ativo === false),
     frequencia: lead.frequencia || 'normal',
   }));
   const [busy, setBusy] = React.useState(false);
@@ -1919,8 +1950,8 @@ const ColdLeadEditModal = ({lead, onClose, onSave}) => {
 
           <div className="ad-cold-edit-row">
             <label className="ad-cold-check">
-              <input type="checkbox" checked={form.unsubscribed} onChange={(e) => setField('unsubscribed', e.target.checked)} />
-              <span>Descadastrado (não recebe mais e-mails)</span>
+              <input type="checkbox" checked={form.ativo} onChange={(e) => setField('ativo', e.target.checked)} />
+              <span><strong>Ativo</strong> · recebe e-mails normalmente (desmarque pra inativar)</span>
             </label>
           </div>
           <div className="ad-cold-edit-row">
@@ -2467,11 +2498,11 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                       {l.source}{l.sources && l.sources.length > 1 ? <span style={{color:'var(--sand)', fontSize:'10px'}}> +{l.sources.length - 1}</span> : ''}
                     </td>
                     <td>
-                      {l.unsubscribed ? <span style={{color:'#d97757'}}>descadastrou</span>
+                      {(l.unsubscribed || l.ativo === false) ? <span style={{color:'#d97757', fontWeight: 600}}>inativo</span>
                         : l.convertedToHotAt ? <span style={{color:'#819470'}}>virou quente</span>
                         : l.emailStatus && l.emailStatus.toLowerCase().includes("can't send") ? <span style={{color:'#d97757'}}>bounce</span>
-                        : l.frequencia === 'menor' ? <span style={{color:'#B89579'}}>freq. menor</span>
-                        : <span style={{color:'rgba(247,245,242,0.6)'}}>frio</span>}
+                        : l.frequencia === 'menor' ? <span style={{color:'#B89579'}}>ativo · freq. menor</span>
+                        : <span style={{color:'#819470'}}>ativo</span>}
                     </td>
                     <td style={{textAlign:'right', whiteSpace:'nowrap'}}>
                       <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => setEditing(l)} style={{marginRight: 6}}>Editar</button>
@@ -2548,7 +2579,7 @@ const SorteioPanel = ({onLogout, onBackToOverview}) => {
       if (l.deletedAt) continue;
       if (l.origem !== origem) continue;
       const email = String(l.email || '').trim().toLowerCase();
-      if (excludeUnsub && l.unsubscribed) continue;
+      if (excludeUnsub && (l.unsubscribed || l.ativo === false)) continue;
       if (excludeBounce && l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send")) continue;
       // Evita candidato sem nome (anônimo) — opcional, podemos relaxar
       const nome = String(l.nome || '').trim();

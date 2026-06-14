@@ -228,10 +228,15 @@ export default async (req) => {
         }, 503);
       }
 
-      // Dedupe por e-mail
+      // Dedupe por e-mail. Pula leads inativos:
+      //  - deletadods (lixeira)
+      //  - descadastrados via /sair (unsubscribed: true)
+      //  - marcados como inativos no admin (ativo === false)
       const byEmail = new Map();
       for (const l of leads) {
         if (l.deletedAt) continue;
+        if (l.unsubscribed) continue;
+        if (l.ativo === false) continue;
         const email = String(l.email || '').trim().toLowerCase();
         if (!email || !email.includes('@')) continue;
         if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});

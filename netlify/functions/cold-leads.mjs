@@ -257,7 +257,12 @@ export default async (req) => {
         estado: body.estado !== undefined ? String(body.estado || '').trim().toUpperCase().slice(0, 2) : existing.estado,
         atuacao: body.atuacao !== undefined ? String(body.atuacao || '').trim() : existing.atuacao,
         notes: body.notes !== undefined ? String(body.notes || '') : existing.notes,
-        unsubscribed: body.unsubscribed !== undefined ? !!body.unsubscribed : existing.unsubscribed,
+        // ativo/inativo é o conceito visível pra usuária. Mapeia pra
+        // unsubscribed (legado) E ativo (novo campo explícito).
+        unsubscribed: body.ativo !== undefined ? !body.ativo
+          : (body.unsubscribed !== undefined ? !!body.unsubscribed : existing.unsubscribed),
+        ativo: body.ativo !== undefined ? !!body.ativo
+          : (body.unsubscribed !== undefined ? !body.unsubscribed : (existing.ativo !== undefined ? existing.ativo : !existing.unsubscribed)),
         frequencia: body.frequencia !== undefined ? (body.frequencia === 'menor' ? 'menor' : 'normal') : existing.frequencia,
         updatedAt: new Date().toISOString(),
       };
