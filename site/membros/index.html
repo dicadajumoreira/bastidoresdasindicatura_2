@@ -530,13 +530,32 @@
           return;
         }
 
-        // Tenta restaurar sessão
+        // Tenta restaurar sessão E revalida no servidor pra pegar
+        // atualizações de perfil (ex.: pessoa fez o quiz desde o último
+        // login — o perfil_nome precisa ser atualizado na sessão).
         try {
           const saved = sessionStorage.getItem(STORAGE_KEY);
           if (saved) {
             const data = JSON.parse(saved);
             if (data.email && data.token && data.exp && Date.now() < data.exp) {
+              // Mostra a sessão imediatamente
               setMember(data);
+              // E revalida em paralelo pra atualizar perfil/nome
+              (async () => {
+                try {
+                  const {ok, data: fresh} = await post('/.netlify/functions/membros-validate', {token: data.token});
+                  if (ok && fresh.ok) {
+                    const next = {
+                      ...data,
+                      nome: fresh.nome || data.nome,
+                      perfil: fresh.perfil || data.perfil || null,
+                      perfil_nome: fresh.perfil_nome || data.perfil_nome || null,
+                    };
+                    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+                    setMember(next);
+                  }
+                } catch {}
+              })();
             }
           }
         } catch {}
@@ -556,7 +575,14 @@
           setLoginErr(data.error || 'E-mail ou senha inválidos.');
           return;
         }
-        const session = {email: data.email, nome: data.nome, token: data.token, exp: Date.now() + 7 * 24 * 60 * 60 * 1000};
+        const session = {
+          email: data.email,
+          nome: data.nome,
+          token: data.token,
+          perfil: data.perfil || null,
+          perfil_nome: data.perfil_nome || null,
+          exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
         setMember(session);
       };
