@@ -68,6 +68,15 @@ export default async (req) => {
   // Gera id único
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+  // Normaliza data_nascimento pro formato MM-DD-YYYY (input type=date manda YYYY-MM-DD).
+  // Se vier em outro formato, mantém o valor original (tolerante).
+  const normDataNasc = (() => {
+    const raw = String(body.data_nascimento || '').trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[2]}-${m[3]}-${m[1]}`;
+    return raw;
+  })();
+
   const lead = {
     id,
     createdAt: new Date().toISOString(),
@@ -75,6 +84,7 @@ export default async (req) => {
     notes: '',
     origem,          // mentoria | checklist | ebook-ia | sindico-profissional | sobrevivencia-whatsapp | 50-frases | nr1
     ...body,
+    data_nascimento: normDataNasc,
   };
 
   // 1) Gravação principal (com retry). Se falhar de vez, devolve erro: o front
