@@ -18,7 +18,6 @@ const BsTopbar = () => (
         <a href="#sobre">Juliana</a>
         <a href="#estrutura">Estrutura</a>
         <a href="#vagas">Vagas</a>
-        <a href="#contato" className="bs-topnav-cta">Reservar</a>
       </nav>
     </div>
   </header>
