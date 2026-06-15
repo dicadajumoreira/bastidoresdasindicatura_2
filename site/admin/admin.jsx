@@ -2998,6 +2998,24 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
     } catch (e) { alert('Falha: ' + e.message); }
   };
 
+  const [diagEmail, setDiagEmail] = React.useState('');
+  const [diagResult, setDiagResult] = React.useState(null);
+  const [diagBusy, setDiagBusy] = React.useState(false);
+
+  const runDiag = async () => {
+    const em = diagEmail.trim().toLowerCase();
+    if (!em) return;
+    setDiagBusy(true); setDiagResult(null);
+    try {
+      const res = await api('/api/mentoria-diag', {
+        method: 'POST',
+        body: JSON.stringify({email: em}),
+      });
+      setDiagResult(res);
+    } catch (e) { setDiagResult({error: e.message}); }
+    finally { setDiagBusy(false); }
+  };
+
   return (
     <div className="ad-broadcast">
       <header className="ad-broadcast-head">
@@ -3177,6 +3195,51 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
           </p>
         </section>
       )}
+
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Diagnóstico</span>
+          <h2 className="ad-widget-title">Por que o aluno não vê desbloqueado?</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Cola o e-mail do aluno. Vai mostrar (1) todas as aplicações dele no banco, (2) o que o cache de membros tem, e (3) o que a página /membros/ recebe.
+        </p>
+        <div style={{display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12}}>
+          <input
+            type="email"
+            value={diagEmail}
+            onChange={(e) => setDiagEmail(e.target.value)}
+            placeholder="email@dominio.com"
+            style={{flex: 1, padding: '10px 12px', fontFamily: 'monospace'}}
+          />
+          <button className="ad-btn ad-btn-primary" onClick={runDiag} disabled={diagBusy || !diagEmail.trim()}>
+            {diagBusy ? 'Verificando…' : 'Diagnosticar'}
+          </button>
+        </div>
+        {diagResult && (
+          <div style={{background: 'rgba(0,0,0,0.35)', padding: 16, fontFamily: 'monospace', fontSize: 12, color: '#a8d4a8', maxHeight: 480, overflow: 'auto', whiteSpace: 'pre-wrap', border: '1px solid rgba(247,245,242,0.1)'}}>
+            {diagResult.error ? (
+              <span style={{color: '#d97757'}}>Erro: {diagResult.error}</span>
+            ) : (
+              <>
+                <div style={{color: 'var(--sand)', marginBottom: 8, fontWeight: 700}}>
+                  RESUMO PARA "{diagResult.email}":
+                </div>
+                <div style={{marginBottom: 12, color: '#e0e0e0'}}>
+                  • Aplicações encontradas: <strong>{diagResult.leads.length}</strong>{'\n'}
+                  • Aplicações com mentoria=true: <strong style={{color: diagResult.leads.some((l) => l.mentoria) ? '#a8d4a8' : '#d97757'}}>{diagResult.leads.filter((l) => l.mentoria).length}</strong>{'\n'}
+                  • Cache existe pra esse e-mail? <strong>{diagResult.cacheEntry ? 'sim' : 'não'}</strong>{'\n'}
+                  • Cache.mentoria: <strong style={{color: diagResult.cacheEntry && diagResult.cacheEntry.mentoria ? '#a8d4a8' : '#d97757'}}>{diagResult.cacheEntry ? String(!!diagResult.cacheEntry.mentoria) : 'N/A'}</strong>{'\n'}
+                  • Lookup final (o que /membros/ recebe): <strong style={{color: diagResult.lookupResult && diagResult.lookupResult.lead && diagResult.lookupResult.lead.mentoria ? '#a8d4a8' : '#d97757'}}>mentoria={diagResult.lookupResult && diagResult.lookupResult.lead ? String(!!diagResult.lookupResult.lead.mentoria) : 'lead não encontrado'}</strong>
+                </div>
+                <details><summary style={{cursor:'pointer', color: 'var(--sand)'}}>JSON completo</summary>
+                  <div style={{marginTop: 8}}>{JSON.stringify(diagResult, null, 2)}</div>
+                </details>
+              </>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="ad-widget ad-bc-history">
         <header className="ad-widget-head">
