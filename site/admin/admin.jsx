@@ -3088,6 +3088,223 @@ const SorteioPanel = ({onLogout, onBackToOverview}) => {
 /* ============================================================
    MENTORIA PANEL — config da sala de transmissão + inscritos
    ============================================================ */
+// Editor de uma aula individual no cronograma da Mentoria.
+// Mostra os dados basicos (numero, tipo, data, titulo, gravacao) em uma
+// linha, e os "Materiais exclusivos" expansiveis embaixo. Cada material:
+// {tipo: 'pdf'|'video'|'word'|'quiz'|'link', titulo, url}.
+const MATERIAL_TIPOS = [
+  {id: 'pdf',   label: 'PDF',   icon: '📄', color: '#d97757'},
+  {id: 'video', label: 'Vídeo', icon: '▶',  color: '#B89579'},
+  {id: 'word',  label: 'Word',  icon: '📝', color: '#5b8caf'},
+  {id: 'quiz',  label: 'Quiz',  icon: '🧠', color: '#819470'},
+  {id: 'link',  label: 'Link',  icon: '🔗', color: 'rgba(247,245,242,0.55)'},
+];
+const tipoMeta = (id) => MATERIAL_TIPOS.find((t) => t.id === id) || MATERIAL_TIPOS[4];
+
+const AulaEditor = ({aula, idx, busy, onChange, onSave}) => {
+  const hoje = new Date().toISOString().slice(0, 10);
+  const isPast = aula.data < hoje;
+  const hasRecording = !!(aula.recordingLink && String(aula.recordingLink).trim());
+  const materiais = Array.isArray(aula.materiais) ? aula.materiais : [];
+  const [expanded, setExpanded] = React.useState(false);
+  const [novoTipo, setNovoTipo] = React.useState('pdf');
+  const [novoTitulo, setNovoTitulo] = React.useState('');
+  const [novoUrl, setNovoUrl] = React.useState('');
+
+  const addMaterial = () => {
+    const titulo = novoTitulo.trim();
+    const url = novoUrl.trim();
+    if (!titulo || !url) {
+      alert('Preencha título e URL do material.');
+      return;
+    }
+    const next = [...materiais, {tipo: novoTipo, titulo, url}];
+    onChange({materiais: next});
+    setNovoTitulo('');
+    setNovoUrl('');
+    // Salva imediato pra nao perder se trocar de aula
+    onSave({materiais: next});
+  };
+
+  const removeMaterial = (i) => {
+    const next = materiais.filter((_, k) => k !== i);
+    onChange({materiais: next});
+    onSave({materiais: next});
+  };
+
+  return (
+    <div style={{
+      background: aula.tipo === 'particular' ? 'rgba(184,149,121,0.06)' : 'rgba(247,245,242,0.03)',
+      border: '1px solid rgba(247,245,242,0.10)',
+      borderLeft: `3px solid ${hasRecording ? '#819470' : isPast ? '#d97757' : aula.tipo === 'particular' ? '#B89579' : 'rgba(218,189,169,0.5)'}`,
+    }}>
+      {/* Linha principal · dados basicos */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 60px) minmax(0, 100px) minmax(0, 120px) minmax(0, 1fr) minmax(0, 1.4fr) auto',
+        gap: 10,
+        alignItems: 'center',
+        padding: '14px 16px',
+      }}>
+        <span style={{fontFamily: 'monospace', fontSize: 13, color: 'var(--sand)', fontWeight: 700}}>
+          {String(aula.numero).padStart(2, '0')}
+        </span>
+        <span style={{
+          fontSize: 9, padding: '4px 8px', fontWeight: 700,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+          color: aula.tipo === 'particular' ? '#B89579' : '#819470',
+          border: `1px solid ${aula.tipo === 'particular' ? '#B89579' : '#819470'}`,
+          textAlign: 'center',
+        }}>{aula.tipo === 'particular' ? 'Particular' : 'Grupo'}</span>
+        <input
+          type="date"
+          value={aula.data || ''}
+          onChange={(e) => onChange({data: e.target.value})}
+          style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, fontFamily: 'monospace', padding: '6px 0'}}
+        />
+        <input
+          type="text"
+          value={aula.titulo || ''}
+          onChange={(e) => onChange({titulo: e.target.value})}
+          placeholder={`Título da aula ${idx + 1}`}
+          style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, padding: '6px 0'}}
+        />
+        <input
+          type="url"
+          value={aula.recordingLink || ''}
+          onChange={(e) => onChange({recordingLink: e.target.value})}
+          placeholder="Link da gravação (cola depois da aula)"
+          style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 12, fontFamily: 'monospace', padding: '6px 0'}}
+        />
+        <div style={{display: 'flex', gap: 6}}>
+          <button
+            type="button"
+            className="ad-btn ad-btn-ghost ad-btn-sm"
+            disabled={busy}
+            onClick={() => onSave()}
+          >
+            Salvar
+          </button>
+          <button
+            type="button"
+            className="ad-btn ad-btn-ghost ad-btn-sm"
+            onClick={() => setExpanded((v) => !v)}
+            style={{color: materiais.length > 0 ? 'var(--sand)' : 'rgba(247,245,242,0.55)'}}
+          >
+            {expanded ? '▲' : '▼'} Materiais ({materiais.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Materiais exclusivos · expansivel */}
+      {expanded && (
+        <div style={{
+          borderTop: '1px solid rgba(247,245,242,0.10)',
+          padding: '14px 16px',
+          background: 'rgba(0,0,0,0.18)',
+        }}>
+          <p style={{margin: '0 0 12px', fontSize: 11, color: 'rgba(247,245,242,0.55)', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700}}>
+            Materiais exclusivos da aula
+          </p>
+
+          {materiais.length > 0 ? (
+            <div style={{display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14}}>
+              {materiais.map((m, i) => {
+                const meta = tipoMeta(m.tipo);
+                return (
+                  <div key={i} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '80px 1fr 1.4fr auto',
+                    gap: 10,
+                    alignItems: 'center',
+                    padding: '10px 12px',
+                    background: 'rgba(247,245,242,0.03)',
+                    border: '1px solid rgba(247,245,242,0.08)',
+                  }}>
+                    <span style={{
+                      fontSize: 10, padding: '4px 8px', fontWeight: 700,
+                      letterSpacing: '0.12em', textTransform: 'uppercase',
+                      color: meta.color, border: `1px solid ${meta.color}`,
+                      textAlign: 'center',
+                    }}>{meta.icon} {meta.label}</span>
+                    <span style={{fontSize: 13, color: 'var(--offwhite)'}}>{m.titulo}</span>
+                    <a href={m.url} target="_blank" rel="noreferrer" style={{
+                      fontSize: 11, fontFamily: 'monospace', color: 'rgba(247,245,242,0.5)',
+                      textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap',
+                    }}>{m.url}</a>
+                    <button
+                      type="button"
+                      className="ad-btn ad-btn-ghost ad-btn-sm"
+                      onClick={() => removeMaterial(i)}
+                      style={{color: '#d97757', borderColor: 'transparent', background: 'transparent'}}
+                      title="Remover material"
+                    >⊘</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p style={{margin: '0 0 14px', fontSize: 12, color: 'rgba(247,245,242,0.45)', fontStyle: 'italic'}}>
+              Nenhum material adicionado nesta aula ainda.
+            </p>
+          )}
+
+          {/* Form pra adicionar novo */}
+          <div style={{
+            padding: 12,
+            background: 'rgba(218,189,169,0.05)',
+            border: '1px dashed rgba(218,189,169,0.30)',
+          }}>
+            <p style={{margin: '0 0 10px', fontSize: 11, color: 'var(--sand)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase'}}>
+              Adicionar material
+            </p>
+            <div style={{display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8}}>
+              {MATERIAL_TIPOS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setNovoTipo(t.id)}
+                  style={{
+                    padding: '8px 12px', fontSize: 11, fontWeight: 700,
+                    letterSpacing: '0.10em', textTransform: 'uppercase',
+                    background: novoTipo === t.id ? t.color : 'transparent',
+                    color: novoTipo === t.id ? '#0F1116' : t.color,
+                    border: `1px solid ${t.color}`,
+                    cursor: 'pointer',
+                  }}>
+                  {t.icon} {t.label}
+                </button>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={novoTitulo}
+              onChange={(e) => setNovoTitulo(e.target.value)}
+              placeholder="Título do material (ex.: Apostila Aula 01, Vídeo bônus, Teste prático)"
+              style={{width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, padding: '8px 0', marginBottom: 6}}
+            />
+            <input
+              type="url"
+              value={novoUrl}
+              onChange={(e) => setNovoUrl(e.target.value)}
+              placeholder="URL pública (Google Drive, OneDrive, YouTube, Vimeo, Google Forms…)"
+              style={{width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 12, fontFamily: 'monospace', padding: '8px 0', marginBottom: 10}}
+            />
+            <button
+              type="button"
+              className="ad-btn ad-btn-primary ad-btn-sm"
+              onClick={addMaterial}
+              disabled={busy || !novoTitulo.trim() || !novoUrl.trim()}
+            >
+              + Adicionar à aula {String(aula.numero).padStart(2, '0')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onReloadLeads}) => {
   const [config, setConfig] = React.useState(null);
   const [loadingCfg, setLoadingCfg] = React.useState(false);
@@ -3264,102 +3481,51 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
         )}
       </section>
 
-      {/* Cronograma das 12 aulas */}
+      {/* Cronograma · cada aula tem dados basicos + recordingLink + materiais
+          exclusivos (PDFs, videos, words, quizzes) acessiveis pelos inscritos. */}
       {config && Array.isArray(config.aulas) && (
         <section className="ad-widget">
           <header className="ad-widget-head">
-            <span className="ad-widget-eyebrow">Cronograma · 12 aulas</span>
-            <h2 className="ad-widget-title">Calendário das aulas</h2>
+            <span className="ad-widget-eyebrow">Cronograma · {config.aulas.length} aulas</span>
+            <h2 className="ad-widget-title">Calendário das aulas + Materiais</h2>
           </header>
           <p className="ad-bc-drafts-lead">
-            Cada aula tem data, título e link da gravação. As aulas futuras aparecem como "em breve" no painel do membro. Depois de gravar, cola o link da gravação na aula correspondente — o membro inscrito passa a ver o botão de assistir.
+            Cada aula tem data, título, link da gravação (cola depois da aula) e os <strong>materiais exclusivos</strong> que só os inscritos veem na área de membros. Pra cada material, cole um link público (Google Drive, OneDrive, Vimeo, YouTube, Google Forms — qualquer URL).
           </p>
-          <div style={{display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14}}>
-            {config.aulas.map((aula, idx) => {
-              const hoje = new Date().toISOString().slice(0, 10);
-              const isPast = aula.data < hoje;
-              const hasRecording = !!(aula.recordingLink && aula.recordingLink.trim());
-              return (
-                <div key={idx} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '60px 100px 120px 1fr 1.4fr 100px',
-                  gap: 10,
-                  alignItems: 'center',
-                  padding: '14px 16px',
-                  background: aula.tipo === 'particular' ? 'rgba(184,149,121,0.06)' : 'rgba(247,245,242,0.03)',
-                  border: '1px solid rgba(247,245,242,0.10)',
-                  borderLeft: `3px solid ${hasRecording ? '#819470' : isPast ? '#d97757' : aula.tipo === 'particular' ? '#B89579' : 'rgba(218,189,169,0.5)'}`,
-                }}>
-                  <span style={{fontFamily: 'monospace', fontSize: 13, color: 'var(--sand)', fontWeight: 700}}>
-                    {String(aula.numero).padStart(2, '0')}
-                  </span>
-                  <span style={{
-                    fontSize: 9, padding: '4px 8px', fontWeight: 700,
-                    letterSpacing: '0.12em', textTransform: 'uppercase',
-                    color: aula.tipo === 'particular' ? '#B89579' : '#819470',
-                    border: `1px solid ${aula.tipo === 'particular' ? '#B89579' : '#819470'}`,
-                    textAlign: 'center',
-                  }}>{aula.tipo === 'particular' ? 'Particular' : 'Grupo'}</span>
-                  <input
-                    type="date"
-                    value={aula.data || ''}
-                    onChange={(e) => {
-                      const next = [...config.aulas];
-                      next[idx] = {...next[idx], data: e.target.value};
-                      setConfig((c) => ({...c, aulas: next}));
-                    }}
-                    style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, fontFamily: 'monospace', padding: '6px 0'}}
-                  />
-                  <input
-                    type="text"
-                    value={aula.titulo || ''}
-                    onChange={(e) => {
-                      const next = [...config.aulas];
-                      next[idx] = {...next[idx], titulo: e.target.value};
-                      setConfig((c) => ({...c, aulas: next}));
-                    }}
-                    placeholder={`Título da aula ${idx + 1}`}
-                    style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, padding: '6px 0'}}
-                  />
-                  <input
-                    type="url"
-                    value={aula.recordingLink || ''}
-                    onChange={(e) => {
-                      const next = [...config.aulas];
-                      next[idx] = {...next[idx], recordingLink: e.target.value};
-                      setConfig((c) => ({...c, aulas: next}));
-                    }}
-                    placeholder="Link da gravação (cola depois da aula)"
-                    style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 12, fontFamily: 'monospace', padding: '6px 0'}}
-                  />
-                  <button
-                    type="button"
-                    className="ad-btn ad-btn-ghost ad-btn-sm"
-                    disabled={busy}
-                    onClick={async () => {
-                      try {
-                        await api('/api/mentoria-config', {
-                          method: 'POST',
-                          body: JSON.stringify({
-                            action: 'update-aula',
-                            aulaIndex: idx,
-                            data: aula.data,
-                            titulo: aula.titulo,
-                            recordingLink: aula.recordingLink,
-                          }),
-                        });
-                        setMsg(`Aula ${aula.numero} salva.`);
-                      } catch (e) { setErr(e.message); }
-                    }}
-                  >
-                    Salvar
-                  </button>
-                </div>
-              );
-            })}
+          <div style={{display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14}}>
+            {config.aulas.map((aula, idx) => (
+              <AulaEditor
+                key={idx}
+                aula={aula}
+                idx={idx}
+                busy={busy}
+                onChange={(patch) => {
+                  const next = [...config.aulas];
+                  next[idx] = {...next[idx], ...patch};
+                  setConfig((c) => ({...c, aulas: next}));
+                }}
+                onSave={async (extraPayload) => {
+                  try {
+                    await api('/api/mentoria-config', {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        action: 'update-aula',
+                        aulaIndex: idx,
+                        data: aula.data,
+                        titulo: aula.titulo,
+                        recordingLink: aula.recordingLink,
+                        materiais: aula.materiais || [],
+                        ...extraPayload,
+                      }),
+                    });
+                    setMsg(`Aula ${aula.numero} salva.`);
+                  } catch (e) { setErr(e.message); }
+                }}
+              />
+            ))}
           </div>
           <p className="ad-bc-hint" style={{marginTop: 14}}>
-            Use o botão <strong>Salvar</strong> de cada aula pra gravar individualmente. Aulas com gravação preenchida ganham a borda verde; passadas sem gravação ficam laranja.
+            Borda verde = aula com gravação preenchida. Borda laranja = aula passada sem gravação. Borda dourada = aula particular.
           </p>
         </section>
       )}

@@ -715,6 +715,60 @@
     }
     .mb-aula-status.is-future { color: rgba(247, 245, 242, 0.4); }
     .mb-aula-status.is-pending { color: #d97757; }
+    /* Materiais exclusivos da aula · so aparecem pra inscritos */
+    .mb-aula-materiais {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(247, 245, 242, 0.12);
+    }
+    .mb-aula-materiais-label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(247, 245, 242, 0.45);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .mb-aula-materiais-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mb-aula-material {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(247, 245, 242, 0.03);
+      border: 1px solid;
+      text-decoration: none;
+      transition: background 0.18s ease;
+    }
+    .mb-aula-material:hover { background: rgba(247, 245, 242, 0.06); }
+    .mb-aula-material-icon {
+      font-size: 16px;
+      width: 24px;
+      text-align: center;
+    }
+    .mb-aula-material-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .mb-aula-material-tipo {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+      opacity: 0.7;
+    }
+    .mb-aula-material-titulo {
+      font-size: 13px;
+      color: var(--offwhite);
+      font-weight: 500;
+    }
     .mb-aula-status.is-locked {
       color: rgba(247, 245, 242, 0.35);
       display: inline-flex;
@@ -776,6 +830,15 @@
   <div id="root"></div>
   <script type="text/babel">
     const STORAGE_KEY = 'bs-membros-token';
+
+    // Mapeamento visual dos tipos de material exclusivo por aula da Mentoria
+    const MATERIAL_ICON = {
+      pdf:   {icon: '📄', label: 'PDF',   color: '#d97757'},
+      video: {icon: '▶',  label: 'Vídeo', color: '#B89579'},
+      word:  {icon: '📝', label: 'Word',  color: '#7BA8C9'},
+      quiz:  {icon: '🧠', label: 'Quiz',  color: '#a8d4a8'},
+      link:  {icon: '🔗', label: 'Link',  color: 'var(--sand)'},
+    };
 
     const MATERIAIS = [
       {volume:'V09', eyebrow:'Volume 09 · Guia editorial', titulo:'Saúde Mental do Síndico', desc:'O custo emocional invisível da profissão. 10 capítulos, autoavaliação com +50 itens e plano de 30 dias.', pdf:'/saude-mental/material.pdf', landing:'/saude-mental/', tags:['guia']},
@@ -1417,6 +1480,7 @@
                       // visiveis em algum momento) sao locked. Aqui ja
                       // filtramos pra so Executive ver particulares, entao
                       // se aparecer particular = a pessoa eh Executive.
+                      const materiais = isInscrito && Array.isArray(aula.materiais) ? aula.materiais : [];
                       return (
                         <div key={i} className={
                           'mb-aula'
@@ -1433,6 +1497,25 @@
                           <div className="mb-aula-content">
                             <p className="mb-aula-title">{aula.titulo || `Aula ${aula.numero}`}</p>
                             {aula.descricao && <p className="mb-aula-desc">{aula.descricao}</p>}
+                            {materiais.length > 0 && (
+                              <div className="mb-aula-materiais">
+                                <span className="mb-aula-materiais-label">Materiais da aula · {materiais.length}</span>
+                                <div className="mb-aula-materiais-list">
+                                  {materiais.map((m, k) => {
+                                    const meta = MATERIAL_ICON[m.tipo] || MATERIAL_ICON.link;
+                                    return (
+                                      <a key={k} href={m.url} target="_blank" rel="noreferrer" className="mb-aula-material" style={{borderColor: meta.color, color: meta.color}}>
+                                        <span className="mb-aula-material-icon">{meta.icon}</span>
+                                        <span className="mb-aula-material-info">
+                                          <span className="mb-aula-material-tipo">{meta.label}</span>
+                                          <span className="mb-aula-material-titulo">{m.titulo}</span>
+                                        </span>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <div className="mb-aula-action">
                             {!isInscrito ? (

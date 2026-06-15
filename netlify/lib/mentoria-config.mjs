@@ -63,8 +63,9 @@ export async function loadMentoriaConfig({sanitize = false} = {}) {
 
   if (!sanitize) return cfg;
 
-  // Versao publica: sem link do Teams, sem gravacoes. Mantem datas,
-  // titulos, descricoes, horarios — info publica que serve de teaser.
+  // Versao publica: sem link do Teams, sem gravacoes, sem materiais
+  // exclusivos. Mantem datas, titulos, descricoes, horarios — info
+  // publica que serve de teaser.
   return {
     horario: cfg.horario,
     horarioParticular: cfg.horarioParticular,
@@ -78,6 +79,7 @@ export async function loadMentoriaConfig({sanitize = false} = {}) {
       tipo: a.tipo,
       descricao: a.descricao || '',
       recordingLink: null,
+      materiais: [],
     })),
     updatedAt: cfg.updatedAt || null,
   };

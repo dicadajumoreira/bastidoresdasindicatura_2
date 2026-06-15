@@ -52,6 +52,21 @@ export default async (req) => {
     const i = body.aulaIndex;
     if (i < 0 || i >= current.aulas.length) return json({error: 'Aula inexistente'}, 400);
     const aula = current.aulas[i];
+    // Sanitiza materiais: array de {tipo, titulo, url}. Tipos validos.
+    const VALID_TIPOS = new Set(['pdf', 'video', 'word', 'quiz', 'link']);
+    let materiaisPatch = {};
+    if (Array.isArray(body.materiais)) {
+      materiaisPatch = {
+        materiais: body.materiais
+          .filter((m) => m && typeof m === 'object')
+          .map((m) => ({
+            tipo: VALID_TIPOS.has(m.tipo) ? m.tipo : 'link',
+            titulo: String(m.titulo || '').trim().slice(0, 200),
+            url: String(m.url || '').trim().slice(0, 2000),
+          }))
+          .filter((m) => m.titulo && m.url),
+      };
+    }
     const updated = {
       ...aula,
       ...(body.titulo !== undefined ? {titulo: String(body.titulo).trim()} : {}),
@@ -59,6 +74,7 @@ export default async (req) => {
       ...(body.descricao !== undefined ? {descricao: String(body.descricao).trim()} : {}),
       ...(body.recordingLink !== undefined ? {recordingLink: String(body.recordingLink).trim()} : {}),
       ...(body.tipo !== undefined ? {tipo: body.tipo === 'particular' ? 'particular' : 'grupo'} : {}),
+      ...materiaisPatch,
     };
     current.aulas[i] = updated;
     current.updatedAt = new Date().toISOString();
