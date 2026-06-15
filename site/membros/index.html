@@ -877,6 +877,14 @@
       const [profileErr, setProfileErr] = React.useState('');
       const [profileMsg, setProfileMsg] = React.useState('');
 
+      // Se o aluno perder o acesso a mentoria enquanto esta na aba
+      // Mentoria, volta pra biblioteca (a aba some do nav tambem).
+      React.useEffect(() => {
+        if (loggedView === 'mentoria' && member && !member.mentoria) {
+          setLoggedView('library');
+        }
+      }, [loggedView, member]);
+
       React.useEffect(() => {
         const url = new URL(window.location.href);
         const action = url.searchParams.get('action');
@@ -1261,6 +1269,9 @@
             <div className="mb-user">
               <nav className="mb-nav">
                 <button className={'mb-nav-link' + (loggedView === 'library' ? ' is-on' : '')} onClick={() => setLoggedView('library')}>Biblioteca</button>
+                {member.mentoria && (
+                  <button className={'mb-nav-link' + (loggedView === 'mentoria' ? ' is-on' : '')} onClick={() => setLoggedView('mentoria')}>Mentoria</button>
+                )}
                 <button className={'mb-nav-link' + (loggedView === 'profile' ? ' is-on' : '')} onClick={openProfile}>Meu cadastro</button>
               </nav>
               <span className="mb-user-name">Olá, <strong>{firstName}</strong></span>
@@ -1290,15 +1301,19 @@
             </div>
           </header>
 
-          {/* Banner da Mentoria · sempre visivel, dois estados:
-              - sem mentoria contratada: convite pra aplicacao
+          {/* Banner da Mentoria · sempre visivel em TODAS as paginas,
+              dois estados:
+              - sem mentoria contratada: convite pra aplicacao (em todas
+                as paginas)
               - com mentoria ativa: confirmacao "Acesso ativado" com
                 modalidade, total de aulas, horario e proxima aula */}
           <MentoriaBanner />
 
-          {/* Área da Mentoria · sempre visível pra TODOS os membros.
-              Liberada se member.mentoria === true; senão aparece com
-              cadeado e mensagem 'em breve'. */}
+          {/* Pagina MENTORIA · so visivel pra inscritos (member.mentoria
+              === true). Nao-inscritos nao tem essa aba no nav e nao
+              acessam esse bloco. Contem a Sala + Cronograma das aulas
+              + gravacoes. */}
+          {member.mentoria && loggedView === 'mentoria' && (
           <div className="mb-mentoria-area">
             <span className="mb-mentoria-area-eyebrow">Mentoria · Turma 01 · 2026</span>
             <h2 className="mb-mentoria-area-title">Sala <em>ao vivo.</em></h2>
@@ -1462,6 +1477,7 @@
               );
             })()}
           </div>
+          )}
 
           {loggedView === 'library' && (
             <>
