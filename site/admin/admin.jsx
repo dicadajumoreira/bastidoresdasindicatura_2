@@ -2916,7 +2916,12 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
       <header className="ad-broadcast-head">
         <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onBackToOverview}>← Voltar à visão geral</button>
         <h1 className="ad-broadcast-title">Mentoria · Turma 01</h1>
-        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+        <div style={{display: 'flex', gap: 8}}>
+          <a className="ad-btn ad-btn-ghost ad-btn-sm" href="/membros/" target="_blank" rel="noreferrer" style={{borderColor: '#819470', color: '#819470'}}>
+            Ver área de membros
+          </a>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+        </div>
       </header>
 
       <section className="ad-widget">
@@ -2985,6 +2990,99 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
           </form>
         )}
       </section>
+
+      {/* Cronograma das 12 aulas */}
+      {config && Array.isArray(config.aulas) && (
+        <section className="ad-widget">
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">Cronograma · 12 aulas</span>
+            <h2 className="ad-widget-title">Calendário das aulas</h2>
+          </header>
+          <p className="ad-bc-drafts-lead">
+            Cada aula tem data, título e link da gravação. As aulas futuras aparecem como "em breve" no painel do membro. Depois de gravar, cola o link da gravação na aula correspondente — o membro inscrito passa a ver o botão de assistir.
+          </p>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14}}>
+            {config.aulas.map((aula, idx) => {
+              const hoje = new Date().toISOString().slice(0, 10);
+              const isPast = aula.data < hoje;
+              const hasRecording = !!(aula.recordingLink && aula.recordingLink.trim());
+              return (
+                <div key={idx} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '60px 120px 1fr 1.4fr 120px',
+                  gap: 10,
+                  alignItems: 'center',
+                  padding: '14px 16px',
+                  background: 'rgba(247,245,242,0.03)',
+                  border: '1px solid rgba(247,245,242,0.10)',
+                  borderLeft: `3px solid ${hasRecording ? '#819470' : isPast ? '#d97757' : 'rgba(218,189,169,0.5)'}`,
+                }}>
+                  <span style={{fontFamily: 'monospace', fontSize: 13, color: 'var(--sand)', fontWeight: 700}}>
+                    {String(aula.numero).padStart(2, '0')}
+                  </span>
+                  <input
+                    type="date"
+                    value={aula.data || ''}
+                    onChange={(e) => {
+                      const next = [...config.aulas];
+                      next[idx] = {...next[idx], data: e.target.value};
+                      setConfig((c) => ({...c, aulas: next}));
+                    }}
+                    style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, fontFamily: 'monospace', padding: '6px 0'}}
+                  />
+                  <input
+                    type="text"
+                    value={aula.titulo || ''}
+                    onChange={(e) => {
+                      const next = [...config.aulas];
+                      next[idx] = {...next[idx], titulo: e.target.value};
+                      setConfig((c) => ({...c, aulas: next}));
+                    }}
+                    placeholder={`Título da aula ${idx + 1}`}
+                    style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 13, padding: '6px 0'}}
+                  />
+                  <input
+                    type="url"
+                    value={aula.recordingLink || ''}
+                    onChange={(e) => {
+                      const next = [...config.aulas];
+                      next[idx] = {...next[idx], recordingLink: e.target.value};
+                      setConfig((c) => ({...c, aulas: next}));
+                    }}
+                    placeholder="Link da gravação (cola depois da aula)"
+                    style={{background: 'transparent', border: 'none', borderBottom: '1px solid rgba(247,245,242,0.18)', color: 'var(--offwhite)', fontSize: 12, fontFamily: 'monospace', padding: '6px 0'}}
+                  />
+                  <button
+                    type="button"
+                    className="ad-btn ad-btn-ghost ad-btn-sm"
+                    disabled={busy}
+                    onClick={async () => {
+                      try {
+                        await api('/api/mentoria-config', {
+                          method: 'POST',
+                          body: JSON.stringify({
+                            action: 'update-aula',
+                            aulaIndex: idx,
+                            data: aula.data,
+                            titulo: aula.titulo,
+                            recordingLink: aula.recordingLink,
+                          }),
+                        });
+                        setMsg(`Aula ${aula.numero} salva.`);
+                      } catch (e) { setErr(e.message); }
+                    }}
+                  >
+                    Salvar
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="ad-bc-hint" style={{marginTop: 14}}>
+            Use o botão <strong>Salvar</strong> de cada aula pra gravar individualmente. Aulas com gravação preenchida ganham a borda verde; passadas sem gravação ficam laranja.
+          </p>
+        </section>
+      )}
 
       <section className="ad-widget ad-bc-history">
         <header className="ad-widget-head">

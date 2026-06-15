@@ -531,6 +531,131 @@
       .mb-mentoria-icon { width: 48px; height: 48px; font-size: 22px; }
       .mb-mentoria-card-cta { width: 100%; justify-content: center; }
     }
+
+    /* === CRONOGRAMA DAS AULAS === */
+    .mb-aulas-grid {
+      margin-top: 28px;
+    }
+    .mb-aulas-head { margin-bottom: 16px; }
+    .mb-aulas-eyebrow {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--sand);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .mb-aulas-title {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 24px;
+      margin: 0;
+      color: var(--offwhite);
+    }
+    .mb-aulas-title em { font-style: normal; color: var(--sand); }
+    .mb-aulas-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mb-aula {
+      display: grid;
+      grid-template-columns: 180px 1fr 200px;
+      gap: 18px;
+      align-items: center;
+      padding: 16px 22px;
+      background: rgba(247, 245, 242, 0.025);
+      border: 1px solid rgba(247, 245, 242, 0.08);
+      border-left: 3px solid rgba(247, 245, 242, 0.15);
+      transition: all 140ms;
+    }
+    .mb-aula.is-today {
+      background: rgba(129, 148, 112, 0.10);
+      border-color: rgba(129, 148, 112, 0.5);
+      border-left-color: #819470;
+      border-left-width: 3px;
+    }
+    .mb-aula.has-recording {
+      border-left-color: var(--sand);
+    }
+    .mb-aula-date {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mb-aula-num {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: rgba(247, 245, 242, 0.5);
+      font-weight: 600;
+    }
+    .mb-aula-day {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 14px;
+      color: var(--offwhite);
+      letter-spacing: 0.06em;
+    }
+    .mb-aula.is-today .mb-aula-day { color: #B9D199; font-weight: 700; }
+    .mb-aula-content { min-width: 0; }
+    .mb-aula-title {
+      margin: 0 0 4px;
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--offwhite);
+    }
+    .mb-aula-desc {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(247, 245, 242, 0.55);
+    }
+    .mb-aula-action { text-align: right; }
+    .mb-aula-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 1px solid;
+      transition: all 140ms;
+    }
+    .mb-aula-cta.is-live {
+      background: #819470;
+      color: var(--offwhite);
+      border-color: #819470;
+    }
+    .mb-aula-cta.is-live:hover { background: var(--offwhite); color: var(--onix); }
+    .mb-aula-cta.is-recording {
+      background: transparent;
+      color: var(--sand);
+      border-color: var(--sand);
+    }
+    .mb-aula-cta.is-recording:hover { background: var(--sand); color: var(--onix); }
+    .mb-aula-status {
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .mb-aula-status.is-future { color: rgba(247, 245, 242, 0.4); }
+    .mb-aula-status.is-pending { color: #d97757; }
+    @media (max-width: 720px) {
+      .mb-aula {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 14px 18px;
+      }
+      .mb-aula-action { text-align: left; }
+      .mb-aula-cta { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
@@ -578,6 +703,17 @@
       {id:'checklist', label:'Checklists'},
       {id:'arquetipos', label:'Arquétipos'},
     ];
+
+    // 'YYYY-MM-DD' → 'TER 01 SET 2026'
+    const formatDateLabel = (iso) => {
+      if (!iso) return '';
+      const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return iso;
+      const d = new Date(Date.UTC(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3])));
+      const dias = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+      const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+      return `${dias[d.getUTCDay()]} ${m[3]} ${meses[parseInt(m[2]) - 1]} ${m[1]}`;
+    };
 
     const post = async (path, body) => {
       const res = await fetch(path, {
@@ -999,6 +1135,56 @@
                 </span>
               )}
             </div>
+
+            {/* Cronograma das 12 aulas — visível só pra inscritos */}
+            {member.mentoria && member.mentoriaConfig && Array.isArray(member.mentoriaConfig.aulas) && member.mentoriaConfig.aulas.length > 0 && (
+              <div className="mb-aulas-grid">
+                <div className="mb-aulas-head">
+                  <span className="mb-aulas-eyebrow">Cronograma · 12 aulas</span>
+                  <h3 className="mb-aulas-title">Calendário das <em>aulas.</em></h3>
+                </div>
+                <div className="mb-aulas-list">
+                  {member.mentoriaConfig.aulas.map((aula, i) => {
+                    const today = new Date().toISOString().slice(0, 10);
+                    const isPast = aula.data < today;
+                    const isToday = aula.data === today;
+                    const isUpcoming = aula.data > today;
+                    const hasRecording = !!(aula.recordingLink && aula.recordingLink.trim());
+                    const dateLabel = formatDateLabel(aula.data);
+                    return (
+                      <div key={i} className={'mb-aula' + (isToday ? ' is-today' : '') + (hasRecording ? ' has-recording' : '')}>
+                        <div className="mb-aula-date">
+                          <span className="mb-aula-num">Aula {String(aula.numero).padStart(2, '0')}</span>
+                          <span className="mb-aula-day">{dateLabel}</span>
+                        </div>
+                        <div className="mb-aula-content">
+                          <p className="mb-aula-title">{aula.titulo || `Aula ${aula.numero}`}</p>
+                          {aula.descricao && <p className="mb-aula-desc">{aula.descricao}</p>}
+                        </div>
+                        <div className="mb-aula-action">
+                          {isToday && member.mentoriaConfig.teamsLink && (
+                            <a href={member.mentoriaConfig.teamsLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-live">
+                              Entrar agora →
+                            </a>
+                          )}
+                          {hasRecording && (
+                            <a href={aula.recordingLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-recording">
+                              ▶ Assistir gravação
+                            </a>
+                          )}
+                          {!isToday && !hasRecording && isPast && (
+                            <span className="mb-aula-status is-pending">Gravação em breve</span>
+                          )}
+                          {isUpcoming && !isToday && (
+                            <span className="mb-aula-status is-future">Em breve</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {loggedView === 'library' && (
