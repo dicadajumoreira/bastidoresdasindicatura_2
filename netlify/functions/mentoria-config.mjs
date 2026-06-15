@@ -25,15 +25,23 @@ export default async (req) => {
 
   if (req.method === 'GET') {
     try {
+      const defaults = defaultConfig();
       let cfg = await store.get('config', {type: 'json'});
       if (!cfg) {
-        cfg = defaultConfig();
-      } else if (!Array.isArray(cfg.aulas) || cfg.aulas.length === 0) {
-        cfg.aulas = defaultAulas();
+        cfg = defaults;
       } else {
-        // Migra cronograma antigo (sem tipo) pro novo com tipo + particulares
-        const hasTipo = cfg.aulas.every((a) => a.tipo);
-        if (!hasTipo) cfg.aulas = defaultAulas();
+        if (!Array.isArray(cfg.aulas) || cfg.aulas.length === 0) {
+          cfg.aulas = defaultAulas();
+        } else {
+          const hasTipo = cfg.aulas.every((a) => a.tipo);
+          if (!hasTipo) cfg.aulas = defaultAulas();
+        }
+        // Se ainda não foi definido um link, retorna o default (Teams
+        // recorrente da turma). Não sobrescreve link customizado.
+        if (!cfg.teamsLink || !cfg.teamsLink.trim()) cfg.teamsLink = defaults.teamsLink;
+        if (!cfg.horario || !cfg.horario.trim()) cfg.horario = defaults.horario;
+        if (!cfg.horarioParticular || !cfg.horarioParticular.trim()) cfg.horarioParticular = defaults.horarioParticular;
+        if (!cfg.calendario || !cfg.calendario.trim()) cfg.calendario = defaults.calendario;
       }
       return json({ok: true, config: cfg});
     } catch (err) {
@@ -120,7 +128,11 @@ function defaultAulas() {
 
 function defaultConfig() {
   return {
-    teamsLink: '',
+    // Link único recorrente do Teams pras 12 aulas em grupo.
+    // Particulares (09/09 e 14/10) precisam de link próprio — editar
+    // na aba Cronograma do admin com 'Link da gravação' (reaproveitado
+    // como 'Link da sessão' nas particulares).
+    teamsLink: 'https://teams.microsoft.com/meet/276780535847602?p=cbQfvA1GTBBDNNYTQ7',
     horario: 'Terças · 07h30 às 09h00 (horário de Brasília)',
     horarioParticular: 'Horário individual a combinar',
     calendario: 'Setembro a Novembro de 2026',
