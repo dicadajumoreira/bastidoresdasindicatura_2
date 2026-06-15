@@ -1109,14 +1109,20 @@
       const MentoriaBanner = () => (
         <section className="mb-mentoria-banner">
           <div className="mb-mentoria-text">
-            <span className="mb-mentoria-eyebrow">Mentoria Executiva · Turma 01 · 2026</span>
+            <span className="mb-mentoria-eyebrow">Mentoria Bastidores da Sindicatura · Turma 01 · 2026</span>
             <h2 className="mb-mentoria-title">Quer ir <em>além</em> dos materiais?</h2>
             <p className="mb-mentoria-lead">
-              A Mentoria Bastidores da Sindicatura é pra quem decidiu profissionalizar a gestão de vez. Encontros semanais, método estruturado e uma comunidade pequena que se conhece. Vagas limitadas.
+              Olá, <strong style={{color: 'var(--sand)'}}>{firstName}</strong>. Você já tem acesso à biblioteca completa — mas a Mentoria é onde acontece a transformação real. Encontros ao vivo todas as terças, comunidade pequena que se conhece e suporte direto comigo. <strong>Turma 01 começa em setembro de 2026 · vagas limitadas.</strong>
             </p>
+            <ul style={{margin: '14px 0 18px', padding: 0, listStyle: 'none', fontSize: 13, lineHeight: 1.6, color: 'rgba(247,245,242,0.78)'}}>
+              <li style={{marginBottom: 6}}>✓ 12 aulas ao vivo no Microsoft Teams</li>
+              <li style={{marginBottom: 6}}>✓ Plano Executive inclui 2 sessões particulares comigo</li>
+              <li style={{marginBottom: 6}}>✓ Todas as aulas gravadas e disponíveis aqui na sua área</li>
+              <li>✓ Comunidade fechada de síndicos profissionais</li>
+            </ul>
           </div>
           <a className="mb-mentoria-cta" href="/#contato">
-            Reservar minha aplicação
+            Fazer minha aplicação
             <svg width="14" height="10" viewBox="0 0 18 12" fill="none">
               <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -1163,7 +1169,10 @@
             </div>
           </header>
 
-          <MentoriaBanner />
+          {/* Banner de convite pra Mentoria · so pra quem AINDA NAO eh
+              inscrito. Pra inscritos, a Sala da Mentoria abaixo ja
+              comunica tudo necessario. */}
+          {!member.mentoria && <MentoriaBanner />}
 
           {/* Área da Mentoria · sempre visível pra TODOS os membros.
               Liberada se member.mentoria === true; senão aparece com
