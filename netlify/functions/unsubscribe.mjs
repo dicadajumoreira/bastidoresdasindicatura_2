@@ -81,37 +81,43 @@ export default async (req) => {
     console.error('[unsubscribe] cold update failed:', e.message);
   }
 
-  // 2) Atualiza nos leads quentes (todos os cadastros desse e-mail)
+  // 2) Atualiza o cache members-email-index IMEDIATAMENTE (1 read+write).
+  // Garante que /membros/ ja respeita o descadastro mesmo antes da
+  // propagacao em background terminar de atualizar todos os blobs.
   try {
-    const hot = getStore({name: 'leads', consistency: 'strong'});
-    const list = await hot.list();
-    const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
-    let touched = 0;
-    const BATCH = 10;
-    for (let i = 0; i < keys.length; i += BATCH) {
-      const batch = keys.slice(i, i + BATCH);
-      const ops = await Promise.allSettled(batch.map(async (k) => {
-        const v = await hot.get(k, {type: 'json'});
-        if (!v) return false;
-        if (String(v.email || '').toLowerCase() !== email) return false;
-        const updated = {...v};
-        if (action === 'unsubscribe') {
-          updated.unsubscribed = true;
-          updated.ativo = false;
-          updated.unsubscribedAt = updated.unsubscribedAt || new Date().toISOString();
-        } else {
-          updated.frequencia = 'menor';
-        }
-        await hot.setJSON(k, updated);
-        return true;
-      }));
-      for (const op of ops) {
-        if (op.status === 'fulfilled' && op.value === true) touched++;
+    const idxStore = getStore({name: 'members-email-index', consistency: 'strong'});
+    const idx = await idxStore.get('index', {type: 'json'});
+    if (idx && idx.byEmail && idx.byEmail[email]) {
+      const entry = {...idx.byEmail[email]};
+      if (action === 'unsubscribe') {
+        entry.unsubscribed = true;
+        entry.ativo = false;
+      } else {
+        entry.frequencia = 'menor';
       }
+      idx.byEmail[email] = entry;
+      idx.lastIncrementalAt = new Date().toISOString();
+      await idxStore.setJSON('index', idx);
+      updates.push('index');
     }
-    if (touched) updates.push(`hot:${touched}`);
   } catch (e) {
-    console.error('[unsubscribe] hot update failed:', e.message);
+    console.error('[unsubscribe] index update failed:', e.message);
+  }
+
+  // 3) Propaga pros leads quentes em BACKGROUND (15min budget).
+  // Antes essa parte rodava sincrona aqui e estourava o timeout de 10s
+  // com bases grandes (~7k leads), fazendo o cliente receber HTML de
+  // erro do Netlify ao inves de JSON.
+  try {
+    const origin = new URL(req.url).origin;
+    fetch(`${origin}/.netlify/functions/unsubscribe-propagate-background`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, action}),
+    }).catch(() => {});
+    updates.push('hot-propagating');
+  } catch (e) {
+    console.error('[unsubscribe] background trigger failed:', e.message);
   }
 
   return json({ok: true, action, email, updates});
