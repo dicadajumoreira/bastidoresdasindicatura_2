@@ -49,12 +49,23 @@ export default async (req) => {
   const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const token = sign({email, type: 'membros-session', exp}, secret);
 
+  // Se o membro está inscrito na Mentoria, devolve também a config
+  // (link do Teams + horário) pra UI renderizar direto.
+  let mentoriaConfig = null;
+  if (lead.mentoria) {
+    try {
+      const cfgStore = getStore({name: 'mentoria-config', consistency: 'strong'});
+      mentoriaConfig = await cfgStore.get('config', {type: 'json'});
+    } catch {}
+  }
+
   return json({
     ok: true, token, email,
     nome: lead.nome || '',
     perfil: lead.perfil || null,
     perfil_nome: lead.perfil_nome || null,
     mentoria: !!lead.mentoria,
+    mentoriaConfig,
   });
 };
 

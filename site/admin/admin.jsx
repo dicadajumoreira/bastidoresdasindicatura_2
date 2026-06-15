@@ -1630,7 +1630,7 @@ const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
 /* ============================================================
    OVERVIEW — Dashboard com estatísticas, tela inicial do admin
    ============================================================ */
-const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOpenSorteio}) => {
+const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOpenSorteio, onOpenMentoria}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -1750,6 +1750,9 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOp
           )}
           {onOpenSorteio && (
             <button className="ad-btn ad-btn-ghost" onClick={onOpenSorteio} style={{borderColor: '#d97757', color: '#d97757'}}>Roleta do sorteio</button>
+          )}
+          {onOpenMentoria && (
+            <button className="ad-btn ad-btn-ghost" onClick={onOpenMentoria} style={{borderColor: '#819470', color: '#819470'}}>Mentoria</button>
           )}
           <button className="ad-btn ad-btn-ghost" onClick={logout}>Sair</button>
         </div>
@@ -2823,6 +2826,228 @@ const SorteioPanel = ({onLogout, onBackToOverview}) => {
           </ul>
         </section>
       )}
+    </div>
+  );
+};
+
+/* ============================================================
+   MENTORIA PANEL — config da sala de transmissão + inscritos
+   ============================================================ */
+const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onReloadLeads}) => {
+  const [config, setConfig] = React.useState(null);
+  const [loadingCfg, setLoadingCfg] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+  const [err, setErr] = React.useState('');
+  const [search, setSearch] = React.useState('');
+
+  const loadConfig = React.useCallback(async () => {
+    setLoadingCfg(true);
+    try {
+      const res = await api('/api/mentoria-config');
+      setConfig(res.config || {teamsLink: '', horario: '', calendario: '', notes: ''});
+    } catch (e) { setErr(e.message); }
+    finally { setLoadingCfg(false); }
+  }, []);
+  React.useEffect(() => { loadConfig(); }, [loadConfig]);
+
+  React.useEffect(() => {
+    if (!leadsAll && !leadsLoading && onReloadLeads) onReloadLeads();
+  }, [leadsAll, leadsLoading, onReloadLeads]);
+
+  const setField = (k, v) => setConfig((c) => ({...c, [k]: v}));
+
+  const saveConfig = async (e) => {
+    e.preventDefault();
+    setBusy(true); setMsg(''); setErr('');
+    try {
+      const res = await api('/api/mentoria-config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      });
+      setConfig(res.config);
+      setMsg('Configuração salva. Os membros inscritos já estão vendo o novo link.');
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  // Inscritos = leads com mentoria === true, ativos, não deletados.
+  // Dedupe por email — uma pessoa pode ter mais de uma aplicação.
+  const inscritos = React.useMemo(() => {
+    if (!leadsAll) return [];
+    const seen = new Set();
+    const out = [];
+    for (const l of leadsAll) {
+      if (l.deletedAt) continue;
+      if (!l.mentoria) continue;
+      const em = String(l.email || '').trim().toLowerCase();
+      if (em && seen.has(em)) continue;
+      if (em) seen.add(em);
+      out.push(l);
+    }
+    out.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    return out;
+  }, [leadsAll]);
+
+  const filteredInscritos = React.useMemo(() => {
+    if (!search.trim()) return inscritos;
+    const q = search.trim().toLowerCase();
+    return inscritos.filter((l) =>
+      String(l.nome || '').toLowerCase().includes(q)
+      || String(l.email || '').toLowerCase().includes(q)
+      || String(l.cidade || '').toLowerCase().includes(q)
+      || String(l.estado || '').toLowerCase().includes(q)
+    );
+  }, [inscritos, search]);
+
+  const toggleMentoria = async (lead) => {
+    if (!confirm(`Tirar ${lead.nome} da Mentoria? O acesso ao Teams vai sumir pra ele(a) na próxima visita à Área de Membros.`)) return;
+    try {
+      await api('/api/update-status', {
+        method: 'POST',
+        body: JSON.stringify({id: lead.id, mentoria: false}),
+      });
+      onReloadLeads && onReloadLeads();
+    } catch (e) { alert('Falha: ' + e.message); }
+  };
+
+  return (
+    <div className="ad-broadcast">
+      <header className="ad-broadcast-head">
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onBackToOverview}>← Voltar à visão geral</button>
+        <h1 className="ad-broadcast-title">Mentoria · Turma 01</h1>
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+      </header>
+
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Sala de transmissão</span>
+          <h2 className="ad-widget-title">Microsoft Teams</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          O link e o horário aqui são os que aparecem na Área de Membros pra todos os inscritos da Mentoria. Pode mudar a qualquer momento — atualiza pra todo mundo na hora.
+        </p>
+
+        {loadingCfg || !config ? <p className="ad-bc-empty">Carregando…</p> : (
+          <form onSubmit={saveConfig}>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Link do Teams</span>
+              <input
+                type="url"
+                value={config.teamsLink}
+                onChange={(e) => setField('teamsLink', e.target.value)}
+                placeholder="https://teams.microsoft.com/l/meetup-join/..."
+                style={{fontFamily: 'monospace'}}
+              />
+              <span className="ad-bc-hint">Cole o convite de reunião do Teams da turma. Esse é o botão "Entrar no Teams" que cada inscrito vê.</span>
+            </label>
+
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Horário dos encontros</span>
+              <input
+                type="text"
+                value={config.horario}
+                onChange={(e) => setField('horario', e.target.value)}
+                placeholder="Ex.: Terças, 07h30 (horário de Brasília)"
+              />
+            </label>
+
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Período da turma</span>
+              <input
+                type="text"
+                value={config.calendario}
+                onChange={(e) => setField('calendario', e.target.value)}
+                placeholder="Ex.: Setembro de 2026 a Setembro de 2027"
+              />
+            </label>
+
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Observações (opcional)</span>
+              <textarea
+                value={config.notes}
+                onChange={(e) => setField('notes', e.target.value)}
+                rows={3}
+                placeholder="Recados, lembretes, link da pasta de materiais… (aparece embaixo do card no painel do membro)"
+              />
+            </label>
+
+            <button className="ad-btn ad-btn-primary ad-btn-lg" type="submit" disabled={busy}>
+              {busy ? 'Salvando…' : 'Salvar alterações'}
+            </button>
+            {msg && <p style={{margin: '14px 0 0', color: '#819470', fontSize: 13}}>{msg}</p>}
+            {err && <p style={{margin: '14px 0 0', color: '#d97757', fontSize: 13}}>{err}</p>}
+            {config.updatedAt && (
+              <p style={{margin: '14px 0 0', color: 'rgba(247,245,242,0.45)', fontSize: 11}}>
+                Última atualização: {fmtDate(config.updatedAt)}
+              </p>
+            )}
+          </form>
+        )}
+      </section>
+
+      <section className="ad-widget ad-bc-history">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">Quem tem acesso</span>
+          <h2 className="ad-widget-title">Inscritos na Mentoria <small style={{color:'rgba(247,245,242,0.55)'}}>· {inscritos.length} {inscritos.length === 1 ? 'membro' : 'membros'}</small></h2>
+        </header>
+
+        <p className="ad-bc-drafts-lead">
+          Pra adicionar um novo inscrito, vai em <strong>Ver aplicações</strong>, abre o detalhe do lead e clica em <em>"Marcar como inscrito na Mentoria"</em>. Pra tirar, use o botão remover aqui mesmo na lista.
+        </p>
+
+        <div className="ad-cold-search">
+          <input
+            type="search"
+            placeholder="Buscar por nome, e-mail, cidade…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onReloadLeads} disabled={leadsLoading}>
+            {leadsLoading ? 'Atualizando…' : '↻ Atualizar'}
+          </button>
+        </div>
+
+        {leadsLoading && !leadsAll ? <p className="ad-bc-empty">Carregando inscritos…</p>
+          : filteredInscritos.length === 0 ? (
+            <p className="ad-bc-empty">
+              {inscritos.length === 0
+                ? 'Nenhum inscrito ainda. Vai em Ver aplicações → abre um lead → "Marcar como inscrito na Mentoria".'
+                : 'Nenhum inscrito bate com a busca.'}
+            </p>
+          ) : (
+            <table className="ad-bc-history-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>WhatsApp</th>
+                  <th>Cidade</th>
+                  <th>Inscrição</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInscritos.map((l) => (
+                  <tr key={l.id}>
+                    <td><strong>{l.nome || '—'}</strong></td>
+                    <td className="ad-bc-history-subject">{l.email}</td>
+                    <td>{l.whatsapp || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
+                    <td>{l.cidade}{l.estado ? `/${l.estado}` : ''}</td>
+                    <td style={{fontSize: 11, color: 'rgba(247,245,242,0.55)'}}>
+                      {l.mentoriaAt ? fmtDate(l.mentoriaAt) : '—'}
+                    </td>
+                    <td style={{textAlign:'right', whiteSpace:'nowrap'}}>
+                      <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => toggleMentoria(l)} style={{color: '#d97757'}}>
+                        Tirar da Mentoria
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+      </section>
     </div>
   );
 };
@@ -4455,6 +4680,7 @@ const App = () => {
       onOpenBroadcast={() => setView('broadcast')}
       onOpenColdLeads={() => setView('cold')}
       onOpenSorteio={() => setView('sorteio')}
+      onOpenMentoria={() => setView('mentoria')}
     />;
   }
   if (view === 'broadcast') {
@@ -4477,6 +4703,15 @@ const App = () => {
     return <SorteioPanel
       onLogout={() => setAuthed(false)}
       onBackToOverview={() => setView('overview')}
+    />;
+  }
+  if (view === 'mentoria') {
+    return <MentoriaPanel
+      onLogout={() => setAuthed(false)}
+      onBackToOverview={() => setView('overview')}
+      leadsAll={leadsAll}
+      leadsLoading={leadsLoading}
+      onReloadLeads={reloadLeads}
     />;
   }
   return <LeadsPanel onLogout={() => setAuthed(false)} onBackToOverview={() => setView('overview')} />;

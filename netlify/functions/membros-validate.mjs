@@ -38,12 +38,21 @@ export default async (req) => {
     return json({error: 'Cadastro não encontrado ou desativado'}, 403);
   }
 
+  let mentoriaConfig = null;
+  if (lookup.lead.mentoria) {
+    try {
+      const cfgStore = getStore({name: 'mentoria-config', consistency: 'strong'});
+      mentoriaConfig = await cfgStore.get('config', {type: 'json'});
+    } catch {}
+  }
+
   return json({
     ok: true, email,
     nome: lookup.lead.nome || '',
     perfil: lookup.lead.perfil || null,
     perfil_nome: lookup.lead.perfil_nome || null,
     mentoria: !!lookup.lead.mentoria,
+    mentoriaConfig,
   });
 };
 

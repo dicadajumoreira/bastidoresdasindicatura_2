@@ -661,6 +661,7 @@
                       perfil: fresh.perfil || data.perfil || null,
                       perfil_nome: fresh.perfil_nome || data.perfil_nome || null,
                       mentoria: !!fresh.mentoria,
+                      mentoriaConfig: fresh.mentoriaConfig || data.mentoriaConfig || null,
                     };
                     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
                     setMember(next);
@@ -693,6 +694,7 @@
           perfil: data.perfil || null,
           perfil_nome: data.perfil_nome || null,
           mentoria: !!data.mentoria,
+          mentoriaConfig: data.mentoriaConfig || null,
           exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
         };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
@@ -964,19 +966,30 @@
                     {member.mentoria ? 'Sala da Mentoria · Microsoft Teams' : 'Sala da Mentoria · Em breve'}
                   </p>
                   <p className="mb-mentoria-card-desc">
-                    {member.mentoria
-                      ? 'Encontros semanais ao vivo. Você está inscrito(a) na Turma 01 — entra pelo botão ao lado.'
-                      : 'Esta área é exclusiva pra quem se inscreveu na Mentoria Bastidores da Sindicatura. Quando você confirmar sua vaga, esta sala libera automaticamente.'}
+                    {member.mentoria ? (
+                      <>
+                        Encontros ao vivo
+                        {member.mentoriaConfig && member.mentoriaConfig.horario && <> · <strong>{member.mentoriaConfig.horario}</strong></>}.
+                        Você está inscrito(a) na Turma 01.
+                        {member.mentoriaConfig && member.mentoriaConfig.notes && <> {member.mentoriaConfig.notes}</>}
+                      </>
+                    ) : (
+                      'Esta área é exclusiva pra quem se inscreveu na Mentoria Bastidores da Sindicatura. Quando você confirmar sua vaga, esta sala libera automaticamente.'
+                    )}
                   </p>
                 </div>
               </div>
-              {member.mentoria ? (
-                <a className="mb-mentoria-card-cta" href="https://teams.microsoft.com" target="_blank" rel="noreferrer">
+              {member.mentoria && member.mentoriaConfig && member.mentoriaConfig.teamsLink ? (
+                <a className="mb-mentoria-card-cta" href={member.mentoriaConfig.teamsLink} target="_blank" rel="noreferrer">
                   Entrar no Teams
                   <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
                     <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </a>
+              ) : member.mentoria ? (
+                <span className="mb-mentoria-card-cta" style={{opacity: 0.7}}>
+                  Link em breve
+                </span>
               ) : (
                 <span className="mb-mentoria-card-cta">
                   Bloqueado
