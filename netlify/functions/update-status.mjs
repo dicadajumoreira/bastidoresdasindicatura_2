@@ -21,7 +21,7 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'Invalid JSON'}, 400); }
 
-  const { id, status, notes, deleted, ativo } = body || {};
+  const { id, status, notes, deleted, ativo, mentoria } = body || {};
   if (!id) return json({error: 'id obrigatório'}, 400);
   if (status && !VALID_STATUS.has(status)) return json({error: 'status inválido'}, 400);
 
@@ -44,16 +44,48 @@ export default async (req) => {
       }
     : {};
 
+  // Mentoria: marca/desmarca o lead como inscrito na Mentoria. Ao
+  // marcar, registra a data pra histórico. Ao desmarcar, mantém o
+  // mentoriaAt pra rastreabilidade.
+  const mentoriaPatch = typeof mentoria === 'boolean'
+    ? {
+        mentoria,
+        ...(mentoria ? {mentoriaAt: current.mentoriaAt || new Date().toISOString()} : {}),
+      }
+    : {};
+
   const updated = {
     ...current,
     ...(status ? {status} : {}),
     ...(typeof notes === 'string' ? {notes} : {}),
     ...deletePatch,
     ...ativoPatch,
+    ...mentoriaPatch,
     updatedAt: new Date().toISOString(),
   };
 
   await store.setJSON(id, updated);
+
+  // Atualiza o índice de membros com a flag de mentoria
+  if (typeof mentoria === 'boolean' || typeof ativo === 'boolean') {
+    try {
+      const idxStore = getStore({name: 'members-email-index', consistency: 'strong'});
+      const idx = await idxStore.get('index', {type: 'json'});
+      const emailKey = String(updated.email || '').trim().toLowerCase();
+      if (idx && idx.byEmail && emailKey && idx.byEmail[emailKey]) {
+        idx.byEmail[emailKey] = {
+          ...idx.byEmail[emailKey],
+          mentoria: !!updated.mentoria,
+          ativo: updated.ativo !== false,
+          unsubscribed: !!updated.unsubscribed,
+        };
+        idx.lastIncrementalAt = new Date().toISOString();
+        await idxStore.setJSON('index', idx);
+      }
+    } catch (err) {
+      console.error('[update-status] members index update failed:', err.message);
+    }
+  }
 
   return json({ok: true, lead: updated});
 };

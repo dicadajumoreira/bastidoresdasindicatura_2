@@ -525,6 +525,14 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
                 fontWeight: 700, verticalAlign: 'middle',
               }}>Inativo</span>
             )}
+            {lead.mentoria && (
+              <span style={{
+                marginLeft: 12, fontSize: 12, padding: '4px 10px',
+                background: 'rgba(129,148,112,0.18)', color: '#819470',
+                borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
+                fontWeight: 700, verticalAlign: 'middle',
+              }}>Mentoria</span>
+            )}
           </h2>
           <p className="ad-detail-sub">
             <span className="ad-detail-origem">{ORIGEM_LABELS[lead.origem || 'mentoria']}</span>
@@ -753,6 +761,26 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
               style={{color: (lead.ativo === false || lead.unsubscribed) ? '#819470' : '#d97757'}}
             >
               {(lead.ativo === false || lead.unsubscribed) ? '↻ Reativar cadastro' : '⊘ Inativar cadastro'}
+            </button>
+            <button
+              className="ad-btn ad-btn-ghost ad-btn-sm"
+              onClick={async () => {
+                const isMentoria = !!lead.mentoria;
+                const label = isMentoria
+                  ? 'Remover acesso à Mentoria? O membro perde o link do Teams.'
+                  : 'Conceder acesso à Mentoria? O membro vai conseguir entrar no Teams da turma.';
+                if (!window.confirm(label)) return;
+                try {
+                  const res = await api('/api/update-status', {
+                    method: 'POST',
+                    body: JSON.stringify({id: lead.id, mentoria: !isMentoria}),
+                  });
+                  onUpdated(res.lead);
+                } catch (err) { alert(err.message); }
+              }}
+              style={{color: lead.mentoria ? '#d97757' : '#819470', borderColor: lead.mentoria ? '#d97757' : '#819470'}}
+            >
+              {lead.mentoria ? '⊘ Tirar da Mentoria' : '✓ Marcar como inscrito na Mentoria'}
             </button>
             <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
               Excluir aplicação

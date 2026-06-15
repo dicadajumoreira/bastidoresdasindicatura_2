@@ -120,6 +120,8 @@ export default async (req) => {
           // Preserva perfil existente se a aplicação atual não tem
           perfil: lead.perfil || existing?.perfil || null,
           perfil_nome: lead.perfil_nome || existing?.perfil_nome || null,
+          // Preserva flag de Mentoria (definida pelo admin)
+          mentoria: !!(lead.mentoria || existing?.mentoria),
         };
         idx.count = Object.keys(idx.byEmail).length;
         idx.lastIncrementalAt = new Date().toISOString();

@@ -54,6 +54,7 @@ export default async (req) => {
     nome: lead.nome || '',
     perfil: lead.perfil || null,
     perfil_nome: lead.perfil_nome || null,
+    mentoria: !!lead.mentoria,
   });
 };
 

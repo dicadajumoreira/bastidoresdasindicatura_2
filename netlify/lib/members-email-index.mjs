@@ -26,8 +26,8 @@ export async function findLeadByEmail(email) {
       if (entry.unsubscribed || entry.ativo === false) {
         return {lead: null, indexMissing: false};
       }
-      // Garante que perfil/perfil_nome venham sempre presentes (null se faltam)
-      return {lead: {perfil: null, perfil_nome: null, ...entry}, indexMissing: false};
+      // Garante que perfil/perfil_nome/mentoria venham sempre presentes
+      return {lead: {perfil: null, perfil_nome: null, mentoria: false, ...entry}, indexMissing: false};
     }
   } catch (err) {
     console.error('[members-email-index] cache read failed:', err.message);
@@ -40,6 +40,7 @@ export async function findLeadByEmail(email) {
   let lead = null;
   let perfil = null;
   let perfil_nome = null;
+  let mentoria = false;
   let anyInactive = false;
   try {
     const leads = getStore({name: 'leads', consistency: 'strong'});
@@ -72,14 +73,15 @@ export async function findLeadByEmail(email) {
         }
         if (!perfil && v.perfil) perfil = v.perfil;
         if (!perfil_nome && v.perfil_nome) perfil_nome = v.perfil_nome;
+        if (v.mentoria === true) mentoria = true;
       }
-      // Early-exit quando já temos lead E perfil (caso comum: quem fez o
-      // quiz tem tudo em UMA aplicação)
-      if (lead && perfil_nome) break;
+      // Early-exit quando já temos lead E perfil E mentoria
+      if (lead && perfil_nome && mentoria) break;
     }
     if (lead) {
       lead.perfil = perfil;
       lead.perfil_nome = perfil_nome;
+      lead.mentoria = mentoria;
     }
     // Se TODAS as aplicações do e-mail estão inativas, retornamos null
     // pra bloquear o login.
@@ -96,7 +98,10 @@ export async function findLeadByEmail(email) {
       const current = index && index.byEmail
         ? index
         : {builtAt: new Date().toISOString(), byEmail: {}, count: 0};
-      current.byEmail[normalized] = lead;
+      // Preserva mentoria se já existia no cache (admin pode ter marcado
+      // depois e o scan poderia não ter pego ainda)
+      const previousMentoria = current.byEmail && current.byEmail[normalized] && current.byEmail[normalized].mentoria;
+      current.byEmail[normalized] = {...lead, mentoria: lead.mentoria || !!previousMentoria};
       current.count = Object.keys(current.byEmail).length;
       current.lastIncrementalAt = new Date().toISOString();
       await indexStore.setJSON('index', current);

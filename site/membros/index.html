@@ -421,6 +421,116 @@
     }
     .mb-select:focus { outline: none; border-bottom-color: var(--sand, #DABDA9); }
     .mb-select option { background: var(--onix); color: var(--offwhite); }
+
+    /* === SEÇÃO MENTORIA NA ÁREA DE MEMBROS === */
+    .mb-mentoria-area {
+      max-width: 1080px;
+      margin: 32px auto 0;
+      padding: 0 40px;
+    }
+    .mb-mentoria-area-eyebrow {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--sand, #DABDA9);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .mb-mentoria-area-title {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(26px, 4vw, 36px);
+      line-height: 1.05;
+      margin: 0 0 22px;
+      color: var(--offwhite);
+    }
+    .mb-mentoria-area-title em { font-style: normal; color: var(--sand); }
+
+    .mb-mentoria-card {
+      padding: 36px 40px;
+      background: rgba(247, 245, 242, 0.04);
+      border: 1px solid rgba(247, 245, 242, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .mb-mentoria-card.is-locked {
+      background: linear-gradient(135deg, rgba(247,245,242,0.04) 0%, rgba(247,245,242,0.02) 100%);
+      border-style: dashed;
+      border-color: rgba(247, 245, 242, 0.18);
+    }
+    .mb-mentoria-card.is-active {
+      background: linear-gradient(135deg, rgba(129,148,112,0.16) 0%, rgba(129,148,112,0.06) 100%);
+      border-color: rgba(129, 148, 112, 0.5);
+    }
+    .mb-mentoria-card-info { flex: 1; min-width: 280px; display: flex; align-items: center; gap: 22px; }
+    .mb-mentoria-icon {
+      width: 64px; height: 64px; flex-shrink: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      background: rgba(247, 245, 242, 0.06);
+      border: 1px solid rgba(247, 245, 242, 0.18);
+    }
+    .mb-mentoria-card.is-active .mb-mentoria-icon {
+      background: rgba(129, 148, 112, 0.22);
+      border-color: rgba(129, 148, 112, 0.5);
+      color: #B9D199;
+    }
+    .mb-mentoria-card-text { flex: 1; }
+    .mb-mentoria-card-eyebrow {
+      display: block; font-size: 10px;
+      letter-spacing: 0.28em; text-transform: uppercase;
+      font-weight: 700; margin-bottom: 6px;
+    }
+    .mb-mentoria-card.is-locked .mb-mentoria-card-eyebrow { color: rgba(247,245,242,0.45); }
+    .mb-mentoria-card.is-active .mb-mentoria-card-eyebrow { color: #819470; }
+    .mb-mentoria-card-name {
+      font-family: 'Bodoni Moda', Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 22px; color: var(--offwhite);
+      margin: 0 0 6px;
+    }
+    .mb-mentoria-card-desc {
+      font-size: 13px; line-height: 1.5;
+      color: rgba(247, 245, 242, 0.65); margin: 0;
+    }
+    .mb-mentoria-card-cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 22px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      text-decoration: none; font-family: inherit;
+      transition: all 140ms; white-space: nowrap;
+      border: 1px solid;
+      cursor: pointer;
+    }
+    .mb-mentoria-card.is-active .mb-mentoria-card-cta {
+      background: #819470; color: var(--offwhite);
+      border-color: #819470;
+    }
+    .mb-mentoria-card.is-active .mb-mentoria-card-cta:hover {
+      background: var(--offwhite); color: var(--onix);
+    }
+    .mb-mentoria-card.is-locked .mb-mentoria-card-cta {
+      background: transparent; color: rgba(247,245,242,0.45);
+      border-color: rgba(247,245,242,0.25);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    @media (max-width: 720px) {
+      .mb-mentoria-area { padding: 0 20px; }
+      .mb-mentoria-card { padding: 26px 22px; }
+      .mb-mentoria-card-info { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .mb-mentoria-icon { width: 48px; height: 48px; font-size: 22px; }
+      .mb-mentoria-card-cta { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
@@ -550,6 +660,7 @@
                       nome: fresh.nome || data.nome,
                       perfil: fresh.perfil || data.perfil || null,
                       perfil_nome: fresh.perfil_nome || data.perfil_nome || null,
+                      mentoria: !!fresh.mentoria,
                     };
                     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
                     setMember(next);
@@ -581,6 +692,7 @@
           token: data.token,
           perfil: data.perfil || null,
           perfil_nome: data.perfil_nome || null,
+          mentoria: !!data.mentoria,
           exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
         };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
@@ -832,6 +944,49 @@
           </header>
 
           <MentoriaBanner />
+
+          {/* Área da Mentoria · sempre visível pra TODOS os membros.
+              Liberada se member.mentoria === true; senão aparece com
+              cadeado e mensagem 'em breve'. */}
+          <div className="mb-mentoria-area">
+            <span className="mb-mentoria-area-eyebrow">Mentoria · Turma 01 · 2026</span>
+            <h2 className="mb-mentoria-area-title">Sala <em>ao vivo.</em></h2>
+            <div className={'mb-mentoria-card ' + (member.mentoria ? 'is-active' : 'is-locked')}>
+              <div className="mb-mentoria-card-info">
+                <div className="mb-mentoria-icon">
+                  {member.mentoria ? '✓' : '🔒'}
+                </div>
+                <div className="mb-mentoria-card-text">
+                  <span className="mb-mentoria-card-eyebrow">
+                    {member.mentoria ? 'Acesso liberado' : 'Acesso bloqueado'}
+                  </span>
+                  <p className="mb-mentoria-card-name">
+                    {member.mentoria ? 'Sala da Mentoria · Microsoft Teams' : 'Sala da Mentoria · Em breve'}
+                  </p>
+                  <p className="mb-mentoria-card-desc">
+                    {member.mentoria
+                      ? 'Encontros semanais ao vivo. Você está inscrito(a) na Turma 01 — entra pelo botão ao lado.'
+                      : 'Esta área é exclusiva pra quem se inscreveu na Mentoria Bastidores da Sindicatura. Quando você confirmar sua vaga, esta sala libera automaticamente.'}
+                  </p>
+                </div>
+              </div>
+              {member.mentoria ? (
+                <a className="mb-mentoria-card-cta" href="https://teams.microsoft.com" target="_blank" rel="noreferrer">
+                  Entrar no Teams
+                  <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                    <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </a>
+              ) : (
+                <span className="mb-mentoria-card-cta">
+                  Bloqueado
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 7V5a4 4 0 018 0v2m-9 0h10v8H3V7z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              )}
+            </div>
+          </div>
 
           {loggedView === 'library' && (
             <>

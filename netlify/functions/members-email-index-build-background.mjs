@@ -52,24 +52,25 @@ export default async (req) => {
           createdAt: v.createdAt,
           perfil: v.perfil || null,
           perfil_nome: v.perfil_nome || null,
+          mentoria: !!v.mentoria,
         };
         if (!existing) {
           byEmail[email] = base;
         } else if (isActive && !existingActive) {
           byEmail[email] = base;
-          // Preserva perfil de outros registros do mesmo e-mail se ainda não tem
           if (!base.perfil_nome && existing.perfil_nome) byEmail[email].perfil_nome = existing.perfil_nome;
           if (!base.perfil && existing.perfil) byEmail[email].perfil = existing.perfil;
+          // Mentoria é OR: se qualquer entrada marca, o membro tem acesso
+          byEmail[email].mentoria = base.mentoria || !!existing.mentoria;
         } else if (isActive === existingActive) {
-          // Mantém o registro existente como base, mas COMPLETA com perfil
-          // se o novo trouxer e o existente não tem.
           if (!existing.perfil_nome && base.perfil_nome) byEmail[email].perfil_nome = base.perfil_nome;
           if (!existing.perfil && base.perfil) byEmail[email].perfil = base.perfil;
-          // E também pega o mais recente em caso de empate
+          byEmail[email].mentoria = !!existing.mentoria || base.mentoria;
           if (v.createdAt && (!existing.createdAt || v.createdAt > existing.createdAt)) {
             byEmail[email] = {...base,
               perfil: existing.perfil || base.perfil,
               perfil_nome: existing.perfil_nome || base.perfil_nome,
+              mentoria: !!existing.mentoria || base.mentoria,
               nome: v.nome || existing.nome,
             };
           }
