@@ -52,6 +52,7 @@ export default async (req) => {
     perfil: lookup.lead.perfil || null,
     perfil_nome: lookup.lead.perfil_nome || null,
     mentoria: !!lookup.lead.mentoria,
+    mentoriaModalidade: lookup.lead.mentoriaModalidade || null,
     mentoriaConfig,
   });
 };

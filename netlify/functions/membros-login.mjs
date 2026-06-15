@@ -65,6 +65,7 @@ export default async (req) => {
     perfil: lead.perfil || null,
     perfil_nome: lead.perfil_nome || null,
     mentoria: !!lead.mentoria,
+    mentoriaModalidade: lead.mentoriaModalidade || null,
     mentoriaConfig,
   });
 };

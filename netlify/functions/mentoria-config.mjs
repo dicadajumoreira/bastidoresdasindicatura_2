@@ -1,8 +1,15 @@
 // Netlify Function v2 · GET/POST /api/mentoria-config
 // Configura a sala da Mentoria: link do Teams, horário, calendário,
-// e o cronograma das 12 aulas (data + título + link da gravação).
+// e os cronogramas das aulas por modalidade.
 //
-// GET: retorna a config atual
+// MODALIDADES:
+//   - 'experience': 12 aulas em grupo (terças)
+//   - 'executive': 14 aulas — 12 em grupo + 2 particulares
+//
+// As aulas particulares (tipo: 'particular') aparecem SÓ pra inscritos
+// na modalidade Executive. Inscritos em Experience veem só as de grupo.
+//
+// GET: retorna a config atual (cronograma das 14 aulas)
 // POST: salva nova config (exige token Bearer do admin)
 // POST com action=update-aula: atualiza só uma aula específica
 
@@ -22,8 +29,11 @@ export default async (req) => {
       if (!cfg) {
         cfg = defaultConfig();
       } else if (!Array.isArray(cfg.aulas) || cfg.aulas.length === 0) {
-        // Garante que tem o array de aulas mesmo em configs antigas
         cfg.aulas = defaultAulas();
+      } else {
+        // Migra cronograma antigo (sem tipo) pro novo com tipo + particulares
+        const hasTipo = cfg.aulas.every((a) => a.tipo);
+        if (!hasTipo) cfg.aulas = defaultAulas();
       }
       return json({ok: true, config: cfg});
     } catch (err) {
@@ -33,7 +43,6 @@ export default async (req) => {
 
   if (req.method !== 'POST') return json({error: 'Method not allowed'}, 405);
 
-  // POST exige auth admin
   const secret = process.env.AUTH_SECRET || 'bastidores-da-sindicatura-fallback';
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
@@ -42,13 +51,11 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'JSON inválido'}, 400); }
 
-  // Carrega config atual pra preservar campos não enviados
   let current = null;
   try { current = await store.get('config', {type: 'json'}); } catch {}
   if (!current) current = defaultConfig();
-  if (!Array.isArray(current.aulas)) current.aulas = defaultAulas();
+  if (!Array.isArray(current.aulas) || current.aulas.length === 0) current.aulas = defaultAulas();
 
-  // MODO: atualizar uma aula específica
   if (body.action === 'update-aula' && typeof body.aulaIndex === 'number') {
     const i = body.aulaIndex;
     if (i < 0 || i >= current.aulas.length) return json({error: 'Aula inexistente'}, 400);
@@ -59,6 +66,7 @@ export default async (req) => {
       ...(body.data !== undefined ? {data: String(body.data).trim()} : {}),
       ...(body.descricao !== undefined ? {descricao: String(body.descricao).trim()} : {}),
       ...(body.recordingLink !== undefined ? {recordingLink: String(body.recordingLink).trim()} : {}),
+      ...(body.tipo !== undefined ? {tipo: body.tipo === 'particular' ? 'particular' : 'grupo'} : {}),
     };
     current.aulas[i] = updated;
     current.updatedAt = new Date().toISOString();
@@ -70,11 +78,11 @@ export default async (req) => {
     }
   }
 
-  // MODO: atualizar config geral
   const updated = {
     ...current,
     teamsLink: body.teamsLink !== undefined ? String(body.teamsLink).trim() : current.teamsLink,
     horario: body.horario !== undefined ? String(body.horario).trim() : current.horario,
+    horarioParticular: body.horarioParticular !== undefined ? String(body.horarioParticular).trim() : (current.horarioParticular || 'Horário individual a combinar'),
     calendario: body.calendario !== undefined ? String(body.calendario).trim() : current.calendario,
     notes: body.notes !== undefined ? String(body.notes).trim() : current.notes,
     aulas: Array.isArray(body.aulas) ? body.aulas : current.aulas,
@@ -89,33 +97,32 @@ export default async (req) => {
   }
 };
 
-// Gera 12 aulas começando na primeira terça de setembro/2026 e
-// avançando 1 por semana.
+// 14 aulas: 12 em grupo (terças) + 2 particulares (9/9 e 14/10)
+// Datas exatas confirmadas pela Juliana.
 function defaultAulas() {
-  // 01/09/2026 é terça. Confirma e gera a partir daí.
-  const aulas = [];
-  const start = new Date(Date.UTC(2026, 8, 1)); // 01 setembro 2026 UTC
-  // ajusta pra próxima terça caso não seja
-  while (start.getUTCDay() !== 2) start.setUTCDate(start.getUTCDate() + 1);
-
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(start);
-    d.setUTCDate(start.getUTCDate() + (i * 7));
-    aulas.push({
-      numero: i + 1,
-      data: d.toISOString().slice(0, 10), // YYYY-MM-DD
-      titulo: `Aula ${String(i + 1).padStart(2, '0')}`,
-      descricao: '',
-      recordingLink: '',
-    });
-  }
-  return aulas;
+  return [
+    {numero: 1,  data: '2026-09-01', titulo: 'Aula 01', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 2,  data: '2026-09-08', titulo: 'Aula 02', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 3,  data: '2026-09-09', titulo: 'Mentoria Particular',   tipo: 'particular', descricao: 'Sessão individual · só Executive', recordingLink: ''},
+    {numero: 4,  data: '2026-09-15', titulo: 'Aula 03', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 5,  data: '2026-09-22', titulo: 'Aula 04', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 6,  data: '2026-09-29', titulo: 'Aula 05', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 7,  data: '2026-10-06', titulo: 'Aula 06', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 8,  data: '2026-10-13', titulo: 'Aula 07', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 9,  data: '2026-10-14', titulo: 'Mentoria Particular',   tipo: 'particular', descricao: 'Sessão individual · só Executive', recordingLink: ''},
+    {numero: 10, data: '2026-10-20', titulo: 'Aula 08', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 11, data: '2026-10-27', titulo: 'Aula 09', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 12, data: '2026-11-03', titulo: 'Aula 10', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 13, data: '2026-11-10', titulo: 'Aula 11', tipo: 'grupo',      descricao: '', recordingLink: ''},
+    {numero: 14, data: '2026-11-17', titulo: 'Aula 12', tipo: 'grupo',      descricao: '', recordingLink: ''},
+  ];
 }
 
 function defaultConfig() {
   return {
     teamsLink: '',
-    horario: 'Terças, 07h30 (horário de Brasília)',
+    horario: 'Terças · 07h30 às 09h00 (horário de Brasília)',
+    horarioParticular: 'Horário individual a combinar',
     calendario: 'Setembro a Novembro de 2026',
     notes: '',
     aulas: defaultAulas(),

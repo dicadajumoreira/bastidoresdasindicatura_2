@@ -53,6 +53,7 @@ export default async (req) => {
           perfil: v.perfil || null,
           perfil_nome: v.perfil_nome || null,
           mentoria: !!v.mentoria,
+          mentoriaModalidade: v.mentoria ? (v.mentoriaModalidade || null) : null,
         };
         if (!existing) {
           byEmail[email] = base;

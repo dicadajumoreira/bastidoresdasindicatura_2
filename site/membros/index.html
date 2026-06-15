@@ -598,7 +598,19 @@
       color: var(--offwhite);
       letter-spacing: 0.06em;
     }
+    .mb-aula-horario {
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 10px;
+      color: rgba(247, 245, 242, 0.45);
+      letter-spacing: 0.06em;
+    }
     .mb-aula.is-today .mb-aula-day { color: #B9D199; font-weight: 700; }
+    .mb-aula.is-particular {
+      background: rgba(184, 149, 121, 0.06);
+      border-color: rgba(184, 149, 121, 0.25);
+      border-left-color: #B89579;
+    }
+    .mb-aula.is-particular .mb-aula-num { color: #B89579; }
     .mb-aula-content { min-width: 0; }
     .mb-aula-title {
       margin: 0 0 4px;
@@ -797,6 +809,7 @@
                       perfil: fresh.perfil || data.perfil || null,
                       perfil_nome: fresh.perfil_nome || data.perfil_nome || null,
                       mentoria: !!fresh.mentoria,
+                      mentoriaModalidade: fresh.mentoriaModalidade || data.mentoriaModalidade || null,
                       mentoriaConfig: fresh.mentoriaConfig || data.mentoriaConfig || null,
                     };
                     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -830,6 +843,7 @@
           perfil: data.perfil || null,
           perfil_nome: data.perfil_nome || null,
           mentoria: !!data.mentoria,
+          mentoriaModalidade: data.mentoriaModalidade || null,
           mentoriaConfig: data.mentoriaConfig || null,
           exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
         };
@@ -1104,9 +1118,10 @@
                   <p className="mb-mentoria-card-desc">
                     {member.mentoria ? (
                       <>
+                        Você está inscrito(a) na Turma 01 · <strong style={{color: 'var(--sand)'}}>Modalidade {member.mentoriaModalidade === 'executive' ? 'Executive' : 'Experience'}</strong>.
                         Encontros ao vivo
                         {member.mentoriaConfig && member.mentoriaConfig.horario && <> · <strong>{member.mentoriaConfig.horario}</strong></>}.
-                        Você está inscrito(a) na Turma 01.
+                        {member.mentoriaModalidade === 'executive' && <> Inclui 2 sessões particulares.</>}
                         {member.mentoriaConfig && member.mentoriaConfig.notes && <> {member.mentoriaConfig.notes}</>}
                       </>
                     ) : (
@@ -1136,55 +1151,73 @@
               )}
             </div>
 
-            {/* Cronograma das 12 aulas — visível só pra inscritos */}
-            {member.mentoria && member.mentoriaConfig && Array.isArray(member.mentoriaConfig.aulas) && member.mentoriaConfig.aulas.length > 0 && (
-              <div className="mb-aulas-grid">
-                <div className="mb-aulas-head">
-                  <span className="mb-aulas-eyebrow">Cronograma · 12 aulas</span>
-                  <h3 className="mb-aulas-title">Calendário das <em>aulas.</em></h3>
+            {/* Cronograma das aulas — visível só pra inscritos.
+                Filtra particulares pra quem NÃO é Executive. */}
+            {member.mentoria && member.mentoriaConfig && Array.isArray(member.mentoriaConfig.aulas) && member.mentoriaConfig.aulas.length > 0 && (() => {
+              const isExecutive = member.mentoriaModalidade === 'executive';
+              const visibleAulas = member.mentoriaConfig.aulas.filter((a) => isExecutive || a.tipo !== 'particular');
+              return (
+                <div className="mb-aulas-grid">
+                  <div className="mb-aulas-head">
+                    <span className="mb-aulas-eyebrow">
+                      Cronograma · {visibleAulas.length} aulas · {isExecutive ? 'Executive' : 'Experience'}
+                    </span>
+                    <h3 className="mb-aulas-title">Calendário das <em>aulas.</em></h3>
+                    <p style={{margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: 'rgba(247,245,242,0.6)'}}>
+                      Aulas em grupo · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horario || 'Terças, 07h30 às 09h00 (Brasília)'}</strong>.
+                      {isExecutive && (
+                        <> Particulares · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horarioParticular || 'Horário individual a combinar'}</strong>.</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="mb-aulas-list">
+                    {visibleAulas.map((aula, i) => {
+                      const today = new Date().toISOString().slice(0, 10);
+                      const isPast = aula.data < today;
+                      const isToday = aula.data === today;
+                      const isUpcoming = aula.data > today;
+                      const hasRecording = !!(aula.recordingLink && aula.recordingLink.trim());
+                      const dateLabel = formatDateLabel(aula.data);
+                      const isParticular = aula.tipo === 'particular';
+                      const horarioLabel = isParticular
+                        ? (member.mentoriaConfig.horarioParticular || 'Individual')
+                        : '07h30 às 09h00';
+                      return (
+                        <div key={i} className={'mb-aula' + (isToday ? ' is-today' : '') + (hasRecording ? ' has-recording' : '') + (isParticular ? ' is-particular' : '')}>
+                          <div className="mb-aula-date">
+                            <span className="mb-aula-num">{isParticular ? 'PARTICULAR' : `Aula ${String(i + 1).padStart(2, '0')}`}</span>
+                            <span className="mb-aula-day">{dateLabel}</span>
+                            <span className="mb-aula-horario">{horarioLabel}</span>
+                          </div>
+                          <div className="mb-aula-content">
+                            <p className="mb-aula-title">{aula.titulo || `Aula ${aula.numero}`}</p>
+                            {aula.descricao && <p className="mb-aula-desc">{aula.descricao}</p>}
+                          </div>
+                          <div className="mb-aula-action">
+                            {isToday && member.mentoriaConfig.teamsLink && (
+                              <a href={member.mentoriaConfig.teamsLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-live">
+                                Entrar agora →
+                              </a>
+                            )}
+                            {hasRecording && (
+                              <a href={aula.recordingLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-recording">
+                                ▶ Assistir gravação
+                              </a>
+                            )}
+                            {!isToday && !hasRecording && isPast && (
+                              <span className="mb-aula-status is-pending">Gravação em breve</span>
+                            )}
+                            {isUpcoming && !isToday && (
+                              <span className="mb-aula-status is-future">Em breve</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="mb-aulas-list">
-                  {member.mentoriaConfig.aulas.map((aula, i) => {
-                    const today = new Date().toISOString().slice(0, 10);
-                    const isPast = aula.data < today;
-                    const isToday = aula.data === today;
-                    const isUpcoming = aula.data > today;
-                    const hasRecording = !!(aula.recordingLink && aula.recordingLink.trim());
-                    const dateLabel = formatDateLabel(aula.data);
-                    return (
-                      <div key={i} className={'mb-aula' + (isToday ? ' is-today' : '') + (hasRecording ? ' has-recording' : '')}>
-                        <div className="mb-aula-date">
-                          <span className="mb-aula-num">Aula {String(aula.numero).padStart(2, '0')}</span>
-                          <span className="mb-aula-day">{dateLabel}</span>
-                        </div>
-                        <div className="mb-aula-content">
-                          <p className="mb-aula-title">{aula.titulo || `Aula ${aula.numero}`}</p>
-                          {aula.descricao && <p className="mb-aula-desc">{aula.descricao}</p>}
-                        </div>
-                        <div className="mb-aula-action">
-                          {isToday && member.mentoriaConfig.teamsLink && (
-                            <a href={member.mentoriaConfig.teamsLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-live">
-                              Entrar agora →
-                            </a>
-                          )}
-                          {hasRecording && (
-                            <a href={aula.recordingLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-recording">
-                              ▶ Assistir gravação
-                            </a>
-                          )}
-                          {!isToday && !hasRecording && isPast && (
-                            <span className="mb-aula-status is-pending">Gravação em breve</span>
-                          )}
-                          {isUpcoming && !isToday && (
-                            <span className="mb-aula-status is-future">Em breve</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {loggedView === 'library' && (

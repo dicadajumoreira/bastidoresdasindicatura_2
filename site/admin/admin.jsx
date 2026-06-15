@@ -528,10 +528,11 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
             {lead.mentoria && (
               <span style={{
                 marginLeft: 12, fontSize: 12, padding: '4px 10px',
-                background: 'rgba(129,148,112,0.18)', color: '#819470',
+                background: lead.mentoriaModalidade === 'executive' ? 'rgba(184,149,121,0.22)' : 'rgba(129,148,112,0.18)',
+                color: lead.mentoriaModalidade === 'executive' ? '#B89579' : '#819470',
                 borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
                 fontWeight: 700, verticalAlign: 'middle',
-              }}>Mentoria</span>
+              }}>{lead.mentoriaModalidade === 'executive' ? 'Executive' : 'Experience'}</span>
             )}
           </h2>
           <p className="ad-detail-sub">
@@ -762,26 +763,97 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
             >
               {(lead.ativo === false || lead.unsubscribed) ? '↻ Reativar cadastro' : '⊘ Inativar cadastro'}
             </button>
-            <button
-              className="ad-btn ad-btn-ghost ad-btn-sm"
-              onClick={async () => {
-                const isMentoria = !!lead.mentoria;
-                const label = isMentoria
-                  ? 'Remover acesso à Mentoria? O membro perde o link do Teams.'
-                  : 'Conceder acesso à Mentoria? O membro vai conseguir entrar no Teams da turma.';
-                if (!window.confirm(label)) return;
-                try {
-                  const res = await api('/api/update-status', {
-                    method: 'POST',
-                    body: JSON.stringify({id: lead.id, mentoria: !isMentoria}),
-                  });
-                  onUpdated(res.lead);
-                } catch (err) { alert(err.message); }
-              }}
-              style={{color: lead.mentoria ? '#d97757' : '#819470', borderColor: lead.mentoria ? '#d97757' : '#819470'}}
-            >
-              {lead.mentoria ? '⊘ Tirar da Mentoria' : '✓ Marcar como inscrito na Mentoria'}
-            </button>
+            {/* Seletor de modalidade da Mentoria */}
+            {!lead.mentoria ? (
+              <>
+                <button
+                  className="ad-btn ad-btn-ghost ad-btn-sm"
+                  onClick={async () => {
+                    if (!window.confirm(`Marcar ${lead.nome} como inscrito na Mentoria EXPERIENCE? 12 aulas em grupo, sem sessões particulares.`)) return;
+                    try {
+                      const res = await api('/api/update-status', {
+                        method: 'POST',
+                        body: JSON.stringify({id: lead.id, mentoria: true, mentoriaModalidade: 'experience'}),
+                      });
+                      onUpdated(res.lead);
+                    } catch (err) { alert(err.message); }
+                  }}
+                  style={{color: '#819470', borderColor: '#819470'}}
+                >
+                  ✓ Mentoria Experience
+                </button>
+                <button
+                  className="ad-btn ad-btn-ghost ad-btn-sm"
+                  onClick={async () => {
+                    if (!window.confirm(`Marcar ${lead.nome} como inscrito na Mentoria EXECUTIVE? 12 aulas em grupo + 2 sessões particulares.`)) return;
+                    try {
+                      const res = await api('/api/update-status', {
+                        method: 'POST',
+                        body: JSON.stringify({id: lead.id, mentoria: true, mentoriaModalidade: 'executive'}),
+                      });
+                      onUpdated(res.lead);
+                    } catch (err) { alert(err.message); }
+                  }}
+                  style={{color: '#B89579', borderColor: '#B89579'}}
+                >
+                  ✓ Mentoria Executive
+                </button>
+              </>
+            ) : (
+              <>
+                {lead.mentoriaModalidade !== 'executive' ? (
+                  <button
+                    className="ad-btn ad-btn-ghost ad-btn-sm"
+                    onClick={async () => {
+                      if (!window.confirm(`Mudar ${lead.nome} pra Executive? Libera as 2 sessões particulares.`)) return;
+                      try {
+                        const res = await api('/api/update-status', {
+                          method: 'POST',
+                          body: JSON.stringify({id: lead.id, mentoriaModalidade: 'executive'}),
+                        });
+                        onUpdated(res.lead);
+                      } catch (err) { alert(err.message); }
+                    }}
+                    style={{color: '#B89579', borderColor: '#B89579'}}
+                  >
+                    ↑ Mudar pra Executive
+                  </button>
+                ) : (
+                  <button
+                    className="ad-btn ad-btn-ghost ad-btn-sm"
+                    onClick={async () => {
+                      if (!window.confirm(`Mudar ${lead.nome} pra Experience? Tira acesso às particulares.`)) return;
+                      try {
+                        const res = await api('/api/update-status', {
+                          method: 'POST',
+                          body: JSON.stringify({id: lead.id, mentoriaModalidade: 'experience'}),
+                        });
+                        onUpdated(res.lead);
+                      } catch (err) { alert(err.message); }
+                    }}
+                    style={{color: '#819470', borderColor: '#819470'}}
+                  >
+                    ↓ Mudar pra Experience
+                  </button>
+                )}
+                <button
+                  className="ad-btn ad-btn-ghost ad-btn-sm"
+                  onClick={async () => {
+                    if (!window.confirm(`Remover ${lead.nome} da Mentoria? Perde acesso ao Teams.`)) return;
+                    try {
+                      const res = await api('/api/update-status', {
+                        method: 'POST',
+                        body: JSON.stringify({id: lead.id, mentoria: false}),
+                      });
+                      onUpdated(res.lead);
+                    } catch (err) { alert(err.message); }
+                  }}
+                  style={{color: '#d97757', borderColor: '#d97757'}}
+                >
+                  ⊘ Tirar da Mentoria
+                </button>
+              </>
+            )}
             <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
               Excluir aplicação
             </button>
@@ -3009,17 +3081,24 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
               return (
                 <div key={idx} style={{
                   display: 'grid',
-                  gridTemplateColumns: '60px 120px 1fr 1.4fr 120px',
+                  gridTemplateColumns: '60px 100px 120px 1fr 1.4fr 100px',
                   gap: 10,
                   alignItems: 'center',
                   padding: '14px 16px',
-                  background: 'rgba(247,245,242,0.03)',
+                  background: aula.tipo === 'particular' ? 'rgba(184,149,121,0.06)' : 'rgba(247,245,242,0.03)',
                   border: '1px solid rgba(247,245,242,0.10)',
-                  borderLeft: `3px solid ${hasRecording ? '#819470' : isPast ? '#d97757' : 'rgba(218,189,169,0.5)'}`,
+                  borderLeft: `3px solid ${hasRecording ? '#819470' : isPast ? '#d97757' : aula.tipo === 'particular' ? '#B89579' : 'rgba(218,189,169,0.5)'}`,
                 }}>
                   <span style={{fontFamily: 'monospace', fontSize: 13, color: 'var(--sand)', fontWeight: 700}}>
                     {String(aula.numero).padStart(2, '0')}
                   </span>
+                  <span style={{
+                    fontSize: 9, padding: '4px 8px', fontWeight: 700,
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: aula.tipo === 'particular' ? '#B89579' : '#819470',
+                    border: `1px solid ${aula.tipo === 'particular' ? '#B89579' : '#819470'}`,
+                    textAlign: 'center',
+                  }}>{aula.tipo === 'particular' ? 'Particular' : 'Grupo'}</span>
                   <input
                     type="date"
                     value={aula.data || ''}
@@ -3091,7 +3170,7 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
         </header>
 
         <p className="ad-bc-drafts-lead">
-          Pra adicionar um novo inscrito, vai em <strong>Ver aplicações</strong>, abre o detalhe do lead e clica em <em>"Marcar como inscrito na Mentoria"</em>. Pra tirar, use o botão remover aqui mesmo na lista.
+          Pra adicionar um novo inscrito, vai em <strong>Ver aplicações</strong>, abre o detalhe do lead e clica em <em>"Mentoria Experience"</em> (12 aulas em grupo) ou <em>"Mentoria Executive"</em> (12 em grupo + 2 particulares). Pra tirar, use o botão da linha.
         </p>
 
         <div className="ad-cold-search">
@@ -3110,7 +3189,7 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
           : filteredInscritos.length === 0 ? (
             <p className="ad-bc-empty">
               {inscritos.length === 0
-                ? 'Nenhum inscrito ainda. Vai em Ver aplicações → abre um lead → "Marcar como inscrito na Mentoria".'
+                ? 'Nenhum inscrito ainda. Vai em Ver aplicações → abre um lead → "Mentoria Experience" ou "Mentoria Executive".'
                 : 'Nenhum inscrito bate com a busca.'}
             </p>
           ) : (
@@ -3118,6 +3197,7 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
               <thead>
                 <tr>
                   <th>Nome</th>
+                  <th>Modalidade</th>
                   <th>E-mail</th>
                   <th>WhatsApp</th>
                   <th>Cidade</th>
@@ -3129,6 +3209,14 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
                 {filteredInscritos.map((l) => (
                   <tr key={l.id}>
                     <td><strong>{l.nome || '—'}</strong></td>
+                    <td>
+                      <span style={{
+                        fontSize: 10, padding: '3px 8px', fontWeight: 700,
+                        letterSpacing: '0.12em', textTransform: 'uppercase',
+                        background: l.mentoriaModalidade === 'executive' ? 'rgba(184,149,121,0.22)' : 'rgba(129,148,112,0.18)',
+                        color: l.mentoriaModalidade === 'executive' ? '#B89579' : '#819470',
+                      }}>{l.mentoriaModalidade === 'executive' ? 'Executive' : 'Experience'}</span>
+                    </td>
                     <td className="ad-bc-history-subject">{l.email}</td>
                     <td>{l.whatsapp || <span style={{color:'rgba(247,245,242,0.35)'}}>—</span>}</td>
                     <td>{l.cidade}{l.estado ? `/${l.estado}` : ''}</td>
@@ -3137,7 +3225,7 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
                     </td>
                     <td style={{textAlign:'right', whiteSpace:'nowrap'}}>
                       <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => toggleMentoria(l)} style={{color: '#d97757'}}>
-                        Tirar da Mentoria
+                        Tirar
                       </button>
                     </td>
                   </tr>

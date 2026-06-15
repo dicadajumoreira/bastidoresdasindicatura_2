@@ -21,7 +21,11 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({error: 'Invalid JSON'}, 400); }
 
-  const { id, status, notes, deleted, ativo, mentoria } = body || {};
+  const { id, status, notes, deleted, ativo, mentoria, mentoriaModalidade } = body || {};
+  const VALID_MENTORIA_MODALIDADES = new Set(['experience', 'executive']);
+  if (mentoriaModalidade && !VALID_MENTORIA_MODALIDADES.has(mentoriaModalidade)) {
+    return json({error: 'Modalidade inválida (experience | executive)'}, 400);
+  }
   if (!id) return json({error: 'id obrigatório'}, 400);
   if (status && !VALID_STATUS.has(status)) return json({error: 'status inválido'}, 400);
 
@@ -51,7 +55,12 @@ export default async (req) => {
     ? {
         mentoria,
         ...(mentoria ? {mentoriaAt: current.mentoriaAt || new Date().toISOString()} : {}),
+        // Quando ativa sem especificar modalidade, default = 'experience'
+        ...(mentoria && !mentoriaModalidade && !current.mentoriaModalidade ? {mentoriaModalidade: 'experience'} : {}),
       }
+    : {};
+  const modalidadePatch = mentoriaModalidade
+    ? {mentoriaModalidade}
     : {};
 
   const updated = {
@@ -61,6 +70,7 @@ export default async (req) => {
     ...deletePatch,
     ...ativoPatch,
     ...mentoriaPatch,
+    ...modalidadePatch,
     updatedAt: new Date().toISOString(),
   };
 

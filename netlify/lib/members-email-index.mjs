@@ -27,7 +27,7 @@ export async function findLeadByEmail(email) {
         return {lead: null, indexMissing: false};
       }
       // Garante que perfil/perfil_nome/mentoria venham sempre presentes
-      return {lead: {perfil: null, perfil_nome: null, mentoria: false, ...entry}, indexMissing: false};
+      return {lead: {perfil: null, perfil_nome: null, mentoria: false, mentoriaModalidade: null, ...entry}, indexMissing: false};
     }
   } catch (err) {
     console.error('[members-email-index] cache read failed:', err.message);
@@ -41,6 +41,7 @@ export async function findLeadByEmail(email) {
   let perfil = null;
   let perfil_nome = null;
   let mentoria = false;
+  let mentoriaModalidade = null;
   let anyInactive = false;
   try {
     const leads = getStore({name: 'leads', consistency: 'strong'});
@@ -73,15 +74,21 @@ export async function findLeadByEmail(email) {
         }
         if (!perfil && v.perfil) perfil = v.perfil;
         if (!perfil_nome && v.perfil_nome) perfil_nome = v.perfil_nome;
-        if (v.mentoria === true) mentoria = true;
+        if (v.mentoria === true) {
+          mentoria = true;
+          // 'executive' tem prioridade sobre 'experience' se houver
+          // múltiplas aplicações marcadas
+          if (v.mentoriaModalidade === 'executive') mentoriaModalidade = 'executive';
+          else if (!mentoriaModalidade && v.mentoriaModalidade) mentoriaModalidade = v.mentoriaModalidade;
+        }
       }
-      // Early-exit quando já temos lead E perfil E mentoria
       if (lead && perfil_nome && mentoria) break;
     }
     if (lead) {
       lead.perfil = perfil;
       lead.perfil_nome = perfil_nome;
       lead.mentoria = mentoria;
+      lead.mentoriaModalidade = mentoriaModalidade || (mentoria ? 'experience' : null);
     }
     // Se TODAS as aplicações do e-mail estão inativas, retornamos null
     // pra bloquear o login.
