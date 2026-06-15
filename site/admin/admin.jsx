@@ -563,6 +563,12 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
         />
       )}
 
+      {/* Painel Mentoria · ativacao manual quando o curso for pago.
+          Painel grande, sem confirm() nativo (que falha em alguns
+          navegadores mobile). Plano selecionavel ANTES e DEPOIS da
+          ativacao. Botao com loading + sucesso visivel. */}
+      <MentoriaActivator lead={lead} onUpdated={onUpdated} />
+
       {/* Formulários baixados por esta pessoa (cadastro único) */}
       {forms.length > 1 && (
         <div className="ad-dup-card">
@@ -768,128 +774,275 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
             >
               {(lead.ativo === false || lead.unsubscribed) ? '↻ Reativar cadastro' : '⊘ Inativar cadastro'}
             </button>
-            {/* Painel Mentoria · um botão "aluno ativo" + plano cadastrado.
-                Marcar como ativo desbloqueia a Sala da Mentoria na area de
-                membros do aluno na hora (cache eh atualizado pelo backend). */}
-            <div style={{
-              width: '100%',
-              border: lead.mentoria ? '1px solid #819470' : '1px solid rgba(247,245,242,0.18)',
-              background: lead.mentoria ? 'rgba(129,148,112,0.08)' : 'rgba(247,245,242,0.03)',
-              padding: 14,
-              marginTop: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-            }}>
-              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap'}}>
-                <div>
-                  <span style={{fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>
-                    Mentoria · acesso à Sala
-                  </span>
-                  <div style={{fontSize: 15, fontWeight: 700, color: lead.mentoria ? '#a8d4a8' : 'rgba(247,245,242,0.75)', marginTop: 4}}>
-                    {lead.mentoria ? '✓ Aluno ativo da mentoria' : '○ Não é aluno ainda'}
-                  </div>
-                  {lead.mentoria && lead.mentoriaAt && (
-                    <div style={{fontSize: 11, color: 'rgba(247,245,242,0.55)', marginTop: 2}}>
-                      Inscrição registrada em {fmtDate(lead.mentoriaAt)}
-                    </div>
-                  )}
-                  {lead.mentoria && (
-                    <div style={{fontSize: 11, color: '#a8d4a8', marginTop: 2, fontStyle: 'italic'}}>
-                      A Sala da Mentoria está desbloqueada pra ele(a) na área de membros.
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="ad-btn ad-btn-sm"
-                  onClick={async () => {
-                    if (lead.mentoria) {
-                      if (!window.confirm(`Tirar ${lead.nome} da Mentoria? A Sala vai bloquear pra ele(a) na próxima visita à área de membros.`)) return;
-                      try {
-                        const res = await api('/api/update-status', {
-                          method: 'POST',
-                          body: JSON.stringify({id: lead.id, mentoria: false}),
-                        });
-                        onUpdated(res.lead);
-                      } catch (err) { alert(err.message); }
-                    } else {
-                      const plano = String(lead.modalidade || '').toLowerCase().includes('executive') ? 'executive' : 'experience';
-                      const planoLabel = plano === 'executive' ? 'Executive (12 grupo + 2 particulares)' : 'Experience (12 aulas em grupo)';
-                      if (!window.confirm(`Ativar ${lead.nome} como aluno da Mentoria no plano ${planoLabel}?\n\nA Sala da Mentoria fica desbloqueada na hora pra ele(a).\n\nO plano pode ser trocado a qualquer momento depois.`)) return;
-                      try {
-                        const res = await api('/api/update-status', {
-                          method: 'POST',
-                          body: JSON.stringify({id: lead.id, mentoria: true, mentoriaModalidade: plano}),
-                        });
-                        onUpdated(res.lead);
-                      } catch (err) { alert(err.message); }
-                    }
-                  }}
-                  style={lead.mentoria
-                    ? {color: '#d97757', borderColor: '#d97757', background: 'transparent'}
-                    : {background: '#819470', color: '#0F1116', borderColor: '#819470', fontWeight: 700, letterSpacing: '0.08em'}}
-                >
-                  {lead.mentoria ? '⊘ Tirar da Mentoria' : '✓ Ativar como aluno da Mentoria'}
-                </button>
-              </div>
-
-              {lead.mentoria && (
-                <div>
-                  <span style={{fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700, display: 'block', marginBottom: 8}}>
-                    Plano cadastrado
-                  </span>
-                  <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
-                    <button
-                      className="ad-btn ad-btn-sm"
-                      onClick={async () => {
-                        if (lead.mentoriaModalidade === 'experience') return;
-                        try {
-                          const res = await api('/api/update-status', {
-                            method: 'POST',
-                            body: JSON.stringify({id: lead.id, mentoriaModalidade: 'experience'}),
-                          });
-                          onUpdated(res.lead);
-                        } catch (err) { alert(err.message); }
-                      }}
-                      style={lead.mentoriaModalidade === 'experience'
-                        ? {background: 'rgba(129,148,112,0.30)', color: '#819470', borderColor: '#819470', fontWeight: 700}
-                        : {color: 'rgba(247,245,242,0.55)', borderColor: 'rgba(247,245,242,0.18)', background: 'transparent'}}
-                    >
-                      {lead.mentoriaModalidade === 'experience' ? '● ' : '○ '}Experience · 12 aulas em grupo
-                    </button>
-                    <button
-                      className="ad-btn ad-btn-sm"
-                      onClick={async () => {
-                        if (lead.mentoriaModalidade === 'executive') return;
-                        try {
-                          const res = await api('/api/update-status', {
-                            method: 'POST',
-                            body: JSON.stringify({id: lead.id, mentoriaModalidade: 'executive'}),
-                          });
-                          onUpdated(res.lead);
-                        } catch (err) { alert(err.message); }
-                      }}
-                      style={lead.mentoriaModalidade === 'executive'
-                        ? {background: 'rgba(184,149,121,0.30)', color: '#B89579', borderColor: '#B89579', fontWeight: 700}
-                        : {color: 'rgba(247,245,242,0.55)', borderColor: 'rgba(247,245,242,0.18)', background: 'transparent'}}
-                    >
-                      {lead.mentoriaModalidade === 'executive' ? '● ' : '○ '}Executive · 12 grupo + 2 particulares
-                    </button>
-                  </div>
-                  {lead.modalidade && (
-                    <p style={{fontSize: 11, color: 'rgba(247,245,242,0.45)', fontStyle: 'italic', margin: '8px 0 0'}}>
-                      Preferência do formulário: <strong style={{color: 'var(--sand)'}}>{lead.modalidade}</strong>
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
+            {/* Mentoria foi movida pra um painel proprio no topo do cadastro */}
             <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
               Excluir aplicação
             </button>
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// Painel grande de ativacao da Mentoria. Aparece logo abaixo das
+// acoes de contato no detalhe da aplicacao. Usa confirmacao INLINE
+// (sem window.confirm) pra evitar bugs de WebView no mobile.
+const MentoriaActivator = ({lead, onUpdated}) => {
+  const [busy, setBusy] = React.useState(false);
+  const [doneFlash, setDoneFlash] = React.useState('');
+  const [confirming, setConfirming] = React.useState(null); // 'ativar' | 'tirar' | null
+  // Plano escolhido antes de ativar. Default = preferencia do formulario, ou experience.
+  const initialPlano = String(lead.modalidade || '').toLowerCase().includes('executive') ? 'executive' : 'experience';
+  const [planoEscolhido, setPlanoEscolhido] = React.useState(lead.mentoriaModalidade || initialPlano);
+
+  React.useEffect(() => {
+    setPlanoEscolhido(lead.mentoriaModalidade || initialPlano);
+    setConfirming(null);
+    setDoneFlash('');
+  }, [lead.id]);
+
+  const flashSuccess = (msg) => {
+    setDoneFlash(msg);
+    setTimeout(() => setDoneFlash(''), 3500);
+  };
+
+  const apiCall = async (body, successMsg) => {
+    setBusy(true);
+    try {
+      const res = await api('/api/update-status', {method: 'POST', body: JSON.stringify(body)});
+      onUpdated(res.lead);
+      flashSuccess(successMsg);
+      setConfirming(null);
+    } catch (err) {
+      alert('Falha: ' + err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const ativar = () => apiCall(
+    {id: lead.id, mentoria: true, mentoriaModalidade: planoEscolhido},
+    'Aluno ativado. A Sala da Mentoria desbloqueou na área de membros.',
+  );
+  const tirar = () => apiCall(
+    {id: lead.id, mentoria: false},
+    'Aluno removido da Mentoria.',
+  );
+  const mudarPlano = (novo) => {
+    if (lead.mentoriaModalidade === novo) return;
+    apiCall(
+      {id: lead.id, mentoriaModalidade: novo},
+      `Plano alterado pra ${novo === 'executive' ? 'Executive' : 'Experience'}.`,
+    );
+  };
+
+  const isAtivo = !!lead.mentoria;
+  const modalidade = lead.mentoriaModalidade || planoEscolhido;
+  const corPlano = (m) => m === 'executive' ? '#B89579' : '#819470';
+  const bgPlano = (m) => m === 'executive' ? 'rgba(184,149,121,0.18)' : 'rgba(129,148,112,0.18)';
+
+  return (
+    <div style={{
+      border: isAtivo ? '2px solid ' + corPlano(modalidade) : '2px solid rgba(218,189,169,0.4)',
+      background: isAtivo ? bgPlano(modalidade) : 'rgba(218,189,169,0.05)',
+      padding: 18,
+      margin: '12px 0 18px',
+      borderRadius: 4,
+    }}>
+      <div style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap'}}>
+        <span style={{
+          fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
+          color: isAtivo ? corPlano(modalidade) : 'var(--sand)', fontWeight: 700,
+        }}>
+          {isAtivo ? '✓ Aluno ativo · Mentoria' : '○ Mentoria · acesso à Sala'}
+        </span>
+        {isAtivo && (
+          <span style={{
+            fontSize: 10, padding: '4px 10px', fontWeight: 700, letterSpacing: '0.14em',
+            textTransform: 'uppercase', background: bgPlano(modalidade), color: corPlano(modalidade),
+            borderRadius: 2,
+          }}>{modalidade === 'executive' ? 'Executive' : 'Experience'}</span>
+        )}
+      </div>
+
+      {isAtivo ? (
+        <>
+          <p style={{margin: '0 0 12px', fontSize: 14, color: '#a8d4a8', lineHeight: 1.4}}>
+            <strong>Aluno(a) com acesso liberado.</strong> A Sala da Mentoria está desbloqueada pra <strong>{lead.email}</strong> na área de membros.
+            {lead.mentoriaAt && <> Inscrição registrada em {fmtDate(lead.mentoriaAt)}.</>}
+          </p>
+
+          <div style={{marginBottom: 12}}>
+            <span style={{
+              display: 'block', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase',
+              color: 'rgba(247,245,242,0.55)', fontWeight: 700, marginBottom: 8,
+            }}>Plano contratado</span>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8}}>
+              <button
+                type="button"
+                onClick={() => mudarPlano('experience')}
+                disabled={busy}
+                style={{
+                  padding: '14px 16px', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em',
+                  background: modalidade === 'experience' ? 'rgba(129,148,112,0.30)' : 'transparent',
+                  color: modalidade === 'experience' ? '#819470' : 'rgba(247,245,242,0.65)',
+                  border: '1px solid ' + (modalidade === 'experience' ? '#819470' : 'rgba(247,245,242,0.18)'),
+                  borderRadius: 2, cursor: busy ? 'wait' : 'pointer', textAlign: 'left',
+                }}>
+                {modalidade === 'experience' ? '● ' : '○ '}Experience
+                <span style={{display: 'block', fontSize: 11, fontWeight: 400, marginTop: 2, opacity: 0.8}}>
+                  12 aulas em grupo
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => mudarPlano('executive')}
+                disabled={busy}
+                style={{
+                  padding: '14px 16px', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em',
+                  background: modalidade === 'executive' ? 'rgba(184,149,121,0.30)' : 'transparent',
+                  color: modalidade === 'executive' ? '#B89579' : 'rgba(247,245,242,0.65)',
+                  border: '1px solid ' + (modalidade === 'executive' ? '#B89579' : 'rgba(247,245,242,0.18)'),
+                  borderRadius: 2, cursor: busy ? 'wait' : 'pointer', textAlign: 'left',
+                }}>
+                {modalidade === 'executive' ? '● ' : '○ '}Executive
+                <span style={{display: 'block', fontSize: 11, fontWeight: 400, marginTop: 2, opacity: 0.8}}>
+                  12 grupo + 2 particulares
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {confirming === 'tirar' ? (
+            <div style={{padding: 14, background: 'rgba(217,119,87,0.10)', border: '1px solid #d97757', borderRadius: 2}}>
+              <p style={{margin: '0 0 12px', fontSize: 13, color: '#d97757', fontWeight: 600}}>
+                Tirar {lead.nome} da Mentoria? A Sala vai bloquear pra ele(a).
+              </p>
+              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                <button type="button" onClick={tirar} disabled={busy} style={{
+                  padding: '12px 20px', fontSize: 12, fontWeight: 700, letterSpacing: '0.14em',
+                  background: '#d97757', color: '#0F1116', border: 'none', borderRadius: 2,
+                  cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase', flex: 1, minWidth: 140,
+                }}>
+                  {busy ? 'Tirando…' : 'Sim, tirar da Mentoria'}
+                </button>
+                <button type="button" onClick={() => setConfirming(null)} disabled={busy} style={{
+                  padding: '12px 20px', fontSize: 12, fontWeight: 600, letterSpacing: '0.14em',
+                  background: 'transparent', color: 'rgba(247,245,242,0.7)',
+                  border: '1px solid rgba(247,245,242,0.25)', borderRadius: 2,
+                  cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase',
+                }}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setConfirming('tirar')} disabled={busy} style={{
+              padding: '12px 20px', fontSize: 12, fontWeight: 600, letterSpacing: '0.14em',
+              background: 'transparent', color: '#d97757', border: '1px solid #d97757',
+              borderRadius: 2, cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase',
+            }}>
+              ⊘ Tirar da Mentoria
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <p style={{margin: '0 0 14px', fontSize: 14, color: 'rgba(247,245,242,0.85)', lineHeight: 1.45}}>
+            Quando confirmar o pagamento, clica em <strong>Ativar</strong> abaixo. A Sala da Mentoria desbloqueia <strong>na hora</strong> pra <strong>{lead.email}</strong> na área de membros.
+          </p>
+
+          <div style={{marginBottom: 14}}>
+            <span style={{
+              display: 'block', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase',
+              color: 'rgba(247,245,242,0.55)', fontWeight: 700, marginBottom: 8,
+            }}>Escolha o plano contratado</span>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8}}>
+              <button
+                type="button"
+                onClick={() => setPlanoEscolhido('experience')}
+                disabled={busy}
+                style={{
+                  padding: '14px 16px', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em',
+                  background: planoEscolhido === 'experience' ? 'rgba(129,148,112,0.30)' : 'transparent',
+                  color: planoEscolhido === 'experience' ? '#819470' : 'rgba(247,245,242,0.65)',
+                  border: '2px solid ' + (planoEscolhido === 'experience' ? '#819470' : 'rgba(247,245,242,0.18)'),
+                  borderRadius: 2, cursor: busy ? 'wait' : 'pointer', textAlign: 'left',
+                }}>
+                {planoEscolhido === 'experience' ? '● ' : '○ '}Experience
+                <span style={{display: 'block', fontSize: 11, fontWeight: 400, marginTop: 2, opacity: 0.85}}>
+                  12 aulas em grupo
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlanoEscolhido('executive')}
+                disabled={busy}
+                style={{
+                  padding: '14px 16px', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em',
+                  background: planoEscolhido === 'executive' ? 'rgba(184,149,121,0.30)' : 'transparent',
+                  color: planoEscolhido === 'executive' ? '#B89579' : 'rgba(247,245,242,0.65)',
+                  border: '2px solid ' + (planoEscolhido === 'executive' ? '#B89579' : 'rgba(247,245,242,0.18)'),
+                  borderRadius: 2, cursor: busy ? 'wait' : 'pointer', textAlign: 'left',
+                }}>
+                {planoEscolhido === 'executive' ? '● ' : '○ '}Executive
+                <span style={{display: 'block', fontSize: 11, fontWeight: 400, marginTop: 2, opacity: 0.85}}>
+                  12 grupo + 2 particulares
+                </span>
+              </button>
+            </div>
+            {lead.modalidade && (
+              <p style={{fontSize: 11, color: 'rgba(247,245,242,0.45)', fontStyle: 'italic', margin: '8px 0 0'}}>
+                Preferência marcada no formulário: <strong style={{color: 'var(--sand)'}}>{lead.modalidade}</strong>
+              </p>
+            )}
+          </div>
+
+          {confirming === 'ativar' ? (
+            <div style={{padding: 14, background: 'rgba(129,148,112,0.12)', border: '1px solid #819470', borderRadius: 2}}>
+              <p style={{margin: '0 0 12px', fontSize: 14, color: '#a8d4a8', fontWeight: 600}}>
+                Ativar <strong>{lead.nome}</strong> no plano <strong>{planoEscolhido === 'executive' ? 'Executive' : 'Experience'}</strong>?
+              </p>
+              <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                <button type="button" onClick={ativar} disabled={busy} style={{
+                  padding: '14px 22px', fontSize: 13, fontWeight: 800, letterSpacing: '0.14em',
+                  background: '#819470', color: '#0F1116', border: 'none', borderRadius: 2,
+                  cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase', flex: 1, minWidth: 180,
+                }}>
+                  {busy ? 'Ativando…' : '✓ Sim, ativar agora'}
+                </button>
+                <button type="button" onClick={() => setConfirming(null)} disabled={busy} style={{
+                  padding: '14px 22px', fontSize: 13, fontWeight: 600, letterSpacing: '0.14em',
+                  background: 'transparent', color: 'rgba(247,245,242,0.7)',
+                  border: '1px solid rgba(247,245,242,0.25)', borderRadius: 2,
+                  cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase',
+                }}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirming('ativar')}
+              disabled={busy}
+              style={{
+                width: '100%', padding: '18px 22px', fontSize: 14, fontWeight: 800, letterSpacing: '0.16em',
+                background: '#819470', color: '#0F1116', border: 'none', borderRadius: 2,
+                cursor: busy ? 'wait' : 'pointer', textTransform: 'uppercase',
+              }}>
+              ✓ Ativar como aluno da Mentoria
+            </button>
+          )}
+        </>
+      )}
+
+      {doneFlash && (
+        <div style={{
+          marginTop: 12, padding: 12,
+          background: 'rgba(129,148,112,0.15)', border: '1px solid #a8d4a8',
+          color: '#a8d4a8', fontSize: 13, fontWeight: 600, borderRadius: 2,
+        }}>
+          ✓ {doneFlash}
+        </div>
+      )}
     </div>
   );
 };
