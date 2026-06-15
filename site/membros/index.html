@@ -1091,6 +1091,28 @@
                 <button className={'mb-nav-link' + (loggedView === 'profile' ? ' is-on' : '')} onClick={openProfile}>Meu cadastro</button>
               </nav>
               <span className="mb-user-name">Olá, <strong>{firstName}</strong></span>
+              <button
+                className="mb-logout"
+                title="Atualizar dados do cadastro (perfil, mentoria, modalidade)"
+                onClick={async () => {
+                  try {
+                    const {ok, data: fresh} = await post('/.netlify/functions/membros-validate', {token: member.token});
+                    if (ok && fresh.ok) {
+                      const next = {
+                        ...member,
+                        nome: fresh.nome || member.nome,
+                        perfil: fresh.perfil || null,
+                        perfil_nome: fresh.perfil_nome || null,
+                        mentoria: !!fresh.mentoria,
+                        mentoriaModalidade: fresh.mentoriaModalidade || null,
+                        mentoriaConfig: fresh.mentoriaConfig || member.mentoriaConfig || null,
+                      };
+                      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+                      setMember(next);
+                    }
+                  } catch {}
+                }}
+              >↻ Atualizar</button>
               <button className="mb-logout" onClick={logout}>Sair</button>
             </div>
           </header>

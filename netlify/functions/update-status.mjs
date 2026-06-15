@@ -76,19 +76,34 @@ export default async (req) => {
 
   await store.setJSON(id, updated);
 
-  // Atualiza o índice de membros com a flag de mentoria
-  if (typeof mentoria === 'boolean' || typeof ativo === 'boolean') {
+  // Atualiza o índice de membros com a flag de mentoria/modalidade.
+  // Dispara também quando SÓ a modalidade mudou. Se a entrada do
+  // e-mail ainda não existe no índice (caso comum: membro nunca
+  // logou ainda), CRIA ela na hora — assim a próxima visita ao
+  // /membros/ pega o estado certo.
+  if (typeof mentoria === 'boolean' || typeof ativo === 'boolean' || mentoriaModalidade) {
     try {
       const idxStore = getStore({name: 'members-email-index', consistency: 'strong'});
-      const idx = await idxStore.get('index', {type: 'json'});
+      const idx = (await idxStore.get('index', {type: 'json'})) || {builtAt: new Date().toISOString(), byEmail: {}, count: 0};
+      if (!idx.byEmail) idx.byEmail = {};
       const emailKey = String(updated.email || '').trim().toLowerCase();
-      if (idx && idx.byEmail && emailKey && idx.byEmail[emailKey]) {
+      if (emailKey) {
+        const existing = idx.byEmail[emailKey] || {
+          id: updated.id,
+          nome: updated.nome || '',
+          createdAt: updated.createdAt,
+          perfil: updated.perfil || null,
+          perfil_nome: updated.perfil_nome || null,
+        };
         idx.byEmail[emailKey] = {
-          ...idx.byEmail[emailKey],
+          ...existing,
+          nome: updated.nome || existing.nome || '',
           mentoria: !!updated.mentoria,
+          mentoriaModalidade: updated.mentoria ? (updated.mentoriaModalidade || existing.mentoriaModalidade || 'experience') : null,
           ativo: updated.ativo !== false,
           unsubscribed: !!updated.unsubscribed,
         };
+        idx.count = Object.keys(idx.byEmail).length;
         idx.lastIncrementalAt = new Date().toISOString();
         await idxStore.setJSON('index', idx);
       }
