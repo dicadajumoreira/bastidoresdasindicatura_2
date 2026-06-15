@@ -5,6 +5,7 @@
 // Body: { token }
 // Resposta: { ok, email, nome }
 
+import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
 import { findLeadByEmail } from '../lib/members-email-index.mjs';
 

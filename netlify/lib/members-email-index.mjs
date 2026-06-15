@@ -26,8 +26,29 @@ export async function findLeadByEmail(email) {
       if (entry.unsubscribed || entry.ativo === false) {
         return {lead: null, indexMissing: false};
       }
-      // Garante que perfil/perfil_nome/mentoria venham sempre presentes
-      return {lead: {perfil: null, perfil_nome: null, mentoria: false, mentoriaModalidade: null, ...entry}, indexMissing: false};
+      const merged = {perfil: null, perfil_nome: null, mentoria: false, mentoriaModalidade: null, ...entry};
+      // Se o cache diz mentoria:false MAS existe id, faz uma checagem
+      // direta no blob da lead pra cobrir o caso de cache stale (raro,
+      // mas catastrófico pra UX da Sala da Mentoria). Custo: 1 read.
+      if (!merged.mentoria && merged.id) {
+        try {
+          const leadsStore = getStore({name: 'leads', consistency: 'strong'});
+          const fresh = await leadsStore.get(merged.id, {type: 'json'});
+          if (fresh && fresh.mentoria === true && !fresh.unsubscribed && fresh.ativo !== false) {
+            merged.mentoria = true;
+            merged.mentoriaModalidade = fresh.mentoriaModalidade || 'experience';
+            // Atualiza o cache pra próxima chamada
+            try {
+              index.byEmail[normalized] = {...entry, mentoria: true, mentoriaModalidade: merged.mentoriaModalidade};
+              index.lastIncrementalAt = new Date().toISOString();
+              await indexStore.setJSON('index', index);
+            } catch {}
+          }
+        } catch (err) {
+          console.error('[members-email-index] fresh mentoria check failed:', err.message);
+        }
+      }
+      return {lead: merged, indexMissing: false};
     }
   } catch (err) {
     console.error('[members-email-index] cache read failed:', err.message);
