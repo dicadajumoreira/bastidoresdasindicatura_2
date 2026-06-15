@@ -671,8 +671,13 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
         )}
 
         {lead.modalidade && (
-          <Section title="Modalidade escolhida">
+          <Section title="Modalidade desejada (preferência no formulário)">
             <Field k="Modalidade" v={lead.modalidade} />
+            {!lead.mentoria && (
+              <p style={{margin: '8px 0 0', fontSize: 11, color: 'rgba(247,245,242,0.5)', lineHeight: 1.5, fontStyle: 'italic'}}>
+                Essa é a modalidade que a pessoa escolheu ao preencher a aplicação — ainda <strong>não está inscrita</strong>. Pra confirmar a inscrição, use os botões "Mentoria Experience" ou "Mentoria Executive" abaixo.
+              </p>
+            )}
           </Section>
         )}
       </div>
@@ -766,6 +771,12 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
             {/* Seletor de modalidade da Mentoria */}
             {!lead.mentoria ? (
               <>
+                {/* Hint da modalidade desejada pela pessoa, se houver */}
+                {lead.modalidade && (
+                  <p style={{width: '100%', margin: '0 0 4px', fontSize: 11, color: 'var(--sand)', fontStyle: 'italic'}}>
+                    No formulário, a pessoa pediu modalidade <strong>{lead.modalidade}</strong>.
+                  </p>
+                )}
                 <button
                   className="ad-btn ad-btn-ghost ad-btn-sm"
                   onClick={async () => {
@@ -778,9 +789,11 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
                       onUpdated(res.lead);
                     } catch (err) { alert(err.message); }
                   }}
-                  style={{color: '#819470', borderColor: '#819470'}}
+                  style={String(lead.modalidade || '').toLowerCase().includes('experience')
+                    ? {background: 'rgba(129,148,112,0.18)', color: '#819470', borderColor: '#819470'}
+                    : {color: '#819470', borderColor: '#819470'}}
                 >
-                  ✓ Mentoria Experience
+                  ✓ Mentoria Experience{String(lead.modalidade || '').toLowerCase().includes('experience') ? ' ★' : ''}
                 </button>
                 <button
                   className="ad-btn ad-btn-ghost ad-btn-sm"
@@ -794,9 +807,11 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
                       onUpdated(res.lead);
                     } catch (err) { alert(err.message); }
                   }}
-                  style={{color: '#B89579', borderColor: '#B89579'}}
+                  style={String(lead.modalidade || '').toLowerCase().includes('executive')
+                    ? {background: 'rgba(184,149,121,0.22)', color: '#B89579', borderColor: '#B89579'}
+                    : {color: '#B89579', borderColor: '#B89579'}}
                 >
-                  ✓ Mentoria Executive
+                  ✓ Mentoria Executive{String(lead.modalidade || '').toLowerCase().includes('executive') ? ' ★' : ''}
                 </button>
               </>
             ) : (

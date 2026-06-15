@@ -54,9 +54,17 @@ export default async (req) => {
   const mentoriaPatch = typeof mentoria === 'boolean'
     ? {
         mentoria,
-        ...(mentoria ? {mentoriaAt: current.mentoriaAt || new Date().toISOString()} : {}),
-        // Quando ativa sem especificar modalidade, default = 'experience'
-        ...(mentoria && !mentoriaModalidade && !current.mentoriaModalidade ? {mentoriaModalidade: 'experience'} : {}),
+        ...(mentoria
+          ? {
+              mentoriaAt: current.mentoriaAt || new Date().toISOString(),
+              // Default = experience quando ativa sem modalidade explícita
+              ...(mentoriaModalidade ? {} : (current.mentoriaModalidade ? {} : {mentoriaModalidade: 'experience'})),
+            }
+          : {
+              // Ao TIRAR da mentoria, limpa a modalidade pra evitar
+              // estado inconsistente (mentoria:false + modalidade preenchida)
+              mentoriaModalidade: null,
+            }),
       }
     : {};
   const modalidadePatch = mentoriaModalidade
