@@ -768,107 +768,122 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
             >
               {(lead.ativo === false || lead.unsubscribed) ? '↻ Reativar cadastro' : '⊘ Inativar cadastro'}
             </button>
-            {/* Seletor de modalidade da Mentoria */}
-            {!lead.mentoria ? (
-              <>
-                {/* Hint da modalidade desejada pela pessoa, se houver */}
-                {lead.modalidade && (
-                  <p style={{width: '100%', margin: '0 0 4px', fontSize: 11, color: 'var(--sand)', fontStyle: 'italic'}}>
-                    No formulário, a pessoa pediu modalidade <strong>{lead.modalidade}</strong>.
-                  </p>
-                )}
+            {/* Painel Mentoria · um botão "aluno ativo" + plano cadastrado.
+                Marcar como ativo desbloqueia a Sala da Mentoria na area de
+                membros do aluno na hora (cache eh atualizado pelo backend). */}
+            <div style={{
+              width: '100%',
+              border: lead.mentoria ? '1px solid #819470' : '1px solid rgba(247,245,242,0.18)',
+              background: lead.mentoria ? 'rgba(129,148,112,0.08)' : 'rgba(247,245,242,0.03)',
+              padding: 14,
+              marginTop: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}>
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap'}}>
+                <div>
+                  <span style={{fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>
+                    Mentoria · acesso à Sala
+                  </span>
+                  <div style={{fontSize: 15, fontWeight: 700, color: lead.mentoria ? '#a8d4a8' : 'rgba(247,245,242,0.75)', marginTop: 4}}>
+                    {lead.mentoria ? '✓ Aluno ativo da mentoria' : '○ Não é aluno ainda'}
+                  </div>
+                  {lead.mentoria && lead.mentoriaAt && (
+                    <div style={{fontSize: 11, color: 'rgba(247,245,242,0.55)', marginTop: 2}}>
+                      Inscrição registrada em {fmtDate(lead.mentoriaAt)}
+                    </div>
+                  )}
+                  {lead.mentoria && (
+                    <div style={{fontSize: 11, color: '#a8d4a8', marginTop: 2, fontStyle: 'italic'}}>
+                      A Sala da Mentoria está desbloqueada pra ele(a) na área de membros.
+                    </div>
+                  )}
+                </div>
                 <button
-                  className="ad-btn ad-btn-ghost ad-btn-sm"
+                  className="ad-btn ad-btn-sm"
                   onClick={async () => {
-                    if (!window.confirm(`Marcar ${lead.nome} como inscrito na Mentoria EXPERIENCE? 12 aulas em grupo, sem sessões particulares.`)) return;
-                    try {
-                      const res = await api('/api/update-status', {
-                        method: 'POST',
-                        body: JSON.stringify({id: lead.id, mentoria: true, mentoriaModalidade: 'experience'}),
-                      });
-                      onUpdated(res.lead);
-                    } catch (err) { alert(err.message); }
-                  }}
-                  style={String(lead.modalidade || '').toLowerCase().includes('experience')
-                    ? {background: 'rgba(129,148,112,0.18)', color: '#819470', borderColor: '#819470'}
-                    : {color: '#819470', borderColor: '#819470'}}
-                >
-                  ✓ Mentoria Experience{String(lead.modalidade || '').toLowerCase().includes('experience') ? ' ★' : ''}
-                </button>
-                <button
-                  className="ad-btn ad-btn-ghost ad-btn-sm"
-                  onClick={async () => {
-                    if (!window.confirm(`Marcar ${lead.nome} como inscrito na Mentoria EXECUTIVE? 12 aulas em grupo + 2 sessões particulares.`)) return;
-                    try {
-                      const res = await api('/api/update-status', {
-                        method: 'POST',
-                        body: JSON.stringify({id: lead.id, mentoria: true, mentoriaModalidade: 'executive'}),
-                      });
-                      onUpdated(res.lead);
-                    } catch (err) { alert(err.message); }
-                  }}
-                  style={String(lead.modalidade || '').toLowerCase().includes('executive')
-                    ? {background: 'rgba(184,149,121,0.22)', color: '#B89579', borderColor: '#B89579'}
-                    : {color: '#B89579', borderColor: '#B89579'}}
-                >
-                  ✓ Mentoria Executive{String(lead.modalidade || '').toLowerCase().includes('executive') ? ' ★' : ''}
-                </button>
-              </>
-            ) : (
-              <>
-                {lead.mentoriaModalidade !== 'executive' ? (
-                  <button
-                    className="ad-btn ad-btn-ghost ad-btn-sm"
-                    onClick={async () => {
-                      if (!window.confirm(`Mudar ${lead.nome} pra Executive? Libera as 2 sessões particulares.`)) return;
+                    if (lead.mentoria) {
+                      if (!window.confirm(`Tirar ${lead.nome} da Mentoria? A Sala vai bloquear pra ele(a) na próxima visita à área de membros.`)) return;
                       try {
                         const res = await api('/api/update-status', {
                           method: 'POST',
-                          body: JSON.stringify({id: lead.id, mentoriaModalidade: 'executive'}),
+                          body: JSON.stringify({id: lead.id, mentoria: false}),
                         });
                         onUpdated(res.lead);
                       } catch (err) { alert(err.message); }
-                    }}
-                    style={{color: '#B89579', borderColor: '#B89579'}}
-                  >
-                    ↑ Mudar pra Executive
-                  </button>
-                ) : (
-                  <button
-                    className="ad-btn ad-btn-ghost ad-btn-sm"
-                    onClick={async () => {
-                      if (!window.confirm(`Mudar ${lead.nome} pra Experience? Tira acesso às particulares.`)) return;
+                    } else {
+                      const plano = String(lead.modalidade || '').toLowerCase().includes('executive') ? 'executive' : 'experience';
+                      const planoLabel = plano === 'executive' ? 'Executive (12 grupo + 2 particulares)' : 'Experience (12 aulas em grupo)';
+                      if (!window.confirm(`Ativar ${lead.nome} como aluno da Mentoria no plano ${planoLabel}?\n\nA Sala da Mentoria fica desbloqueada na hora pra ele(a).\n\nO plano pode ser trocado a qualquer momento depois.`)) return;
                       try {
                         const res = await api('/api/update-status', {
                           method: 'POST',
-                          body: JSON.stringify({id: lead.id, mentoriaModalidade: 'experience'}),
+                          body: JSON.stringify({id: lead.id, mentoria: true, mentoriaModalidade: plano}),
                         });
                         onUpdated(res.lead);
                       } catch (err) { alert(err.message); }
-                    }}
-                    style={{color: '#819470', borderColor: '#819470'}}
-                  >
-                    ↓ Mudar pra Experience
-                  </button>
-                )}
-                <button
-                  className="ad-btn ad-btn-ghost ad-btn-sm"
-                  onClick={async () => {
-                    if (!window.confirm(`Remover ${lead.nome} da Mentoria? Perde acesso ao Teams.`)) return;
-                    try {
-                      const res = await api('/api/update-status', {
-                        method: 'POST',
-                        body: JSON.stringify({id: lead.id, mentoria: false}),
-                      });
-                      onUpdated(res.lead);
-                    } catch (err) { alert(err.message); }
+                    }
                   }}
-                  style={{color: '#d97757', borderColor: '#d97757'}}
+                  style={lead.mentoria
+                    ? {color: '#d97757', borderColor: '#d97757', background: 'transparent'}
+                    : {background: '#819470', color: '#0F1116', borderColor: '#819470', fontWeight: 700, letterSpacing: '0.08em'}}
                 >
-                  ⊘ Tirar da Mentoria
+                  {lead.mentoria ? '⊘ Tirar da Mentoria' : '✓ Ativar como aluno da Mentoria'}
                 </button>
-              </>
-            )}
+              </div>
+
+              {lead.mentoria && (
+                <div>
+                  <span style={{fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700, display: 'block', marginBottom: 8}}>
+                    Plano cadastrado
+                  </span>
+                  <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                    <button
+                      className="ad-btn ad-btn-sm"
+                      onClick={async () => {
+                        if (lead.mentoriaModalidade === 'experience') return;
+                        try {
+                          const res = await api('/api/update-status', {
+                            method: 'POST',
+                            body: JSON.stringify({id: lead.id, mentoriaModalidade: 'experience'}),
+                          });
+                          onUpdated(res.lead);
+                        } catch (err) { alert(err.message); }
+                      }}
+                      style={lead.mentoriaModalidade === 'experience'
+                        ? {background: 'rgba(129,148,112,0.30)', color: '#819470', borderColor: '#819470', fontWeight: 700}
+                        : {color: 'rgba(247,245,242,0.55)', borderColor: 'rgba(247,245,242,0.18)', background: 'transparent'}}
+                    >
+                      {lead.mentoriaModalidade === 'experience' ? '● ' : '○ '}Experience · 12 aulas em grupo
+                    </button>
+                    <button
+                      className="ad-btn ad-btn-sm"
+                      onClick={async () => {
+                        if (lead.mentoriaModalidade === 'executive') return;
+                        try {
+                          const res = await api('/api/update-status', {
+                            method: 'POST',
+                            body: JSON.stringify({id: lead.id, mentoriaModalidade: 'executive'}),
+                          });
+                          onUpdated(res.lead);
+                        } catch (err) { alert(err.message); }
+                      }}
+                      style={lead.mentoriaModalidade === 'executive'
+                        ? {background: 'rgba(184,149,121,0.30)', color: '#B89579', borderColor: '#B89579', fontWeight: 700}
+                        : {color: 'rgba(247,245,242,0.55)', borderColor: 'rgba(247,245,242,0.18)', background: 'transparent'}}
+                    >
+                      {lead.mentoriaModalidade === 'executive' ? '● ' : '○ '}Executive · 12 grupo + 2 particulares
+                    </button>
+                  </div>
+                  {lead.modalidade && (
+                    <p style={{fontSize: 11, color: 'rgba(247,245,242,0.45)', fontStyle: 'italic', margin: '8px 0 0'}}>
+                      Preferência do formulário: <strong style={{color: 'var(--sand)'}}>{lead.modalidade}</strong>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
             <button className="ad-btn ad-btn-danger-ghost ad-btn-sm" onClick={softDelete}>
               Excluir aplicação
             </button>
