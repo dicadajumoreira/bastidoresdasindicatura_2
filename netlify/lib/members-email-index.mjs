@@ -17,7 +17,11 @@ export async function findLeadByEmail(email) {
 
   const indexStore = getStore({name: 'members-email-index', consistency: 'strong'});
 
-  // 1) Cache hit
+  // 1) Cache hit — caminho rápido. Confia no cache.
+  // O cache é mantido SINCRONO pelo update-status.mjs (quando admin
+  // marca mentoria, o cache é atualizado na mesma request) e tambem
+  // pelo background rebuild. Se o cache disser mentoria:false, trata
+  // como false pra nao bloquear o login com scan caro.
   let index = null;
   try {
     index = await indexStore.get('index', {type: 'json'});
@@ -26,54 +30,7 @@ export async function findLeadByEmail(email) {
       if (entry.unsubscribed || entry.ativo === false) {
         return {lead: null, indexMissing: false};
       }
-      const merged = {perfil: null, perfil_nome: null, mentoria: false, mentoriaModalidade: null, ...entry};
-      // Se o cache diz mentoria:false, faz um scan paralelo de TODAS as
-      // aplicações desse e-mail (uma pessoa pode ter 5+ leads — quiz,
-      // ebook, mentoria etc — e a mentoria pode ter sido marcada em
-      // qualquer uma delas, não necessariamente na que o cache aponta).
-      // Custo: 1 list + N reads paralelos, só roda quando mentoria é
-      // false no cache.
-      if (!merged.mentoria) {
-        try {
-          const leadsStore = getStore({name: 'leads', consistency: 'strong'});
-          const list = await leadsStore.list();
-          const keys = (list.blobs || []).map((b) => b.key).filter((k) => k !== '__leads_index__');
-          let foundMentoria = false;
-          let foundModalidade = null;
-          const CONC = 60;
-          const deadline = Date.now() + 6000;
-          for (let i = 0; i < keys.length && !foundMentoria; i += CONC) {
-            if (Date.now() > deadline) break;
-            const batch = keys.slice(i, i + CONC);
-            const got = await Promise.allSettled(batch.map((k) => leadsStore.get(k, {type: 'json'})));
-            for (const r of got) {
-              if (r.status !== 'fulfilled' || !r.value) continue;
-              const v = r.value;
-              if (v.deletedAt) continue;
-              if (String(v.email || '').toLowerCase() !== normalized) continue;
-              if (v.unsubscribed || v.ativo === false) continue;
-              if (v.mentoria === true) {
-                foundMentoria = true;
-                if (v.mentoriaModalidade === 'executive') foundModalidade = 'executive';
-                else if (!foundModalidade && v.mentoriaModalidade) foundModalidade = v.mentoriaModalidade;
-              }
-            }
-          }
-          if (foundMentoria) {
-            merged.mentoria = true;
-            merged.mentoriaModalidade = foundModalidade || 'experience';
-            // Atualiza o cache na hora pra próxima chamada ser instantânea
-            try {
-              index.byEmail[normalized] = {...entry, mentoria: true, mentoriaModalidade: merged.mentoriaModalidade};
-              index.lastIncrementalAt = new Date().toISOString();
-              await indexStore.setJSON('index', index);
-            } catch {}
-          }
-        } catch (err) {
-          console.error('[members-email-index] mentoria full-scan failed:', err.message);
-        }
-      }
-      return {lead: merged, indexMissing: false};
+      return {lead: {perfil: null, perfil_nome: null, mentoria: false, mentoriaModalidade: null, ...entry}, indexMissing: false};
     }
   } catch (err) {
     console.error('[members-email-index] cache read failed:', err.message);
