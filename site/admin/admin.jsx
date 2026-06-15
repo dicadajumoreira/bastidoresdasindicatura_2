@@ -4460,50 +4460,82 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         <p style={{margin: '0 0 10px', fontSize: 13, color: '#F7F5F2', fontWeight: 600, letterSpacing: '0.05em'}}>
           Tem disparo pra retomar?
         </p>
-        <button
-          className="ad-btn ad-btn-primary ad-btn-lg"
-          style={{width: '100%', maxWidth: 420}}
-          disabled={busy}
-          onClick={async () => {
-            try {
-              const res = await api('/api/broadcast-history');
-              // Mostra TODOS os disparos recentes — não filtra por "incompleto"
-              // porque o histórico pode estar corrompido (total reduzido por
-              // tentativas anteriores de Continuar que não funcionaram).
-              const all = (res.history || []).filter((h) => !h.resendOf);
-              if (all.length === 0) {
-                alert('Nenhum disparo encontrado no histórico.');
-                return;
+        <div style={{display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap'}}>
+          <button
+            className="ad-btn ad-btn-primary ad-btn-lg"
+            style={{flex: '1 1 220px', maxWidth: 420}}
+            disabled={busy}
+            onClick={async () => {
+              try {
+                const res = await api('/api/broadcast-history');
+                const all = (res.history || []).filter((h) => !h.resendOf);
+                if (all.length === 0) {
+                  alert('Nenhum disparo encontrado no histórico.');
+                  return;
+                }
+                const list = all.slice(0, 10).map((h, i) => {
+                  const proc = (h.sent || 0) + (h.failed || 0);
+                  return `${i + 1}. ${h.subject.slice(0, 40)} · ${proc} enviados · ${fmtDate(h.sentAt)}`;
+                }).join('\n');
+                const choice = all.length === 1
+                  ? '1'
+                  : prompt(`Disparos recentes:\n\n${list}\n\nDigite o número do que quer continuar:`, '1');
+                if (!choice) return;
+                const idx = parseInt(choice, 10) - 1;
+                if (idx < 0 || idx >= all.length) { alert('Opção inválida.'); return; }
+                const picked = all[idx];
+                const includeCold = confirm(
+                  'Esse disparo incluía leads frios da base de planilhas importadas?\n\n' +
+                  '• OK = SIM, incluía leads frios\n' +
+                  '• Cancelar = NÃO, era só leads quentes\n\n' +
+                  'Dica: se o total era maior que ~6500 contatos, provavelmente incluía leads frios.'
+                );
+                resumeBroadcast(picked, includeCold);
+              } catch (e) {
+                alert('Falha ao buscar disparos: ' + e.message);
               }
-              const list = all.slice(0, 10).map((h, i) => {
-                const proc = (h.sent || 0) + (h.failed || 0);
-                return `${i + 1}. ${h.subject.slice(0, 40)} · ${proc} enviados · ${fmtDate(h.sentAt)}`;
-              }).join('\n');
-              const choice = all.length === 1
-                ? '1'
-                : prompt(`Disparos recentes:\n\n${list}\n\nDigite o número do que quer continuar:`, '1');
-              if (!choice) return;
-              const idx = parseInt(choice, 10) - 1;
-              if (idx < 0 || idx >= all.length) { alert('Opção inválida.'); return; }
-              const picked = all[idx];
-              // Pergunta se incluía leads frios (importante pra dar override
-              // em casos onde o filtro salvo não tem essa flag)
-              const includeCold = confirm(
-                'Esse disparo incluía leads frios da base de planilhas importadas?\n\n' +
-                '• OK = SIM, incluía leads frios\n' +
-                '• Cancelar = NÃO, era só leads quentes\n\n' +
-                'Dica: se o total era maior que ~6500 contatos, provavelmente incluía leads frios.'
-              );
-              resumeBroadcast(picked, includeCold);
-            } catch (e) {
-              alert('Falha ao buscar disparos: ' + e.message);
-            }
-          }}
-        >
-          ▶ Continuar disparo incompleto
-        </button>
+            }}
+          >
+            ▶ Continuar disparo incompleto
+          </button>
+          <button
+            className="ad-btn ad-btn-lg"
+            style={{flex: '1 1 220px', maxWidth: 320, color: '#d97757', borderColor: '#d97757', background: 'transparent'}}
+            disabled={busy}
+            onClick={async () => {
+              try {
+                const res = await api('/api/broadcast-history');
+                const all = (res.history || []).filter((h) => !h.resendOf);
+                if (all.length === 0) {
+                  alert('Nenhum disparo encontrado no histórico.');
+                  return;
+                }
+                const list = all.slice(0, 10).map((h, i) => {
+                  const proc = (h.sent || 0) + (h.failed || 0);
+                  const pendente = h.total && proc < h.total ? ' · ' + (h.total - proc) + ' faltando' : ' · completo';
+                  return `${i + 1}. ${h.subject.slice(0, 40)}${pendente} · ${fmtDate(h.sentAt)}`;
+                }).join('\n');
+                const choice = prompt(`Qual disparo quer EXCLUIR? A ação é definitiva — apaga o histórico, os destinatários enviados e qualquer agendamento.\n\n${list}\n\nDigite o número:`, '');
+                if (!choice) return;
+                const idx = parseInt(choice, 10) - 1;
+                if (idx < 0 || idx >= all.length) { alert('Opção inválida.'); return; }
+                const picked = all[idx];
+                if (!confirm(`Excluir DEFINITIVAMENTE o disparo "${picked.subject}"?\n\nIsso apaga:\n• O registro do disparo\n• A lista de destinatários\n• Qualquer agendamento pendente\n\nNão dá pra desfazer.`)) return;
+                try {
+                  await api('/api/broadcast-delete', {method: 'POST', body: JSON.stringify({id: picked.id})});
+                  alert('Disparo excluído.');
+                  loadHistory && loadHistory();
+                } catch (err) { alert('Falha ao excluir: ' + err.message); }
+              } catch (e) {
+                alert('Falha ao buscar disparos: ' + e.message);
+              }
+            }}
+          >
+            ⊘ Excluir disparo
+          </button>
+        </div>
         <p style={{margin: '10px 0 0', fontSize: 11, color: 'rgba(247, 245, 242, 0.55)'}}>
-          Procura no histórico e retoma de onde parou
+          Continuar retoma de onde parou. Excluir apaga definitivamente.
         </p>
       </div>
 
@@ -4540,13 +4572,29 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                     </p>
                     <p className="ad-bc-incomplete-date">{fmtDate(h.sentAt)}</p>
                   </div>
-                  <button
-                    className="ad-btn ad-btn-primary ad-btn-lg ad-bc-incomplete-cta"
-                    onClick={() => resumeBroadcast(h)}
-                    disabled={busy}
-                  >
-                    {busy ? 'Enviando…' : `▶ Continuar (${remaining})`}
-                  </button>
+                  <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+                    <button
+                      className="ad-btn ad-btn-primary ad-btn-lg ad-bc-incomplete-cta"
+                      onClick={() => resumeBroadcast(h)}
+                      disabled={busy}
+                    >
+                      {busy ? 'Enviando…' : `▶ Continuar (${remaining})`}
+                    </button>
+                    <button
+                      className="ad-btn ad-btn-sm"
+                      style={{color: '#d97757', borderColor: '#d97757', background: 'transparent'}}
+                      disabled={busy}
+                      onClick={async () => {
+                        if (!confirm(`Excluir DEFINITIVAMENTE o disparo "${h.subject}"?\n\nIsso apaga o registro, a lista de quem ja recebeu e qualquer agendamento pendente. Nao da pra desfazer.`)) return;
+                        try {
+                          await api('/api/broadcast-delete', {method: 'POST', body: JSON.stringify({id: h.id})});
+                          loadHistory();
+                        } catch (err) { alert('Falha ao excluir: ' + err.message); }
+                      }}
+                    >
+                      ⊘ Excluir
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -4963,7 +5011,19 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                     {isIncomplete && (
                       <button className="ad-btn ad-btn-primary ad-btn-sm" style={{marginRight: 6}} onClick={() => resumeBroadcast(h)}>Continuar</button>
                     )}
-                    <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => openRecipients(h)}>Ver destinatários</button>
+                    <button className="ad-btn ad-btn-ghost ad-btn-sm" style={{marginRight: 6}} onClick={() => openRecipients(h)}>Ver destinatários</button>
+                    <button
+                      className="ad-btn ad-btn-sm"
+                      style={{color: '#d97757', borderColor: 'transparent', background: 'transparent'}}
+                      title="Excluir disparo"
+                      onClick={async () => {
+                        if (!confirm(`Excluir DEFINITIVAMENTE o disparo "${h.subject}"?\n\nApaga registro, destinatarios e agendamento. Nao da pra desfazer.`)) return;
+                        try {
+                          await api('/api/broadcast-delete', {method: 'POST', body: JSON.stringify({id: h.id})});
+                          loadHistory();
+                        } catch (err) { alert('Falha ao excluir: ' + err.message); }
+                      }}
+                    >⊘</button>
                   </td>
                 </tr>
                 );
