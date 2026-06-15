@@ -150,8 +150,7 @@ export default async (req) => {
         from: FROM,
         to: [body.test.email],
         subject: personalize(subject, {nome: 'Teste', email: body.test.email, material: 'o material'}),
-        html: personalize(html + BROADCAST_FOOTER, {nome: 'Teste', email: body.test.email, material: 'o material'})
-          .replace(/\{\{unsubscribe_url\}\}/g, unsubUrl),
+        html: personalize(html + BROADCAST_FOOTER, {nome: 'Teste', email: body.test.email, material: 'o material', unsubscribe_url: unsubUrl}),
         reply_to: 'contato@dicadajumoreira.com.br',
       });
       return json({ok: true, sent: 1, failed: 0, total: 1, test: true});
@@ -351,8 +350,7 @@ export default async (req) => {
         material: MATERIAL_NAMES[primaryOrigem] || 'o material',
       };
       const unsubUrl = makeUnsubscribeUrl(t.email, 'broadcast') || '';
-      const personalizedHtml = personalize(html + BROADCAST_FOOTER, vars)
-        .replace(/\{\{unsubscribe_url\}\}/g, unsubUrl);
+      const personalizedHtml = personalize(html + BROADCAST_FOOTER, {...vars, unsubscribe_url: unsubUrl});
       try {
         await sendOne({
           from: FROM,

@@ -36,10 +36,12 @@ const BROADCAST_FOOTER = `
 
 // Aplica personalização de variáveis ({{nome}}, etc) E injeta a URL
 // única de descadastro do destinatário no rodapé.
+// IMPORTANTE: passa unsubscribe_url DENTRO das vars, senão o personalize
+// (que apaga placeholders desconhecidos) come o {{unsubscribe_url}} antes
+// do replace acontecer e o link sai vazio.
 export function withBroadcastFooter(html, recipientEmail, vars = {}) {
   const unsubUrl = makeUnsubscribeUrl(recipientEmail, 'broadcast') || '';
-  return personalize(html + BROADCAST_FOOTER, vars)
-    .replace(/\{\{unsubscribe_url\}\}/g, unsubUrl);
+  return personalize(html + BROADCAST_FOOTER, {...vars, unsubscribe_url: unsubUrl});
 }
 
 export function personalize(template, vars) {
