@@ -659,6 +659,52 @@
     }
     .mb-aula-status.is-future { color: rgba(247, 245, 242, 0.4); }
     .mb-aula-status.is-pending { color: #d97757; }
+    .mb-aula-status.is-locked {
+      color: rgba(247, 245, 242, 0.35);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    /* Estado bloqueado: aula visível como teaser pra quem não comprou.
+       Datas visíveis (info pública), conteúdo abafado, CTA "reservar". */
+    .mb-aula.is-locked {
+      opacity: 0.55;
+      background: rgba(247, 245, 242, 0.015);
+      border-color: rgba(247, 245, 242, 0.07);
+    }
+    .mb-aula.is-locked .mb-aula-num { color: rgba(247, 245, 242, 0.4); }
+    .mb-aula.is-locked .mb-aula-day { color: rgba(247, 245, 242, 0.6); }
+    .mb-aula.is-locked .mb-aula-title { color: rgba(247, 245, 242, 0.55); }
+    .mb-aula.is-locked .mb-aula-desc { color: rgba(247, 245, 242, 0.35); }
+    .mb-aulas-cta-locked {
+      margin-top: 18px;
+      padding: 18px 22px;
+      background: rgba(218, 189, 169, 0.08);
+      border: 1px dashed rgba(218, 189, 169, 0.35);
+      text-align: center;
+    }
+    .mb-aulas-cta-locked-text {
+      font-size: 13px;
+      color: rgba(247, 245, 242, 0.75);
+      margin: 0 0 12px;
+      line-height: 1.5;
+    }
+    .mb-aulas-cta-locked-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--sand);
+      color: var(--onix);
+      padding: 14px 22px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 1px solid var(--sand);
+      transition: opacity 0.18s ease;
+    }
+    .mb-aulas-cta-locked-btn:hover { opacity: 0.86; }
     @media (max-width: 720px) {
       .mb-aula {
         grid-template-columns: 1fr;
@@ -1173,39 +1219,66 @@
               )}
             </div>
 
-            {/* Cronograma das aulas — visível só pra inscritos.
-                Filtra particulares pra quem NÃO é Executive. */}
-            {member.mentoria && member.mentoriaConfig && Array.isArray(member.mentoriaConfig.aulas) && member.mentoriaConfig.aulas.length > 0 && (() => {
+            {/* Cronograma das aulas · sempre visivel pra todo membro
+                logado. Pra inscritos: aulas abertas, com link ao vivo
+                no dia, gravacoes depois. Pra nao-inscritos: teaser com
+                as datas reais visiveis (mostra que a turma esta pronta)
+                + CTA pra reservar a vaga. Filtra particulares pra quem
+                NAO eh Executive (mostra como bloqueada com selo "so
+                Executive"). */}
+            {member.mentoriaConfig && Array.isArray(member.mentoriaConfig.aulas) && member.mentoriaConfig.aulas.length > 0 && (() => {
+              const isInscrito = !!member.mentoria;
               const isExecutive = member.mentoriaModalidade === 'executive';
+              // Inscritos Experience nao veem particulares. Nao-inscritos
+              // veem so as de grupo (12) como teaser.
               const visibleAulas = member.mentoriaConfig.aulas.filter((a) => isExecutive || a.tipo !== 'particular');
+              const today = new Date().toISOString().slice(0, 10);
+              const aulasFuturas = visibleAulas.filter((a) => a.data >= today).length;
               return (
                 <div className="mb-aulas-grid">
                   <div className="mb-aulas-head">
                     <span className="mb-aulas-eyebrow">
-                      Cronograma · {visibleAulas.length} aulas · {isExecutive ? 'Executive' : 'Experience'}
+                      Cronograma · {visibleAulas.length} aulas{isInscrito ? ' · ' + (isExecutive ? 'Executive' : 'Experience') : ''}
                     </span>
                     <h3 className="mb-aulas-title">Calendário das <em>aulas.</em></h3>
                     <p style={{margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: 'rgba(247,245,242,0.6)'}}>
-                      Aulas em grupo · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horario || 'Terças, 07h30 às 09h00 (Brasília)'}</strong>.
-                      {isExecutive && (
-                        <> Particulares · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horarioParticular || 'Horário individual a combinar'}</strong>.</>
+                      {isInscrito ? (
+                        <>
+                          Aulas em grupo · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horario || 'Terças, 07h30 às 09h00 (Brasília)'}</strong>.
+                          {isExecutive && (
+                            <> Particulares · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horarioParticular || 'Horário individual a combinar'}</strong>.</>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          Turma 01 começa em <strong style={{color: 'var(--sand)'}}>setembro de 2026</strong> · <strong style={{color: 'var(--sand)'}}>{member.mentoriaConfig.horario || 'Terças, 07h30 às 09h00 (Brasília)'}</strong>. {aulasFuturas} {aulasFuturas === 1 ? 'aula' : 'aulas'} confirmadas no calendário abaixo — quando você garantir sua vaga, tudo isto aqui desbloqueia.
+                        </>
                       )}
                     </p>
                   </div>
                   <div className="mb-aulas-list">
                     {visibleAulas.map((aula, i) => {
-                      const today = new Date().toISOString().slice(0, 10);
                       const isPast = aula.data < today;
                       const isToday = aula.data === today;
                       const isUpcoming = aula.data > today;
-                      const hasRecording = !!(aula.recordingLink && aula.recordingLink.trim());
+                      const hasRecording = !!(aula.recordingLink && String(aula.recordingLink).trim());
                       const dateLabel = formatDateLabel(aula.data);
                       const isParticular = aula.tipo === 'particular';
                       const horarioLabel = isParticular
                         ? (member.mentoriaConfig.horarioParticular || 'Individual')
                         : '07h30 às 09h00';
+                      // Para Experience, as particulares de Executive (se
+                      // visiveis em algum momento) sao locked. Aqui ja
+                      // filtramos pra so Executive ver particulares, entao
+                      // se aparecer particular = a pessoa eh Executive.
                       return (
-                        <div key={i} className={'mb-aula' + (isToday ? ' is-today' : '') + (hasRecording ? ' has-recording' : '') + (isParticular ? ' is-particular' : '')}>
+                        <div key={i} className={
+                          'mb-aula'
+                          + (!isInscrito ? ' is-locked' : '')
+                          + (isToday && isInscrito ? ' is-today' : '')
+                          + (hasRecording && isInscrito ? ' has-recording' : '')
+                          + (isParticular ? ' is-particular' : '')
+                        }>
                           <div className="mb-aula-date">
                             <span className="mb-aula-num">{isParticular ? 'PARTICULAR' : `Aula ${String(i + 1).padStart(2, '0')}`}</span>
                             <span className="mb-aula-day">{dateLabel}</span>
@@ -1216,27 +1289,44 @@
                             {aula.descricao && <p className="mb-aula-desc">{aula.descricao}</p>}
                           </div>
                           <div className="mb-aula-action">
-                            {isToday && member.mentoriaConfig.teamsLink && (
+                            {!isInscrito ? (
+                              <span className="mb-aula-status is-locked">
+                                <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                                  <path d="M4 7V5a4 4 0 018 0v2m-9 0h10v8H3V7z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                Bloqueado
+                              </span>
+                            ) : isToday && member.mentoriaConfig.teamsLink ? (
                               <a href={member.mentoriaConfig.teamsLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-live">
                                 Entrar agora →
                               </a>
-                            )}
-                            {hasRecording && (
+                            ) : hasRecording ? (
                               <a href={aula.recordingLink} target="_blank" rel="noreferrer" className="mb-aula-cta is-recording">
                                 ▶ Assistir gravação
                               </a>
-                            )}
-                            {!isToday && !hasRecording && isPast && (
+                            ) : isPast ? (
                               <span className="mb-aula-status is-pending">Gravação em breve</span>
-                            )}
-                            {isUpcoming && !isToday && (
+                            ) : isUpcoming ? (
                               <span className="mb-aula-status is-future">Em breve</span>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                  {!isInscrito && (
+                    <div className="mb-aulas-cta-locked">
+                      <p className="mb-aulas-cta-locked-text">
+                        <strong style={{color: 'var(--sand)'}}>Garanta sua vaga na Mentoria</strong> pra liberar o calendário completo, entrar nas aulas ao vivo no Teams e assistir as gravações depois.
+                      </p>
+                      <a className="mb-aulas-cta-locked-btn" href="/#contato">
+                        Reservar minha vaga
+                        <svg width="12" height="10" viewBox="0 0 18 12" fill="none">
+                          <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </a>
+                    </div>
+                  )}
                 </div>
               );
             })()}

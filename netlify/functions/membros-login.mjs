@@ -11,6 +11,7 @@ import { getStore } from '@netlify/blobs';
 import { sign } from '../lib/auth-token.mjs';
 import { verifyPassword } from '../lib/password.mjs';
 import { findLeadByEmail } from '../lib/members-email-index.mjs';
+import { loadMentoriaConfig } from '../lib/mentoria-config.mjs';
 
 export const config = {
   path: ['/api/membros-login', '/.netlify/functions/membros-login'],
@@ -49,15 +50,13 @@ export default async (req) => {
   const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const token = sign({email, type: 'membros-session', exp}, secret);
 
-  // Se o membro está inscrito na Mentoria, devolve também a config
-  // (link do Teams + horário) pra UI renderizar direto.
+  // Sempre devolve a config da Mentoria. Sanitizada (sem teamsLink,
+  // sem gravações) pra quem nao eh inscrito — assim o frontend usa o
+  // mesmo cronograma como teaser pra todos os membros logados.
   let mentoriaConfig = null;
-  if (lead.mentoria) {
-    try {
-      const cfgStore = getStore({name: 'mentoria-config', consistency: 'strong'});
-      mentoriaConfig = await cfgStore.get('config', {type: 'json'});
-    } catch {}
-  }
+  try {
+    mentoriaConfig = await loadMentoriaConfig({sanitize: !lead.mentoria});
+  } catch {}
 
   return json({
     ok: true, token, email,

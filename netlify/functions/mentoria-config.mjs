@@ -15,6 +15,7 @@
 
 import { getStore } from '@netlify/blobs';
 import { verify } from '../lib/auth-token.mjs';
+import { defaultAulas, defaultConfig, loadMentoriaConfig } from '../lib/mentoria-config.mjs';
 
 export const config = {
   path: ['/api/mentoria-config', '/.netlify/functions/mentoria-config'],
@@ -25,24 +26,7 @@ export default async (req) => {
 
   if (req.method === 'GET') {
     try {
-      const defaults = defaultConfig();
-      let cfg = await store.get('config', {type: 'json'});
-      if (!cfg) {
-        cfg = defaults;
-      } else {
-        if (!Array.isArray(cfg.aulas) || cfg.aulas.length === 0) {
-          cfg.aulas = defaultAulas();
-        } else {
-          const hasTipo = cfg.aulas.every((a) => a.tipo);
-          if (!hasTipo) cfg.aulas = defaultAulas();
-        }
-        // Se ainda não foi definido um link, retorna o default (Teams
-        // recorrente da turma). Não sobrescreve link customizado.
-        if (!cfg.teamsLink || !cfg.teamsLink.trim()) cfg.teamsLink = defaults.teamsLink;
-        if (!cfg.horario || !cfg.horario.trim()) cfg.horario = defaults.horario;
-        if (!cfg.horarioParticular || !cfg.horarioParticular.trim()) cfg.horarioParticular = defaults.horarioParticular;
-        if (!cfg.calendario || !cfg.calendario.trim()) cfg.calendario = defaults.calendario;
-      }
+      const cfg = await loadMentoriaConfig({sanitize: false});
       return json({ok: true, config: cfg});
     } catch (err) {
       return json({error: 'Falha ao carregar: ' + err.message}, 500);
@@ -104,43 +88,6 @@ export default async (req) => {
     return json({error: 'Falha ao salvar: ' + err.message}, 500);
   }
 };
-
-// 14 aulas: 12 em grupo (terças) + 2 particulares (9/9 e 14/10)
-// Datas exatas confirmadas pela Juliana.
-function defaultAulas() {
-  return [
-    {numero: 1,  data: '2026-09-01', titulo: 'Aula 01', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 2,  data: '2026-09-08', titulo: 'Aula 02', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 3,  data: '2026-09-09', titulo: 'Mentoria Particular',   tipo: 'particular', descricao: 'Sessão individual · só Executive', recordingLink: ''},
-    {numero: 4,  data: '2026-09-15', titulo: 'Aula 03', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 5,  data: '2026-09-22', titulo: 'Aula 04', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 6,  data: '2026-09-29', titulo: 'Aula 05', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 7,  data: '2026-10-06', titulo: 'Aula 06', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 8,  data: '2026-10-13', titulo: 'Aula 07', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 9,  data: '2026-10-14', titulo: 'Mentoria Particular',   tipo: 'particular', descricao: 'Sessão individual · só Executive', recordingLink: ''},
-    {numero: 10, data: '2026-10-20', titulo: 'Aula 08', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 11, data: '2026-10-27', titulo: 'Aula 09', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 12, data: '2026-11-03', titulo: 'Aula 10', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 13, data: '2026-11-10', titulo: 'Aula 11', tipo: 'grupo',      descricao: '', recordingLink: ''},
-    {numero: 14, data: '2026-11-17', titulo: 'Aula 12', tipo: 'grupo',      descricao: '', recordingLink: ''},
-  ];
-}
-
-function defaultConfig() {
-  return {
-    // Link único recorrente do Teams pras 12 aulas em grupo.
-    // Particulares (09/09 e 14/10) precisam de link próprio — editar
-    // na aba Cronograma do admin com 'Link da gravação' (reaproveitado
-    // como 'Link da sessão' nas particulares).
-    teamsLink: 'https://teams.microsoft.com/meet/276780535847602?p=cbQfvA1GTBBDNNYTQ7',
-    horario: 'Terças · 07h30 às 09h00 (horário de Brasília)',
-    horarioParticular: 'Horário individual a combinar',
-    calendario: 'Setembro a Novembro de 2026',
-    notes: '',
-    aulas: defaultAulas(),
-    updatedAt: null,
-  };
-}
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
