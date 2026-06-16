@@ -99,6 +99,7 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 - Frontend pagina chamando `/api/broadcast` com `offset` + `limit=40` em loop, cap de 600 iterações (~24k destinatários).
 - Botão **Continuar** no histórico retoma disparos incompletos via `resumeFrom: broadcastId`, mesmo broadcastId, ordenação determinística garante que não duplica.
 - Pra incluir leads frios, **`cold-leads-summary`** precisa estar construído. Existe botão "Reconstruir índice" no painel de leads frios.
+- **Footer obrigatório nos rascunhos**: todo rascunho de disparo (em `admin.jsx`, próximo a `MATERIAL_BROADCASTS`) DEVE terminar com `${DRAFT_FOOTER_HTML}` interpolado dentro do `<table>` do corpo. Esse rodapé tem 3 linhas: aviso de "recebendo este material por estar cadastrado em bastidoresdasindicatura.com.br", oferta de reduzir frequência / descadastrar (link `{{unsubscribe_url}}` que o backend troca por URL assinada por destinatário) e link da política de privacidade. Não criar rascunho novo com footer próprio — usar a constante.
 
 ## Formulários de captura existentes
 
