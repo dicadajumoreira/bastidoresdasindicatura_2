@@ -2767,7 +2767,14 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             {importResult && (
               <div className={'ad-bc-result ' + (importResult.ok ? 'is-ok' : 'is-err')}>
                 {importResult.ok ? (
-                  <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · <strong>{importResult.merged} complementados</strong> · {importResult.invalid} inválidos</p>
+                  <>
+                    <p>✓ Import concluído: <strong>{importResult.imported} novos</strong> · <strong>{importResult.merged} complementados</strong> · {importResult.invalid} inválidos</p>
+                    {importResult.summaryRebuilding && (
+                      <p style={{margin: '8px 0 0', padding: '10px 12px', background: 'rgba(218,189,169,0.08)', border: '1px dashed rgba(218,189,169,0.4)', fontSize: 12, color: 'var(--sand)'}}>
+                        ⚙ <strong>Reconstruindo índice de disparo em segundo plano.</strong> Demora 1-2 min. Só DEPOIS que o status virar <em>"pronto"</em> os novos contatos entram nos próximos disparos. Acompanhe abaixo, ou clica em <em>"↻ Reconstruir índice"</em> se quiser forçar.
+                      </p>
+                    )}
+                  </>
                 ) : <p>Erro: {importResult.error}</p>}
                 {importResult.errors?.length > 0 && (
                   <details><summary>Erros</summary><ul>{importResult.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></details>
@@ -2808,25 +2815,50 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
           </button>
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={deleteBySource} style={{color: '#d97757'}}>Limpar por origem…</button>
         </div>
-        {summaryStatus && (
-          <p className="ad-bc-hint" style={{margin: '6px 0 14px', fontSize: 12, color: 'rgba(247,245,242,0.55)'}}>
-            Índice de disparo:
-            {summaryStatus.status === 'ready' && summaryStatus.builtAt && (
-              <> <span style={{color: '#819470'}}>pronto</span> · {summaryStatus.count} e-mails únicos · atualizado em {fmtDate(summaryStatus.builtAt)}</>
-            )}
-            {summaryStatus.status === 'building' && (
-              <> <span style={{color: 'var(--sand)'}}>construindo…</span> {summaryStatus.progress}/{summaryStatus.progressTotal || '?'} registros processados</>
-            )}
-            {summaryStatus.status === 'missing' && (
-              <> <span style={{color: '#d97757'}}>não construído</span> · clica em "Reconstruir índice" antes de fazer disparo com leads frios</>
-            )}
-            {summaryStatus.status === 'error' && (
-              <> <span style={{color: '#d97757'}}>erro: {summaryStatus.error}</span></>
-            )}
-            <br/>
-            <span style={{color: 'rgba(247,245,242,0.4)'}}>O índice é o que o disparo de e-mail lê pra mandar pros leads frios. Reconstrói depois de importar bases novas ou editar muitos cadastros.</span>
-          </p>
-        )}
+        {summaryStatus && (() => {
+          // Indice fica DESATUALIZADO quando o numero de leads atual
+          // (totalAll) eh maior que o sourceRecords salvo no indice. Sinal
+          // de import recente que ainda nao foi indexado.
+          const desatualizado =
+            summaryStatus.status === 'ready' &&
+            coldList && typeof coldList.totalAll === 'number' &&
+            typeof summaryStatus.sourceRecords === 'number' &&
+            coldList.totalAll > summaryStatus.sourceRecords + 5; // tolerancia pequena
+          return (
+            <>
+              {desatualizado && (
+                <div style={{
+                  margin: '6px 0 14px', padding: '12px 14px',
+                  background: 'rgba(217,119,87,0.12)', border: '2px solid #d97757',
+                }}>
+                  <p style={{margin: 0, fontSize: 13, color: '#d97757', fontWeight: 700}}>
+                    ⚠ Índice de disparo está desatualizado.
+                  </p>
+                  <p style={{margin: '6px 0 0', fontSize: 12, color: 'rgba(247,245,242,0.85)', lineHeight: 1.5}}>
+                    Tem <strong>{coldList.totalAll - summaryStatus.sourceRecords} novos cadastros</strong> que <strong>NÃO vão entrar no próximo disparo</strong> até o índice ser reconstruído. Clica em <strong>↻ Reconstruir índice de disparo</strong> acima e aguarda virar "pronto" antes de disparar.
+                  </p>
+                </div>
+              )}
+              <p className="ad-bc-hint" style={{margin: '6px 0 14px', fontSize: 12, color: 'rgba(247,245,242,0.55)'}}>
+                Índice de disparo:
+                {summaryStatus.status === 'ready' && summaryStatus.builtAt && (
+                  <> <span style={{color: desatualizado ? '#d97757' : '#819470'}}>{desatualizado ? 'desatualizado' : 'pronto'}</span> · {summaryStatus.count} e-mails únicos · atualizado em {fmtDate(summaryStatus.builtAt)}</>
+                )}
+                {summaryStatus.status === 'building' && (
+                  <> <span style={{color: 'var(--sand)'}}>construindo…</span> {summaryStatus.progress}/{summaryStatus.progressTotal || '?'} registros processados</>
+                )}
+                {summaryStatus.status === 'missing' && (
+                  <> <span style={{color: '#d97757'}}>não construído</span> · clica em "Reconstruir índice" antes de fazer disparo com leads frios</>
+                )}
+                {summaryStatus.status === 'error' && (
+                  <> <span style={{color: '#d97757'}}>erro: {summaryStatus.error}</span></>
+                )}
+                <br/>
+                <span style={{color: 'rgba(247,245,242,0.4)'}}>O índice é o que o disparo de e-mail lê pra mandar pros leads frios. Importações novas disparam reconstrução automática — esse aviso aparece se algo der errado.</span>
+              </p>
+            </>
+          );
+        })()}
         {/* Filtro por status — aplica sobre os leads atualmente carregados (pagina de 200).
             "Descadastrados" engloba pediu /sair (unsubscribed) E inativado manualmente. */}
         {coldList && coldList.leads.length > 0 && (() => {

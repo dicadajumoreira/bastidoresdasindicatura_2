@@ -164,6 +164,28 @@ export default async (req) => {
       }
     }
 
+    // Apos importar, agenda RECONSTRUCAO do indice de disparo em background.
+    // Sem isso, o /api/broadcast continua usando a foto antiga do indice e
+    // os leads recem-importados ficam de fora do envio. Fire-and-forget:
+    // se falhar, o admin ainda pode clicar em "Reconstruir indice"
+    // manualmente.
+    if (importedNew > 0 || merged > 0) {
+      try {
+        const origin = new URL(req.url).origin;
+        fetch(`${origin}/.netlify/functions/cold-leads-summary-build-background`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Repassa o token do request original — o build exige Bearer
+            'Authorization': req.headers.get('authorization') || '',
+          },
+          body: JSON.stringify({}),
+        }).catch(() => {});
+      } catch (e) {
+        console.error('[cold-leads] trigger summary build failed:', e.message);
+      }
+    }
+
     return json({
       ok: true,
       imported: importedNew,
@@ -171,6 +193,7 @@ export default async (req) => {
       invalid,
       total: entries.length,
       errors,
+      summaryRebuilding: importedNew > 0 || merged > 0,
     });
   }
 
