@@ -518,13 +518,29 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
           <span className="ad-tag-sm">Aplicação · {fmtDate(lead.createdAt)}</span>
           <h2 className="ad-detail-name">
             {lead.nome}
-            {(lead.ativo === false || lead.unsubscribed) && (
+            {lead.unsubscribed && (
+              <span title={lead.unsubscribedAt ? 'Descadastrou em ' + fmtDate(lead.unsubscribedAt) : ''} style={{
+                marginLeft: 12, fontSize: 12, padding: '4px 10px',
+                background: 'rgba(217,119,87,0.18)', color: '#d97757',
+                borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
+                fontWeight: 700, verticalAlign: 'middle',
+              }}>Descadastrado</span>
+            )}
+            {!lead.unsubscribed && lead.ativo === false && (
               <span style={{
                 marginLeft: 12, fontSize: 12, padding: '4px 10px',
-                background: 'rgba(217,119,87,0.15)', color: '#d97757',
+                background: 'rgba(217,119,87,0.12)', color: '#d97757',
                 borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
                 fontWeight: 700, verticalAlign: 'middle',
               }}>Inativo</span>
+            )}
+            {!lead.unsubscribed && lead.ativo !== false && lead.frequencia === 'menor' && (
+              <span title="Recebe 1 a cada 4 disparos" style={{
+                marginLeft: 12, fontSize: 12, padding: '4px 10px',
+                background: 'rgba(184,149,121,0.18)', color: '#B89579',
+                borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
+                fontWeight: 700, verticalAlign: 'middle',
+              }}>Freq. reduzida</span>
             )}
             {lead.mentoria && (
               <span style={{
@@ -1100,6 +1116,10 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
   const [modFilter, setModFilter] = React.useState('todos');
   const [origemFilter, setOrigemFilter] = React.useState('todos');
   const [dupFilter, setDupFilter] = React.useState(false);
+  // 'recebimento' filtra pelo estado de envio de e-mail do cluster:
+  // 'todos' | 'descadastrado' (pediu /sair) | 'freq-menor' (pediu reduzir) |
+  // 'inativo' (admin desativou)
+  const [recebimentoFilter, setRecebimentoFilter] = React.useState('todos');
   const [showLixeira, setShowLixeira] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
   const [bulkBusy, setBulkBusy] = React.useState(false);
@@ -1169,11 +1189,21 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
   });
 
   // Ativos: filtra cadastros únicos.
+  // Helpers de classificacao do "estado de recebimento" de um cluster.
+  // Um cluster representa uma pessoa (vario cadastros do mesmo email).
+  // Basta UMA aplicacao do cluster ter o flag pra considerar.
+  const clusterUnsub = (c) => c.forms.some((l) => l.unsubscribed);
+  const clusterInativo = (c) => !clusterUnsub(c) && c.forms.some((l) => l.ativo === false);
+  const clusterFreqMenor = (c) => !clusterUnsub(c) && !clusterInativo(c) && c.forms.some((l) => l.frequencia === 'menor');
+
   const filteredClusters = clusters.filter((c) => {
     if (statusFilter !== 'todos' && c.status !== statusFilter) return false;
     if (origemFilter !== 'todos' && !c.origens.includes(origemFilter)) return false;
     if (modFilter !== 'todos' && !c.forms.some((f) => f.modalidade === modFilter)) return false;
     if (dupFilter && c.count < 2) return false;
+    if (recebimentoFilter === 'descadastrado' && !clusterUnsub(c)) return false;
+    if (recebimentoFilter === 'inativo' && !clusterInativo(c)) return false;
+    if (recebimentoFilter === 'freq-menor' && !clusterFreqMenor(c)) return false;
     if (search) {
       const q = search.toLowerCase();
       const hay = c.forms.flatMap((l) => [
@@ -1186,13 +1216,16 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
   });
 
   const counts = React.useMemo(() => {
-    const c = {todos: clusters.length, duplicates: 0, lixeira: deletedLeads.length};
+    const c = {todos: clusters.length, duplicates: 0, lixeira: deletedLeads.length, descadastrado: 0, inativo: 0, 'freq-menor': 0};
     STATUS_ORDER.forEach((s) => c[s] = 0);
     ORIGEM_ORDER.forEach((o) => c['origem_' + o] = 0);
     clusters.forEach((cl) => {
       c[cl.status] = (c[cl.status] || 0) + 1;
       cl.origens.forEach((o) => { c['origem_' + o] = (c['origem_' + o] || 0) + 1; });
       if (cl.count > 1) c.duplicates += 1;
+      if (clusterUnsub(cl)) c.descadastrado++;
+      else if (clusterInativo(cl)) c.inativo++;
+      else if (clusterFreqMenor(cl)) c['freq-menor']++;
     });
     return c;
   }, [clusters, deletedLeads]);
@@ -1360,6 +1393,22 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
           <button className={modFilter === 'todos' ? 'is-on' : ''} onClick={() => setModFilter('todos')}>Todas</button>
           <button className={modFilter === 'Experience' ? 'is-on' : ''} onClick={() => setModFilter('Experience')}>Experience</button>
           <button className={modFilter === 'Executive' ? 'is-on' : ''} onClick={() => setModFilter('Executive')}>Executive</button>
+        </nav>
+
+        <span className="ad-side-section">Recebimento de e-mails</span>
+        <nav className="ad-side-nav">
+          <button className={recebimentoFilter === 'todos' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('todos')}>
+            <span>Todos</span>
+          </button>
+          <button className={recebimentoFilter === 'descadastrado' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('descadastrado')} style={{color: '#d97757'}}>
+            <span>Descadastrados</span><em>{counts.descadastrado}</em>
+          </button>
+          <button className={recebimentoFilter === 'freq-menor' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('freq-menor')} style={{color: '#B89579'}}>
+            <span>Frequência reduzida</span><em>{counts['freq-menor']}</em>
+          </button>
+          <button className={recebimentoFilter === 'inativo' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('inativo')} style={{color: '#d97757'}}>
+            <span>Inativos (admin)</span><em>{counts.inativo}</em>
+          </button>
         </nav>
 
         <span className="ad-side-section">Duplicatas</span>
@@ -2305,6 +2354,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
   const [coldList, setColdList] = React.useState(null);
   const [search, setSearch] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [statusFilter, setStatusFilter] = React.useState('todos'); // todos | ativo | freq-menor | unsub | bounce | quente
   // Edição inline
   const [editing, setEditing] = React.useState(null); // lead em edição (modal)
   // Seleção pra mesclagem
@@ -2785,17 +2835,67 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             <span style={{color: 'rgba(247,245,242,0.4)'}}>O índice é o que o disparo de e-mail lê pra mandar pros leads frios. Reconstrói depois de importar bases novas ou editar muitos cadastros.</span>
           </p>
         )}
+        {/* Filtro por status — aplica sobre os leads atualmente carregados (pagina de 200). */}
+        {coldList && coldList.leads.length > 0 && (() => {
+          const counts = {todos: 0, ativo: 0, 'freq-menor': 0, unsub: 0, bounce: 0, quente: 0};
+          for (const l of coldList.leads) {
+            counts.todos++;
+            if (l.convertedToHotAt) counts.quente++;
+            else if (l.unsubscribed || l.ativo === false) counts.unsub++;
+            else if (l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send")) counts.bounce++;
+            else if (l.frequencia === 'menor') counts['freq-menor']++;
+            else counts.ativo++;
+          }
+          const chip = (id, label, color) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setStatusFilter(id)}
+              style={{
+                padding: '6px 12px', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.10em', textTransform: 'uppercase',
+                background: statusFilter === id ? color : 'transparent',
+                color: statusFilter === id ? '#0F1116' : color,
+                border: `1px solid ${color}`, cursor: 'pointer',
+              }}>{label} <span style={{opacity: 0.75}}>· {counts[id]}</span></button>
+          );
+          return (
+            <div style={{display: 'flex', gap: 6, flexWrap: 'wrap', margin: '0 0 14px'}}>
+              {chip('todos', 'Todos', 'rgba(247,245,242,0.55)')}
+              {chip('ativo', 'Ativos', '#819470')}
+              {chip('freq-menor', 'Freq. menor', '#B89579')}
+              {chip('unsub', 'Descadastrados', '#d97757')}
+              {chip('bounce', 'Bounce', '#d97757')}
+              {chip('quente', 'Viraram quente', 'var(--sand)')}
+            </div>
+          );
+        })()}
         {loading ? <p className="ad-bc-empty">Carregando…</p>
           : !coldList || coldList.leads.length === 0 ? <p className="ad-bc-empty">Nenhum lead frio {search ? 'encontrado pra busca' : 'ainda. Importe uma planilha acima.'}</p>
-          : (
+          : (() => {
+            const visibleLeads = coldList.leads.filter((l) => {
+              if (statusFilter === 'todos') return true;
+              if (statusFilter === 'quente') return !!l.convertedToHotAt;
+              const isUnsub = !l.convertedToHotAt && (l.unsubscribed || l.ativo === false);
+              if (statusFilter === 'unsub') return isUnsub;
+              const isBounce = !isUnsub && !l.convertedToHotAt && l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send");
+              if (statusFilter === 'bounce') return isBounce;
+              if (statusFilter === 'freq-menor') return !isUnsub && !isBounce && !l.convertedToHotAt && l.frequencia === 'menor';
+              if (statusFilter === 'ativo') return !isUnsub && !isBounce && !l.convertedToHotAt && l.frequencia !== 'menor';
+              return true;
+            });
+            if (visibleLeads.length === 0) {
+              return <p className="ad-bc-empty">Nenhum lead frio com esse status na página atual. Tenta um filtro diferente ou role mais leads.</p>;
+            }
+            return (
             <>
             <table className="ad-bc-history-table">
               <thead>
                 <tr>
                   <th style={{width: 32}}><input type="checkbox" onChange={(e) => {
-                    if (e.target.checked) setSelectedIds(new Set(coldList.leads.map((l) => l.id)));
+                    if (e.target.checked) setSelectedIds(new Set(visibleLeads.map((l) => l.id)));
                     else setSelectedIds(new Set());
-                  }} checked={coldList.leads.length > 0 && selectedIds.size === coldList.leads.length} /></th>
+                  }} checked={visibleLeads.length > 0 && selectedIds.size === visibleLeads.length} /></th>
                   <th>Canal</th>
                   <th>E-mail</th>
                   <th>Nome</th>
@@ -2807,7 +2907,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
                 </tr>
               </thead>
               <tbody>
-                {coldList.leads.map((l) => {
+                {visibleLeads.map((l) => {
                   const emails = l.emails || (l.email ? [l.email] : []);
                   const phones = l.whatsapps || (l.whatsapp ? [l.whatsapp] : []);
                   const checked = selectedIds.has(l.id);
@@ -2861,7 +2961,8 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
               </div>
             )}
             </>
-          )}
+            );
+          })()}
         {coldList && coldList.leads.length === 200 && (
           <p className="ad-bc-empty" style={{marginTop: 16}}>Mostrando primeiros 200. Use a busca pra filtrar.</p>
         )}

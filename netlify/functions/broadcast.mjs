@@ -232,6 +232,7 @@ export default async (req) => {
       //  - deletadods (lixeira)
       //  - descadastrados via /sair (unsubscribed: true)
       //  - marcados como inativos no admin (ativo === false)
+      // Marca frequencia: menor pra aplicar hash 1-em-4 depois.
       const byEmail = new Map();
       for (const l of leads) {
         if (l.deletedAt) continue;
@@ -239,10 +240,24 @@ export default async (req) => {
         if (l.ativo === false) continue;
         const email = String(l.email || '').trim().toLowerCase();
         if (!email || !email.includes('@')) continue;
-        if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set()});
+        if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set(), frequenciaMenor: false});
         const e = byEmail.get(email);
         e.leads.push(l);
         e.origens.add(l.origem || 'mentoria');
+        // Basta UMA aplicacao do email ter freq=menor pra reduzir
+        if (l.frequencia === 'menor') e.frequenciaMenor = true;
+      }
+
+      // Aplica hash 1-em-4 pros leads quentes com frequencia reduzida.
+      // O hash usa broadcastId + email pra ser determinístico (mesmo
+      // disparo, mesmo recipiente: mesma decisao — nao manda duplicado
+      // no Continuar).
+      const freqHashSeed = [...broadcastId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+      for (const [email, entry] of byEmail) {
+        if (entry.frequenciaMenor) {
+          const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, freqHashSeed);
+          if (emHash % 4 !== 0) byEmail.delete(email);
+        }
       }
 
       const filter = body.filter || {};
