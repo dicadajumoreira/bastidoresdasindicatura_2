@@ -1,0 +1,286 @@
+/* Estilos das paginas de compra da mentoria (Experience + Executive).
+   Reaproveita tokens.css e bastidores.css. */
+
+html, body { margin: 0; padding: 0; background: var(--onix); min-height: 100vh; color: var(--offwhite); }
+body { font-family: var(--font-sans, Georgia, serif); -webkit-font-smoothing: antialiased; }
+
+.cmp-stage {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.cmp-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(247, 245, 242, 0.1);
+  margin-bottom: 36px;
+}
+.cmp-back {
+  color: rgba(247, 245, 242, 0.6);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cmp-back:hover { color: var(--sand); }
+.cmp-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.cmp-brand-l1 {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--offwhite);
+}
+.cmp-brand-l2 {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--sand);
+  font-weight: 600;
+}
+
+.cmp-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.cmp-info-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--sand);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.cmp-info-title {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0 0 24px;
+  color: var(--offwhite);
+}
+.cmp-info-title em { font-style: italic; color: var(--sand); }
+.cmp-info-lead {
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(247, 245, 242, 0.8);
+  margin: 0 0 28px;
+}
+
+.cmp-bullets { list-style: none; padding: 0; margin: 0 0 28px; }
+.cmp-bullets li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(247, 245, 242, 0.78);
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(247, 245, 242, 0.08);
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+.cmp-bullets li::before {
+  content: '✓';
+  color: var(--sand);
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.cmp-prices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 24px 0 32px;
+  padding: 18px;
+  background: rgba(247, 245, 242, 0.04);
+  border: 1px solid rgba(247, 245, 242, 0.1);
+}
+.cmp-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cmp-price-label {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(247, 245, 242, 0.55);
+  font-weight: 700;
+}
+.cmp-price-value {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-size: 26px;
+  color: var(--offwhite);
+}
+.cmp-price-block.is-pix .cmp-price-value { color: #a8d4a8; }
+.cmp-price-sub {
+  font-size: 11px;
+  color: rgba(247, 245, 242, 0.55);
+}
+
+/* ===== Form (right column) ===== */
+.cmp-form-card {
+  background: var(--offwhite);
+  color: var(--onix);
+  padding: 36px 32px;
+  position: relative;
+}
+.cmp-form-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--sand);
+}
+.cmp-form-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--sand-deep, #B89579);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.cmp-form-title {
+  font-family: 'Bodoni Moda', Georgia, serif;
+  font-style: italic;
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 0 0 22px;
+  color: var(--onix);
+}
+
+.cmp-field { display: block; margin-bottom: 14px; }
+.cmp-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--graphite, #4d4f5c);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.cmp-field input, .cmp-field select {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid rgba(26, 28, 41, 0.22);
+  background: transparent;
+  padding: 8px 0;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--onix);
+  outline: none;
+}
+.cmp-field input:focus, .cmp-field select:focus { border-bottom-color: var(--onix); }
+.cmp-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+}
+.cmp-row .cmp-field { margin-bottom: 0; }
+.cmp-row + .cmp-field { margin-top: 14px; }
+
+.cmp-method-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+.cmp-method {
+  padding: 14px 16px;
+  border: 2px solid rgba(26, 28, 41, 0.18);
+  cursor: pointer;
+  text-align: left;
+  background: transparent;
+  font-family: inherit;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.cmp-method.is-on {
+  border-color: var(--onix);
+  background: rgba(26, 28, 41, 0.04);
+}
+.cmp-method-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--onix);
+  margin-bottom: 2px;
+}
+.cmp-method-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--graphite, #4d4f5c);
+  line-height: 1.4;
+}
+.cmp-method.is-on .cmp-method-desc strong { color: #819470; }
+
+.cmp-cta {
+  width: 100%;
+  padding: 18px 24px;
+  background: var(--onix);
+  color: var(--offwhite);
+  border: none;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-family: inherit;
+  transition: background 0.18s ease;
+}
+.cmp-cta:hover { background: var(--graphite, #2a2b38); }
+.cmp-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cmp-micro {
+  font-size: 11px;
+  color: var(--graphite, #4d4f5c);
+  text-align: center;
+  margin: 14px 0 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+.cmp-error {
+  font-size: 12px;
+  color: #d97757;
+  font-style: italic;
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .cmp-grid { grid-template-columns: 1fr; gap: 32px; }
+  .cmp-info-title { font-size: 42px; }
+}
+@media (max-width: 540px) {
+  .cmp-stage { padding: 22px 18px 48px; }
+  .cmp-topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .cmp-brand { align-items: flex-start; }
+  .cmp-prices { grid-template-columns: 1fr; }
+  .cmp-method-group { grid-template-columns: 1fr; }
+  .cmp-row { grid-template-columns: 1fr; gap: 0; }
+  .cmp-row .cmp-field { margin-bottom: 14px; }
+  .cmp-form-card { padding: 28px 22px; }
+  .cmp-form-title { font-size: 26px; }
+}

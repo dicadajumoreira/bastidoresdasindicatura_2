@@ -49,8 +49,8 @@ const BsVagas = () => (
             <span className="bs-tier-price-badge">1º lote · 30% OFF</span>
             <span className="bs-tier-price-from">De <s>R$ 7.140</s> por</span>
             <span className="bs-tier-price-v">R$ 4.997</span>
-            <a href="#contato" className="bs-tier-cta">
-              <span>Quero aplicar para a Experience</span>
+            <a href="/comprar-experience/" className="bs-tier-cta">
+              <span>Comprar a Experience</span>
               <svg width="14" height="10" viewBox="0 0 18 12" fill="none">
                 <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -97,8 +97,8 @@ const BsVagas = () => (
             <span className="bs-tier-price-badge">1º lote · 30% OFF</span>
             <span className="bs-tier-price-from">De <s>R$ 12.860</s> por</span>
             <span className="bs-tier-price-v">R$ 8.997</span>
-            <a href="#contato" className="bs-tier-cta bs-tier-cta-light">
-              <span>Quero aplicar para a Executive</span>
+            <a href="/comprar-executive/" className="bs-tier-cta bs-tier-cta-light">
+              <span>Comprar a Executive</span>
               <svg width="14" height="10" viewBox="0 0 18 12" fill="none">
                 <path d="M1 6h15M11 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>

@@ -101,6 +101,14 @@
   function = "serve-html"
   path = "/mba/"
 
+[[edge_functions]]
+  function = "serve-html"
+  path = "/comprar-experience/"
+
+[[edge_functions]]
+  function = "serve-html"
+  path = "/comprar-executive/"
+
 # Redirect 301 da URL antiga pra preservar links já compartilhados
 [[redirects]]
   from = "/sorteio-mba/"

@@ -117,8 +117,34 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 | `/terceirizados/` | `terceirizados` | submit.mjs |
 | `/mba/` | `sorteio-mba` | submit.mjs |
 | `/quiz/` | (por arquétipo) | submit.mjs |
+| `/comprar-experience/` | `mentoria-paga` | stripe-webhook.mjs |
+| `/comprar-executive/` | `mentoria-paga` | stripe-webhook.mjs |
 | Home (mentoria) | `mentoria` | submit.mjs (via bs-form.jsx) |
 
 Páginas de download direto (sem captura): `/bombeiro/` `/politico/` `/solitario/` `/burocrata/` `/estrategista/` `/sargento/`.
 
 Lista completa de origens válidas em `netlify/functions/submit.mjs` — `VALID_ORIGENS`.
+
+## Stripe (pagamento da Mentoria)
+
+Pagamento integrado via Stripe Checkout. Páginas:
+- `/comprar-experience/` · 12 aulas grupo · R$ 4.997 cartão (12x) ou R$ 4.497,30 Pix (10% off)
+- `/comprar-executive/` · 12 grupo + 2 particulares · R$ 8.997 cartão (12x) ou R$ 8.097,30 Pix (10% off)
+
+Após pagamento confirmado, `stripe-webhook.mjs`:
+1. Cria/atualiza lead com `origem: 'mentoria-paga'`, `mentoria: true`, `mentoriaModalidade`
+2. Atualiza cache `members-email-index` (libera Sala da Mentoria na hora)
+3. Manda e-mail de boas-vindas com link de criar senha (`/membros/?action=set-password&t=...`)
+4. Idempotência via chave `stripe:{sessionId}` no blob de leads (Stripe pode reenviar webhook)
+
+**Variáveis de ambiente obrigatórias no Netlify:**
+- `STRIPE_SECRET_KEY` (sk_live_... ou sk_test_...)
+- `STRIPE_WEBHOOK_SECRET` (whsec_...)
+- `STRIPE_PRICE_EXP_CARD` · price ID Experience cartão
+- `STRIPE_PRICE_EXP_PIX` · price ID Experience Pix
+- `STRIPE_PRICE_EXEC_CARD` · price ID Executive cartão
+- `STRIPE_PRICE_EXEC_PIX` · price ID Executive Pix
+
+Webhook configurado em Stripe Dashboard → Developers → Webhooks → endpoint:
+`https://bastidoresdasindicatura.com.br/api/stripe-webhook`
+Eventos: `checkout.session.completed`, `payment_intent.payment_failed`.
