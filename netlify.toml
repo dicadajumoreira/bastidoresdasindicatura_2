@@ -67,6 +67,10 @@
 
 [[edge_functions]]
   function = "serve-html"
+  path = "/terceirizados/"
+
+[[edge_functions]]
+  function = "serve-html"
   path = "/bombeiro/"
 
 [[edge_functions]]

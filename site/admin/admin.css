@@ -1095,6 +1095,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; color: inher
   background: rgba(178, 106, 61, 0.22);
   color: #b26a3d;
 }
+.ad-chip-origem-terceirizados {
+  background: rgba(184, 149, 121, 0.22);
+  color: #B89579;
+}
 .ad-chip-origem-bombeiro {
   background: rgba(201, 70, 46, 0.22);
   color: #c9462e;

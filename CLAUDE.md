@@ -113,6 +113,7 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 | `/conflitos/` | `conflitos` | submit.mjs |
 | `/saude-mental/` | `saude-mental` | submit.mjs |
 | `/gestao-sob-ataque/` | `gestao-sob-ataque` | submit.mjs |
+| `/terceirizados/` | `terceirizados` | submit.mjs |
 | `/mba/` | `sorteio-mba` | submit.mjs |
 | `/quiz/` | (por arquétipo) | submit.mjs |
 | Home (mentoria) | `mentoria` | submit.mjs (via bs-form.jsx) |

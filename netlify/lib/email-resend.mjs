@@ -33,6 +33,7 @@ const MATERIALS = {
   'conflitos': { nome: 'Guia · Conflitos absurdos em condomínio', flow: 'material', pdf: '/conflitos/material.pdf' },
   'saude-mental': { nome: 'Guia · Saúde Mental do Síndico', flow: 'material', pdf: '/saude-mental/material.pdf' },
   'gestao-sob-ataque': { nome: 'Guia · Gestão sob Ataque', flow: 'material', pdf: '/gestao-sob-ataque/material.pdf' },
+  'terceirizados': { nome: 'Guia · Terceirizados em Condomínios', flow: 'material', pdf: '/terceirizados/material.pdf' },
   'bombeiro': { nome: 'Arquétipo · O Bombeiro', flow: 'material', pdf: '/bombeiro/material.pdf' },
   'politico': { nome: 'Arquétipo · O Político', flow: 'material', pdf: '/politico/material.pdf' },
   'solitario': { nome: 'Arquétipo · O Solitário', flow: 'material', pdf: '/solitario/material.pdf' },

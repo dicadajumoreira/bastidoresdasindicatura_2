@@ -23,6 +23,7 @@ const ORIGEM_LABELS = {
   'conflitos': 'Guia Conflitos',
   'saude-mental': 'Saúde Mental',
   'gestao-sob-ataque': 'Gestão sob Ataque',
+  'terceirizados': 'Terceirizados',
   'bombeiro': 'Arquétipo · Bombeiro',
   'politico': 'Arquétipo · Político',
   'solitario': 'Arquétipo · Solitário',
@@ -31,7 +32,7 @@ const ORIGEM_LABELS = {
   'sargento': 'Arquétipo · Sargento',
   'sorteio-mba': 'Sorteio MBA IBMEC',
 };
-const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
+const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
@@ -3659,6 +3660,15 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
 // Quando você publicar um novo material, basta adicionar uma entrada aqui
 // e ele já aparece na lista de rascunhos disponíveis.
 const MATERIAL_BROADCASTS = [
+  {
+    origem: 'terceirizados',
+    nome: 'Terceirizados em Condomínios',
+    eyebrow: 'Volume 20 · Guia prático',
+    titulo: 'O que ninguém fiscaliza até dar problema.',
+    desc: 'Um guia prático pra o síndico evitar passivo trabalhista, falha contratual, acidente e desvio de função. 30 capítulos sobre risco, contrato, fiscalização, jornada, LGPD — mais 4 bônus práticos.',
+    landingPath: '/terceirizados/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
   {
     origem: 'saude-mental',
     nome: 'Saúde Mental do Síndico',
