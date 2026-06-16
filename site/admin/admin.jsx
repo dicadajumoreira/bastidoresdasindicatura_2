@@ -4574,9 +4574,15 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     }
   };
 
+  // No preview, troca os placeholders por valores de exemplo. O
+  // {{unsubscribe_url}} vira um link real pra /sair (sem token, só pra
+  // demonstrar a navegacao). Quando o e-mail eh enviado de verdade pelo
+  // backend, cada destinatario recebe a URL unica e assinada.
   const previewHtml = html
     .replace(/\{\{nome\}\}/g, 'Maria')
-    .replace(/\{\{material\}\}/g, 'o seu material');
+    .replace(/\{\{email\}\}/g, 'maria@exemplo.com')
+    .replace(/\{\{material\}\}/g, 'o seu material')
+    .replace(/\{\{unsubscribe_url\}\}/g, 'https://bastidoresdasindicatura.com.br/sair');
 
   // Conta quantos leads ainda não têm cada material (pra mostrar nos rascunhos)
   const countNotHaving = (origem) => {
@@ -5090,6 +5096,9 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             </header>
             <div className="ad-bc-preview">
               <p className="ad-bc-preview-subject"><strong>Assunto:</strong> {subject.replace(/\{\{nome\}\}/g, 'Maria').replace(/\{\{material\}\}/g, 'o seu material')}</p>
+              <p style={{margin: '0 0 10px', fontSize: 11, color: 'rgba(247,245,242,0.55)', fontStyle: 'italic', padding: '8px 12px', background: 'rgba(218,189,169,0.08)', border: '1px dashed rgba(218,189,169,0.3)'}}>
+                Aqui é só pré-visualização. Os links de <strong>reduzir frequência</strong> e <strong>descadastrar</strong> só ficam válidos no e-mail enviado de verdade (cada destinatário recebe uma URL única assinada). Pra testar de fato, clica em <strong>"Enviar teste"</strong> mais abaixo e clica no link no e-mail que chegar.
+              </p>
               <iframe className="ad-bc-preview-frame" srcDoc={previewHtml} title="Pré-visualização" />
             </div>
           </section>
