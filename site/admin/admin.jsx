@@ -518,21 +518,15 @@ const LeadDetail = ({lead, onClose, onUpdated, onDeleted, onHardDeleted, cluster
           <span className="ad-tag-sm">Aplicação · {fmtDate(lead.createdAt)}</span>
           <h2 className="ad-detail-name">
             {lead.nome}
-            {lead.unsubscribed && (
-              <span title={lead.unsubscribedAt ? 'Descadastrou em ' + fmtDate(lead.unsubscribedAt) : ''} style={{
+            {(lead.unsubscribed || lead.ativo === false) && (
+              <span title={lead.unsubscribed
+                ? (lead.unsubscribedAt ? 'Pediu descadastro via /sair em ' + fmtDate(lead.unsubscribedAt) : 'Pediu descadastro via /sair')
+                : 'Inativado manualmente no admin'} style={{
                 marginLeft: 12, fontSize: 12, padding: '4px 10px',
                 background: 'rgba(217,119,87,0.18)', color: '#d97757',
                 borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
                 fontWeight: 700, verticalAlign: 'middle',
               }}>Descadastrado</span>
-            )}
-            {!lead.unsubscribed && lead.ativo === false && (
-              <span style={{
-                marginLeft: 12, fontSize: 12, padding: '4px 10px',
-                background: 'rgba(217,119,87,0.12)', color: '#d97757',
-                borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase',
-                fontWeight: 700, verticalAlign: 'middle',
-              }}>Inativo</span>
             )}
             {!lead.unsubscribed && lead.ativo !== false && lead.frequencia === 'menor' && (
               <span title="Recebe 1 a cada 4 disparos" style={{
@@ -1192,9 +1186,12 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
   // Helpers de classificacao do "estado de recebimento" de um cluster.
   // Um cluster representa uma pessoa (vario cadastros do mesmo email).
   // Basta UMA aplicacao do cluster ter o flag pra considerar.
-  const clusterUnsub = (c) => c.forms.some((l) => l.unsubscribed);
-  const clusterInativo = (c) => !clusterUnsub(c) && c.forms.some((l) => l.ativo === false);
-  const clusterFreqMenor = (c) => !clusterUnsub(c) && !clusterInativo(c) && c.forms.some((l) => l.frequencia === 'menor');
+  // "Descadastrado" engloba TUDO que deixou de receber e-mail:
+  //   - quem pediu sair via /sair (unsubscribed: true)
+  //   - quem foi inativado manualmente pelo admin (ativo === false)
+  // (do ponto de vista do disparador, os dois sao tratados igual.)
+  const clusterUnsub = (c) => c.forms.some((l) => l.unsubscribed || l.ativo === false);
+  const clusterFreqMenor = (c) => !clusterUnsub(c) && c.forms.some((l) => l.frequencia === 'menor');
 
   const filteredClusters = clusters.filter((c) => {
     if (statusFilter !== 'todos' && c.status !== statusFilter) return false;
@@ -1202,7 +1199,6 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
     if (modFilter !== 'todos' && !c.forms.some((f) => f.modalidade === modFilter)) return false;
     if (dupFilter && c.count < 2) return false;
     if (recebimentoFilter === 'descadastrado' && !clusterUnsub(c)) return false;
-    if (recebimentoFilter === 'inativo' && !clusterInativo(c)) return false;
     if (recebimentoFilter === 'freq-menor' && !clusterFreqMenor(c)) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -1216,7 +1212,7 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
   });
 
   const counts = React.useMemo(() => {
-    const c = {todos: clusters.length, duplicates: 0, lixeira: deletedLeads.length, descadastrado: 0, inativo: 0, 'freq-menor': 0};
+    const c = {todos: clusters.length, duplicates: 0, lixeira: deletedLeads.length, descadastrado: 0, 'freq-menor': 0};
     STATUS_ORDER.forEach((s) => c[s] = 0);
     ORIGEM_ORDER.forEach((o) => c['origem_' + o] = 0);
     clusters.forEach((cl) => {
@@ -1224,7 +1220,6 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
       cl.origens.forEach((o) => { c['origem_' + o] = (c['origem_' + o] || 0) + 1; });
       if (cl.count > 1) c.duplicates += 1;
       if (clusterUnsub(cl)) c.descadastrado++;
-      else if (clusterInativo(cl)) c.inativo++;
       else if (clusterFreqMenor(cl)) c['freq-menor']++;
     });
     return c;
@@ -1400,14 +1395,11 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
           <button className={recebimentoFilter === 'todos' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('todos')}>
             <span>Todos</span>
           </button>
-          <button className={recebimentoFilter === 'descadastrado' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('descadastrado')} style={{color: '#d97757'}}>
+          <button className={recebimentoFilter === 'descadastrado' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('descadastrado')} style={{color: '#d97757'}} title="Inclui quem pediu sair via /sair e quem foi inativado manualmente">
             <span>Descadastrados</span><em>{counts.descadastrado}</em>
           </button>
           <button className={recebimentoFilter === 'freq-menor' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('freq-menor')} style={{color: '#B89579'}}>
             <span>Frequência reduzida</span><em>{counts['freq-menor']}</em>
-          </button>
-          <button className={recebimentoFilter === 'inativo' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('inativo')} style={{color: '#d97757'}}>
-            <span>Inativos (admin)</span><em>{counts.inativo}</em>
           </button>
         </nav>
 
@@ -2835,7 +2827,8 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             <span style={{color: 'rgba(247,245,242,0.4)'}}>O índice é o que o disparo de e-mail lê pra mandar pros leads frios. Reconstrói depois de importar bases novas ou editar muitos cadastros.</span>
           </p>
         )}
-        {/* Filtro por status — aplica sobre os leads atualmente carregados (pagina de 200). */}
+        {/* Filtro por status — aplica sobre os leads atualmente carregados (pagina de 200).
+            "Descadastrados" engloba pediu /sair (unsubscribed) E inativado manualmente. */}
         {coldList && coldList.leads.length > 0 && (() => {
           const counts = {todos: 0, ativo: 0, 'freq-menor': 0, unsub: 0, bounce: 0, quente: 0};
           for (const l of coldList.leads) {
@@ -2846,11 +2839,12 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             else if (l.frequencia === 'menor') counts['freq-menor']++;
             else counts.ativo++;
           }
-          const chip = (id, label, color) => (
+          const chip = (id, label, color, title) => (
             <button
               key={id}
               type="button"
               onClick={() => setStatusFilter(id)}
+              title={title}
               style={{
                 padding: '6px 12px', fontSize: 11, fontWeight: 700,
                 letterSpacing: '0.10em', textTransform: 'uppercase',
@@ -2864,7 +2858,7 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
               {chip('todos', 'Todos', 'rgba(247,245,242,0.55)')}
               {chip('ativo', 'Ativos', '#819470')}
               {chip('freq-menor', 'Freq. menor', '#B89579')}
-              {chip('unsub', 'Descadastrados', '#d97757')}
+              {chip('unsub', 'Descadastrados', '#d97757', 'Inclui quem pediu sair via /sair e quem foi inativado manualmente')}
               {chip('bounce', 'Bounce', '#d97757')}
               {chip('quente', 'Viraram quente', 'var(--sand)')}
             </div>
