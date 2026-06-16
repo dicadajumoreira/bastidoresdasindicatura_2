@@ -3814,11 +3814,14 @@ function buildMaterialHtml(m) {
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+      <tr><td style="padding:24px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#1A1C29;text-align:center">
+          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">se descadastrar</a> a qualquer momento.
+        </p>
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
           Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
         </p>
-        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
           <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
         </p>
       </td></tr>
@@ -3874,11 +3877,14 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+      <tr><td style="padding:24px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#1A1C29;text-align:center">
+          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">se descadastrar</a> a qualquer momento.
+        </p>
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
           Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
         </p>
-        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
           <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
         </p>
       </td></tr>
@@ -3944,11 +3950,14 @@ const MBA_LAST_HOURS_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+      <tr><td style="padding:24px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#1A1C29;text-align:center">
+          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">se descadastrar</a> a qualquer momento.
+        </p>
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
           Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
         </p>
-        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
           <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
         </p>
       </td></tr>
@@ -4010,11 +4019,14 @@ const MBA_FINAL_CHANCE_HTML = `<table cellpadding="0" cellspacing="0" border="0"
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+      <tr><td style="padding:24px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#1A1C29;text-align:center">
+          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">se descadastrar</a> a qualquer momento.
+        </p>
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
           Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
         </p>
-        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
           <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
         </p>
       </td></tr>
@@ -4085,11 +4097,14 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:22px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+      <tr><td style="padding:24px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#1A1C29;text-align:center">
+          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579;font-weight:700">se descadastrar</a> a qualquer momento.
+        </p>
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
           Você está recebendo este e-mail porque se cadastrou em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
         </p>
-        <p style="margin:6px 0 0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
           <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
         </p>
       </td></tr>
