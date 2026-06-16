@@ -15,7 +15,7 @@ export const config = {
 // Campos que o admin pode editar
 const EDITABLE = new Set([
   'nome', 'cidade', 'estado', 'whatsapp', 'email', 'instagram',
-  'atuacao', 'tempoMercado', 'qtdCondominios',
+  'atuacao', 'data_nascimento', 'tempoMercado', 'qtdCondominios',
   'maiorDesafio', 'desgaste', 'areas',
   'desenvolvimento', 'objetivo', 'onde2anos',
   'bastidor', 'modalidade', 'compromisso', 'participacao',

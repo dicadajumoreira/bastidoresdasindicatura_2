@@ -1611,6 +1611,13 @@ const EditLeadModal = ({lead, onCancel, onSaved}) => {
     instagram: lead.instagram || '',
     instagramsExtras: [...(lead.instagramsExtras || [])],
     atuacao: lead.atuacao || '',
+    // Banco guarda MM-DD-YYYY (especificacao da Juliana). O input
+    // type=date precisa de YYYY-MM-DD. Converte ida e volta.
+    data_nascimento: (() => {
+      const s = String(lead.data_nascimento || '').trim();
+      const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+      return m ? `${m[3]}-${m[1]}-${m[2]}` : s;
+    })(),
     modalidade: lead.modalidade || '',
     status: lead.status || 'novo',
   });
@@ -1624,9 +1631,14 @@ const EditLeadModal = ({lead, onCancel, onSaved}) => {
   const save = async () => {
     setSaving(true);
     try {
+      // Converte data_nascimento YYYY-MM-DD (input) -> MM-DD-YYYY (banco)
+      const fieldsToSave = {...form};
+      const dn = String(form.data_nascimento || '').trim();
+      const m = dn.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      fieldsToSave.data_nascimento = m ? `${m[2]}-${m[3]}-${m[1]}` : dn;
       const res = await api('/api/update-lead', {
         method: 'POST',
-        body: JSON.stringify({id: lead.id, fields: form}),
+        body: JSON.stringify({id: lead.id, fields: fieldsToSave}),
       });
       // Status mudou? Atualiza via update-status pra disparar lógica adequada
       if (form.status !== (lead.status || 'novo')) {
@@ -1712,6 +1724,14 @@ const EditLeadModal = ({lead, onCancel, onSaved}) => {
                 <option>Conselheiro</option>
                 <option>Outro</option>
               </select>
+            </label>
+            <label className="ad-edit-field">
+              <span>Data de nascimento</span>
+              <input
+                type="date"
+                value={form.data_nascimento}
+                onChange={(e) => set('data_nascimento', e.target.value)}
+              />
             </label>
             <label className="ad-edit-field">
               <span>Modalidade (mentoria)</span>
