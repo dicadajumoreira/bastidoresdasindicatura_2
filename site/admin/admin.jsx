@@ -2860,9 +2860,10 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
           );
         })()}
         {/* Filtro por status — aplica sobre os leads atualmente carregados (pagina de 200).
-            "Descadastrados" engloba pediu /sair (unsubscribed) E inativado manualmente. */}
+            "Descadastrados" engloba pediu /sair (unsubscribed) E inativado manualmente.
+            "Nunca recebeu" sao os que nunca tiveram firstBroadcastAt setado. */}
         {coldList && coldList.leads.length > 0 && (() => {
-          const counts = {todos: 0, ativo: 0, 'freq-menor': 0, unsub: 0, bounce: 0, quente: 0};
+          const counts = {todos: 0, ativo: 0, 'nunca-recebeu': 0, 'freq-menor': 0, unsub: 0, bounce: 0, quente: 0};
           for (const l of coldList.leads) {
             counts.todos++;
             if (l.convertedToHotAt) counts.quente++;
@@ -2870,6 +2871,14 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             else if (l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send")) counts.bounce++;
             else if (l.frequencia === 'menor') counts['freq-menor']++;
             else counts.ativo++;
+            // "Nunca recebeu" eh sub-grupo dos ativos. Conta separado.
+            if (!l.firstBroadcastAt
+                && !l.convertedToHotAt
+                && !l.unsubscribed
+                && l.ativo !== false
+                && !(l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send"))) {
+              counts['nunca-recebeu']++;
+            }
           }
           const chip = (id, label, color, title) => (
             <button
@@ -2889,9 +2898,10 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             <div style={{display: 'flex', gap: 6, flexWrap: 'wrap', margin: '0 0 14px'}}>
               {chip('todos', 'Todos', 'rgba(247,245,242,0.55)')}
               {chip('ativo', 'Ativos', '#819470')}
+              {chip('nunca-recebeu', 'Nunca recebeu e-mail', 'var(--sand)', 'Ativos que ainda nao receberam nenhum disparo. Ideal pra mandar boas-vindas pra uma base recem-importada')}
               {chip('freq-menor', 'Freq. menor', '#B89579')}
               {chip('unsub', 'Descadastrados', '#d97757', 'Inclui quem pediu sair via /sair e quem foi inativado manualmente')}
-              {chip('bounce', 'Bounce', '#d97757')}
+              {chip('bounce', 'Bounce', '#d97757', 'E-mails que falharam — viraram inativos automaticamente apos o ultimo disparo')}
               {chip('quente', 'Viraram quente', 'var(--sand)')}
             </div>
           );
@@ -2907,7 +2917,9 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
               const isBounce = !isUnsub && !l.convertedToHotAt && l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send");
               if (statusFilter === 'bounce') return isBounce;
               if (statusFilter === 'freq-menor') return !isUnsub && !isBounce && !l.convertedToHotAt && l.frequencia === 'menor';
-              if (statusFilter === 'ativo') return !isUnsub && !isBounce && !l.convertedToHotAt && l.frequencia !== 'menor';
+              const isAtivo = !isUnsub && !isBounce && !l.convertedToHotAt && l.frequencia !== 'menor';
+              if (statusFilter === 'nunca-recebeu') return isAtivo && !l.firstBroadcastAt;
+              if (statusFilter === 'ativo') return isAtivo;
               return true;
             });
             if (visibleLeads.length === 0) {
@@ -4234,6 +4246,10 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   const [excludeOrigens, setExcludeOrigens] = React.useState(() => new Set(['sorteio-mba']));
   const [statusFilter, setStatusFilter] = React.useState(() => new Set()); // vazio = todos
   const [includeCold, setIncludeCold] = React.useState(false);
+  // Sub-opcao: enviar SO pros cold leads que nunca receberam disparo.
+  // Util pra mandar boas-vindas pra base recem-importada sem repetir
+  // pra quem ja recebeu algo antes.
+  const [onlyNeverReceivedCold, setOnlyNeverReceivedCold] = React.useState(false);
   const [coldCount, setColdCount] = React.useState(null);
   const [testEmail, setTestEmail] = React.useState('contato@dicadajumoreira.com.br');
   const [busy, setBusy] = React.useState(false);
@@ -4552,6 +4568,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         excludeOrigens: [...excludeOrigens],
         statuses: statusFilter.size ? [...statusFilter] : undefined,
         includeCold: includeCold || undefined,
+        onlyNeverReceivedCold: (includeCold && onlyNeverReceivedCold) || undefined,
       };
       // Trata o valor do datetime-local SEMPRE como horário de Brasília (UTC-3),
       // ignorando o fuso do navegador da pessoa que está agendando.
@@ -5079,9 +5096,20 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 <input type="checkbox" checked={includeCold} onChange={(e) => setIncludeCold(e.target.checked)} />
                 <span>
                   Incluir leads frios no disparo
-                  {coldCount != null && <span style={{color: 'var(--sand)', fontSize: '12px', marginLeft: 8}}>(~{coldCount} contatos com e-mail · descadastrados ficam de fora · freq. menor recebe 1 a cada 4)</span>}
+                  {coldCount != null && <span style={{color: 'var(--sand)', fontSize: '12px', marginLeft: 8}}>(~{coldCount} contatos com e-mail · descadastrados/bounces ficam de fora · freq. menor recebe 1 a cada 4)</span>}
                 </span>
               </label>
+              {includeCold && (
+                <label className={'ad-bc-check' + (onlyNeverReceivedCold ? ' is-on' : '')} style={{marginLeft: 24, marginTop: 8}}>
+                  <input type="checkbox" checked={onlyNeverReceivedCold} onChange={(e) => setOnlyNeverReceivedCold(e.target.checked)} />
+                  <span>
+                    Só pros que <strong>nunca receberam</strong> e-mail
+                    <span style={{color: 'rgba(247,245,242,0.55)', fontSize: '12px', marginLeft: 8, fontStyle: 'italic'}}>
+                      (ideal pra disparar pra uma base recém-importada sem repetir pra quem já recebeu)
+                    </span>
+                  </span>
+                </label>
+              )}
             </div>
             <div className="ad-bc-funnel">
               <p className="ad-bc-funnel-title">

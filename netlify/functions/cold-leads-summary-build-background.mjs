@@ -71,6 +71,9 @@ export default async (req) => {
             unsubscribed: !!lead.unsubscribed || lead.ativo === false,
             frequencia: lead.frequencia || 'normal',
             status: lead.emailStatus || null,
+            // null/ausente = nunca recebeu disparo. Usado pelo filtro
+            // "onlyNeverReceived" no broadcast pra mandar so pros novos.
+            firstBroadcastAt: lead.firstBroadcastAt || null,
           });
         }
       }
@@ -87,7 +90,9 @@ export default async (req) => {
     }
 
     // Dedupe por email — se um email aparecer em vários leads (raro), prefere
-    // o registro NÃO descadastrado e o nome preenchido
+    // o registro NÃO descadastrado e o nome preenchido. Tambem mantem a
+    // MAIS ANTIGA firstBroadcastAt (basta UMA aplicacao ter recebido pra
+    // pessoa contar como "ja recebeu").
     const byEmail = new Map();
     for (const e of entries) {
       const existing = byEmail.get(e.email);
@@ -96,6 +101,14 @@ export default async (req) => {
       if (existing.unsubscribed && !e.unsubscribed) byEmail.set(e.email, e);
       else if (!existing.unsubscribed && e.unsubscribed) { /* keep existing */ }
       else if (!existing.nome && e.nome) byEmail.set(e.email, {...existing, nome: e.nome});
+      // Sempre preserva a primeira data de broadcast conhecida
+      const merged = byEmail.get(e.email);
+      const oldest = (existing.firstBroadcastAt && e.firstBroadcastAt)
+        ? (existing.firstBroadcastAt < e.firstBroadcastAt ? existing.firstBroadcastAt : e.firstBroadcastAt)
+        : (existing.firstBroadcastAt || e.firstBroadcastAt || null);
+      if (merged.firstBroadcastAt !== oldest) {
+        byEmail.set(e.email, {...merged, firstBroadcastAt: oldest});
+      }
     }
     const deduped = [...byEmail.values()];
 

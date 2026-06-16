@@ -322,11 +322,16 @@ export default async (req) => {
           }
           const seenEmails = new Set(allTargets.map((t) => t.email));
           const hashSeed = [...broadcastId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+          // Filtro opcional: enviar SO pros cold leads que nunca receberam.
+          // Util pra disparar uma campanha de boas-vindas pra base recem-
+          // importada sem repetir pra quem ja recebeu algo antes.
+          const onlyNeverReceived = !!(filter && filter.onlyNeverReceivedCold);
           for (const entry of summary.entries) {
             if (entry.unsubscribed) continue;
             if (entry.status && String(entry.status).toLowerCase().includes("can't send")) continue;
             const email = entry.email;
             if (!email || seenEmails.has(email)) continue;
+            if (onlyNeverReceived && entry.firstBroadcastAt) continue;
             if (entry.frequencia === 'menor') {
               const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, hashSeed);
               if (emHash % 4 !== 0) continue;
@@ -395,6 +400,23 @@ export default async (req) => {
       await recipientsStore.setJSON(`${broadcastId}__${String(offset).padStart(7, '0')}`, recipientsLog);
     } catch (e) {
       console.error('[broadcast] failed to save recipients log:', e.message);
+    }
+
+    // Propaga sent/failed pros cold leads em background. Atualiza os blobs
+    // com firstBroadcastAt/lastBroadcastAt (sent) e emailStatus Can't send
+    // + ativo:false (failed). Assim o proximo disparo ja sabe quem
+    // recebeu e pula os que deram bounce.
+    if (recipientsLog.length > 0) {
+      try {
+        const origin = new URL(req.url).origin;
+        fetch(`${origin}/.netlify/functions/cold-leads-mark-broadcast-background`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({recipientsLog}),
+        }).catch(() => {});
+      } catch (e) {
+        console.error('[broadcast] cold mark trigger failed:', e.message);
+      }
     }
 
     // Lê existing antes de calcular preservedTotal/hasMore
