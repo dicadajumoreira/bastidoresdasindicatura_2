@@ -3779,6 +3779,25 @@ const MATERIAL_BROADCASTS = [
   },
 ];
 
+// Rodape padrao usado por TODOS os rascunhos de disparo. Qualquer
+// rascunho novo deve interpolar ${DRAFT_FOOTER_HTML} no final do
+// <table> do corpo, antes do fechamento. Os links sao:
+//   - bastidoresdasindicatura.com.br (recebimento)
+//   - {{unsubscribe_url}} (reduzir/descadastrar — backend troca por
+//     URL unica assinada por destinatario)
+//   - /politica-de-privacidade/ (politica)
+const DRAFT_FOOTER_HTML = `<tr><td style="padding:20px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Você está recebendo este material por estar cadastrado em <a href="https://bastidoresdasindicatura.com.br" style="color:#B89579">bastidoresdasindicatura.com.br</a>.
+        </p>
+        <p style="margin:0 0 8px;font-size:11px;line-height:1.6;color:#8a8881;text-align:center">
+          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579">reduzir a frequência ou se descadastrar</a> a qualquer momento.
+        </p>
+        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
+          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
+        </p>
+      </td></tr>`;
+
 // Constrói o HTML do e-mail pra um material, com a identidade da marca.
 function buildMaterialHtml(m) {
   const url = `https://bastidoresdasindicatura.com.br${m.landingPath}`;
@@ -3814,14 +3833,7 @@ function buildMaterialHtml(m) {
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:20px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#8a8881;text-align:center">
-          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579">se descadastrar</a> a qualquer momento.
-        </p>
-        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
-          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
-        </p>
-      </td></tr>
+      ${DRAFT_FOOTER_HTML}
     </table>
   </td></tr>
 </table>`;
@@ -3874,14 +3886,7 @@ const MBA_DEFAULT_HTML = `<table cellpadding="0" cellspacing="0" border="0" widt
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:20px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#8a8881;text-align:center">
-          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579">se descadastrar</a> a qualquer momento.
-        </p>
-        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
-          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
-        </p>
-      </td></tr>
+      ${DRAFT_FOOTER_HTML}
     </table>
   </td></tr>
 </table>`;
@@ -3944,14 +3949,7 @@ const MBA_LAST_HOURS_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:20px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#8a8881;text-align:center">
-          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579">se descadastrar</a> a qualquer momento.
-        </p>
-        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
-          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
-        </p>
-      </td></tr>
+      ${DRAFT_FOOTER_HTML}
     </table>
   </td></tr>
 </table>`;
@@ -4010,14 +4008,7 @@ const MBA_FINAL_CHANCE_HTML = `<table cellpadding="0" cellspacing="0" border="0"
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:20px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#8a8881;text-align:center">
-          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579">se descadastrar</a> a qualquer momento.
-        </p>
-        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
-          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
-        </p>
-      </td></tr>
+      ${DRAFT_FOOTER_HTML}
     </table>
   </td></tr>
 </table>`;
@@ -4085,14 +4076,7 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
           </p>
         </div>
       </td></tr>
-      <tr><td style="padding:20px 40px;border-top:1px solid #E8E2D8;background:#FBF8F2">
-        <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#8a8881;text-align:center">
-          Está recebendo e-mails demais? Você pode <a href="{{unsubscribe_url}}" style="color:#B89579">reduzir a frequência</a> ou <a href="{{unsubscribe_url}}" style="color:#B89579">se descadastrar</a> a qualquer momento.
-        </p>
-        <p style="margin:0;font-size:10px;line-height:1.6;color:#8a8881;text-align:center;letter-spacing:.06em">
-          <a href="https://bastidoresdasindicatura.com.br/politica-de-privacidade/" style="color:#B89579">Política de Privacidade</a>
-        </p>
-      </td></tr>
+      ${DRAFT_FOOTER_HTML}
     </table>
   </td></tr>
 </table>`;
