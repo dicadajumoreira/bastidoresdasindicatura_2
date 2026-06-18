@@ -173,6 +173,8 @@ export default async (req) => {
     let includeOrigens = null;
     let statuses = null;
     let states = null;
+    // Breakdown dos motivos de filtragem (so populado no modo NORMAL).
+    let breakdown = null;
 
     if (resendFailedFrom) {
       // ====== Modo REENVIO ======
@@ -233,14 +235,42 @@ export default async (req) => {
       //  - descadastrados via /sair (unsubscribed: true)
       //  - marcados como inativos no admin (ativo === false)
       // Marca frequencia: menor pra aplicar hash 1-em-4 depois.
+      //
+      // breakdown registra cada categoria filtrada — propagada pro front
+      // exibir relatorio detalhado do disparo.
+      breakdown = {
+        hot: {
+          total: leads.length,
+          deletados: 0,
+          descadastrados: 0, // unsubscribed: true
+          inativos: 0,       // ativo: false (sem unsubscribed)
+          semEmail: 0,
+          freqMenorPulados: 0,
+          excluidosPorOrigem: 0,
+          excluidosPorEstado: 0,
+          excluidosPorStatus: 0,
+          duplicatasInternas: 0,
+          finalElegiveis: 0,
+        },
+        cold: {
+          total: 0,
+          descadastrados: 0,
+          bounces: 0,
+          freqMenorPulados: 0,
+          duplicatasComHot: 0,
+          jaReceberam: 0, // quando filter.onlyNeverReceivedCold
+          finalElegiveis: 0,
+        },
+      };
       const byEmail = new Map();
       for (const l of leads) {
-        if (l.deletedAt) continue;
-        if (l.unsubscribed) continue;
-        if (l.ativo === false) continue;
+        if (l.deletedAt) { breakdown.hot.deletados++; continue; }
+        if (l.unsubscribed) { breakdown.hot.descadastrados++; continue; }
+        if (l.ativo === false) { breakdown.hot.inativos++; continue; }
         const email = String(l.email || '').trim().toLowerCase();
-        if (!email || !email.includes('@')) continue;
+        if (!email || !email.includes('@')) { breakdown.hot.semEmail++; continue; }
         if (!byEmail.has(email)) byEmail.set(email, {leads: [], origens: new Set(), frequenciaMenor: false});
+        else breakdown.hot.duplicatasInternas++;
         const e = byEmail.get(email);
         e.leads.push(l);
         e.origens.add(l.origem || 'mentoria');
@@ -256,7 +286,10 @@ export default async (req) => {
       for (const [email, entry] of byEmail) {
         if (entry.frequenciaMenor) {
           const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, freqHashSeed);
-          if (emHash % 4 !== 0) byEmail.delete(email);
+          if (emHash % 4 !== 0) {
+            byEmail.delete(email);
+            breakdown.hot.freqMenorPulados++;
+          }
         }
       }
 
@@ -273,20 +306,21 @@ export default async (req) => {
       for (const [email, entry] of byEmail) {
         let excluded = false;
         for (const o of entry.origens) if (excludeOrigens.has(o)) { excluded = true; break; }
-        if (excluded) continue;
+        if (excluded) { breakdown.hot.excluidosPorOrigem++; continue; }
 
         if (includeOrigens) {
           let any = false;
           for (const o of entry.origens) if (includeOrigens.has(o)) { any = true; break; }
-          if (!any) continue;
+          if (!any) { breakdown.hot.excluidosPorOrigem++; continue; }
         }
 
         const rep = entry.leads.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
-        if (statuses && !statuses.has(rep.status || 'novo')) continue;
-        if (states && !states.has(rep.estado || '')) continue;
+        if (statuses && !statuses.has(rep.status || 'novo')) { breakdown.hot.excluidosPorStatus++; continue; }
+        if (states && !states.has(rep.estado || '')) { breakdown.hot.excluidosPorEstado++; continue; }
 
         allTargets.push({email, rep, origens: [...entry.origens]});
       }
+      breakdown.hot.finalElegiveis = allTargets.length;
 
       // ====== AUTO-DETECÇÃO PRA RETOMAR DISPARO ANTIGO ======
       // Se estamos retomando um disparo (resumeFrom) e o total atual de
@@ -323,22 +357,26 @@ export default async (req) => {
           const seenEmails = new Set(allTargets.map((t) => t.email));
           const hashSeed = [...broadcastId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
           // Filtro opcional: enviar SO pros cold leads que nunca receberam.
-          // Util pra disparar uma campanha de boas-vindas pra base recem-
-          // importada sem repetir pra quem ja recebeu algo antes.
           const onlyNeverReceived = !!(filter && filter.onlyNeverReceivedCold);
+          breakdown.cold.total = summary.entries.length;
+          const coldStartCount = allTargets.length;
           for (const entry of summary.entries) {
-            if (entry.unsubscribed) continue;
-            if (entry.status && String(entry.status).toLowerCase().includes("can't send")) continue;
+            if (entry.unsubscribed) { breakdown.cold.descadastrados++; continue; }
+            if (entry.status && String(entry.status).toLowerCase().includes("can't send")) {
+              breakdown.cold.bounces++; continue;
+            }
             const email = entry.email;
-            if (!email || seenEmails.has(email)) continue;
-            if (onlyNeverReceived && entry.firstBroadcastAt) continue;
+            if (!email) continue;
+            if (seenEmails.has(email)) { breakdown.cold.duplicatasComHot++; continue; }
+            if (onlyNeverReceived && entry.firstBroadcastAt) { breakdown.cold.jaReceberam++; continue; }
             if (entry.frequencia === 'menor') {
               const emHash = [...email].reduce((a, c) => (a * 17 + c.charCodeAt(0)) >>> 0, hashSeed);
-              if (emHash % 4 !== 0) continue;
+              if (emHash % 4 !== 0) { breakdown.cold.freqMenorPulados++; continue; }
             }
             seenEmails.add(email);
             allTargets.push({email, rep: {nome: entry.nome || '', email}, origens: ['cold']});
           }
+          breakdown.cold.finalElegiveis = allTargets.length - coldStartCount;
         } catch (e) {
           console.error('[broadcast] cold summary load failed:', e.message);
         }
@@ -465,6 +503,9 @@ export default async (req) => {
         completed: !hasMore,
         lastBatchAt: new Date().toISOString(),
         resendOf: resendFailedFrom || null,
+        // Breakdown da primeira passada (quando montamos allTargets).
+        // Resumes nao recomputam isso — preserva o que ja tinha.
+        breakdown: existing?.breakdown || breakdown,
       });
     } catch (e) {
       console.error('[broadcast] failed to save history:', e.message);
@@ -481,6 +522,9 @@ export default async (req) => {
       hasMore,
       broadcastId,
       errors,
+      // breakdown so existe na primeira chamada (quando montamos allTargets);
+      // calls seguintes (paginacao) nao tem o breakdown.
+      breakdown,
     });
 
   } catch (err) {

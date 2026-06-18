@@ -4240,6 +4240,73 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
   </td></tr>
 </table>`;
 
+// Relatorio detalhado por motivo de filtragem. Mostra por categoria
+// quantos contatos foram excluidos antes do envio. Util pra auditar
+// "por que so X enviados e nao Y".
+const BroadcastBreakdown = ({breakdown}) => {
+  if (!breakdown) return null;
+  const h = breakdown.hot || {};
+  const c = breakdown.cold || {};
+  const row = (label, n, color, hint) => {
+    if (!n) return null;
+    return (
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0', borderBottom: '1px dashed rgba(247,245,242,0.08)', gap: 12}}>
+        <span style={{fontSize: 12, color: 'rgba(247,245,242,0.78)'}} title={hint || ''}>{label}{hint && <span style={{color: 'rgba(247,245,242,0.4)', fontStyle: 'italic'}}> · {hint}</span>}</span>
+        <strong style={{color, fontFamily: 'monospace', fontSize: 13}}>{n.toLocaleString('pt-BR')}</strong>
+      </div>
+    );
+  };
+  const sectionStyle = {
+    margin: '12px 0',
+    padding: 14,
+    background: 'rgba(0,0,0,0.18)',
+    border: '1px solid rgba(247,245,242,0.08)',
+  };
+  return (
+    <details style={{marginTop: 14}}>
+      <summary style={{cursor: 'pointer', fontSize: 12, color: 'var(--sand)', fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase'}}>
+        Ver auditoria · por que cada contato ficou de fora
+      </summary>
+
+      <div style={sectionStyle}>
+        <p style={{margin: '0 0 8px', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--sand)', fontWeight: 700}}>
+          Leads quentes — base total: {(h.total || 0).toLocaleString('pt-BR')}
+        </p>
+        {row('Na lixeira (deletados)', h.deletados, '#d97757')}
+        {row('Descadastrados via /sair', h.descadastrados, '#d97757', 'unsubscribed: true')}
+        {row('Inativados manualmente no admin', h.inativos, '#d97757', 'ativo: false')}
+        {row('Sem e-mail válido', h.semEmail, 'rgba(247,245,242,0.55)')}
+        {row('Duplicatas internas (mesmo email em vários cadastros)', h.duplicatasInternas, 'rgba(247,245,242,0.55)', 'só envia 1x por email')}
+        {row('Excluídos pelo filtro de origem', h.excluidosPorOrigem, '#B89579')}
+        {row('Excluídos pelo filtro de UF', h.excluidosPorEstado, '#B89579')}
+        {row('Excluídos pelo filtro de status', h.excluidosPorStatus, '#B89579')}
+        {row('Pulados por frequência reduzida', h.freqMenorPulados, '#B89579', 'recebem 1 a cada 4 disparos')}
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '10px 0 0', marginTop: 6, borderTop: '1px solid rgba(247,245,242,0.18)'}}>
+          <strong style={{fontSize: 13, color: '#a8d4a8'}}>Elegíveis (quentes)</strong>
+          <strong style={{color: '#a8d4a8', fontFamily: 'monospace', fontSize: 14}}>{(h.finalElegiveis || 0).toLocaleString('pt-BR')}</strong>
+        </div>
+      </div>
+
+      {c.total > 0 && (
+        <div style={sectionStyle}>
+          <p style={{margin: '0 0 8px', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--sand)', fontWeight: 700}}>
+            Leads frios — base total: {(c.total || 0).toLocaleString('pt-BR')}
+          </p>
+          {row('Descadastrados via /sair', c.descadastrados, '#d97757', 'unsubscribed: true OU ativo: false')}
+          {row('Bounces (e-mail morto)', c.bounces, '#d97757', 'falharam em disparos anteriores · pulados automaticamente')}
+          {row('Já estavam nos leads quentes', c.duplicatasComHot, 'rgba(247,245,242,0.55)', 'dedupe — versão quente prevalece')}
+          {row('Já receberam algum disparo', c.jaReceberam, 'rgba(247,245,242,0.55)', 'só quando filtro "nunca recebeu" está marcado')}
+          {row('Pulados por frequência reduzida', c.freqMenorPulados, '#B89579', 'recebem 1 a cada 4 disparos')}
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '10px 0 0', marginTop: 6, borderTop: '1px solid rgba(247,245,242,0.18)'}}>
+            <strong style={{fontSize: 13, color: '#a8d4a8'}}>Elegíveis (frios)</strong>
+            <strong style={{color: '#a8d4a8', fontFamily: 'monospace', fontSize: 14}}>{(c.finalElegiveis || 0).toLocaleString('pt-BR')}</strong>
+          </div>
+        </div>
+      )}
+    </details>
+  );
+};
+
 const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, leadsLoadInfo, onReloadLeads}) => {
   const [subject, setSubject] = React.useState(MBA_DEFAULT_SUBJECT);
   const [html, setHtml] = React.useState(MBA_DEFAULT_HTML);
@@ -4671,13 +4738,11 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     let totalSent = 0;
     let totalFailed = 0;
     let total = 0;
+    let breakdown = null; // primeira call traz; demais nao
     const errorsAcc = [];
     let failCount = 0;
 
     try {
-      // Loop de paginação: chama backend até não ter mais
-      // Cap de segurança: 600 chamadas (= até 24.000 e-mails)
-      // 11k leads × ~0.5s por chamada paginada ≈ 90 min total.
       for (let i = 0; i < 600; i++) {
         let res;
         try {
@@ -4689,7 +4754,6 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             }),
           });
         } catch (e) {
-          // Backend caiu ou timeout. Tenta de novo até 3x antes de desistir.
           failCount++;
           if (failCount >= 3) {
             errorsAcc.push(`Backend não respondeu após 3 tentativas no offset ${offset}: ${e.message}`);
@@ -4708,6 +4772,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         totalSent += res.sent || 0;
         totalFailed += res.failed || 0;
         total = res.total || total;
+        if (res.breakdown && !breakdown) breakdown = res.breakdown;
         if (res.errors && res.errors.length) errorsAcc.push(...res.errors);
 
         setProgress({
@@ -4727,6 +4792,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         sent: totalSent,
         failed: totalFailed,
         total,
+        breakdown,
         errors: errorsAcc.slice(0, 10),
       });
       loadHistory();
@@ -5258,6 +5324,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                 {result.errors && result.errors.length > 0 && (
                   <details><summary>Primeiros erros</summary><ul>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></details>
                 )}
+                {result.breakdown && <BroadcastBreakdown breakdown={result.breakdown} />}
               </div>
             )}
           </section>
