@@ -1401,6 +1401,18 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
           <button className={recebimentoFilter === 'freq-menor' ? 'is-on' : ''} onClick={() => setRecebimentoFilter('freq-menor')} style={{color: '#B89579'}}>
             <span>Frequência reduzida</span><em>{counts['freq-menor']}</em>
           </button>
+          <button
+            style={{color: 'rgba(247,245,242,0.55)', fontSize: 11}}
+            title="Roda em background. Procura pessoas marcadas como descadastradas no cache ou nos leads frios e propaga pros leads quentes. Use quando os contadores acima parecem baixos demais."
+            onClick={async () => {
+              if (!window.confirm('Vai rodar o ressync dos descadastros (background, 1-2 min). Util pra propagar descadastros antigos que nao foram refletidos nos leads quentes. Continuar?')) return;
+              try {
+                const res = await api('/api/sync-unsubscribes-background', {method: 'POST'});
+                alert(`Sincronização rodando em background. Aguarde 1-2 min e clica em "Atualizar" pra ver as contagens atualizadas.\n\n(Roda em background — esse retorno é só o status inicial.)`);
+              } catch (e) { alert('Falha: ' + e.message); }
+            }}>
+            <span>↻ Sincronizar descadastros</span>
+          </button>
         </nav>
 
         <span className="ad-side-section">Duplicatas</span>

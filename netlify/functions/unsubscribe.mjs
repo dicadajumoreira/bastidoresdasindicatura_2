@@ -104,20 +104,55 @@ export default async (req) => {
     console.error('[unsubscribe] index update failed:', e.message);
   }
 
-  // 3) Propaga pros leads quentes em BACKGROUND (15min budget).
-  // Antes essa parte rodava sincrona aqui e estourava o timeout de 10s
-  // com bases grandes (~7k leads), fazendo o cliente receber HTML de
-  // erro do Netlify ao inves de JSON.
+  // 3) Atualiza os leads QUENTES sincronamente, usando o leads-index
+  // ja em memoria pra achar so os IDs com email matching. Muito mais
+  // rapido que escanear ~7k blobs um por um.
+  //
+  // Antes essa parte rodava em background (timeout-safe), mas levava
+  // 1+ min pra refletir no admin e as vezes falhava silenciosamente.
+  // Agora: 1 read do indice + N writes (N = quantas aplicacoes a pessoa
+  // tem · normalmente 1-5). Roda em ~1s.
   try {
-    const origin = new URL(req.url).origin;
-    fetch(`${origin}/.netlify/functions/unsubscribe-propagate-background`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email, action}),
-    }).catch(() => {});
-    updates.push('hot-propagating');
+    const hotStore = getStore({name: 'leads', consistency: 'strong'});
+    const INDEX_KEY = '__leads_index__';
+    const idx = await hotStore.get(INDEX_KEY, {type: 'json'});
+    const entries = idx && idx.entries ? Object.values(idx.entries) : [];
+    const matching = entries.filter((e) => e && e.lead
+      && String(e.lead.email || '').toLowerCase() === email
+      && !e.lead.deletedAt
+    );
+
+    let touched = 0;
+    for (const e of matching) {
+      try {
+        const lead = e.lead;
+        const updated = {...lead, updatedAt: new Date().toISOString()};
+        if (action === 'unsubscribe') {
+          updated.unsubscribed = true;
+          updated.ativo = false;
+          updated.unsubscribedAt = updated.unsubscribedAt || new Date().toISOString();
+        } else {
+          updated.frequencia = 'menor';
+        }
+        await hotStore.setJSON(lead.id, updated);
+        touched++;
+      } catch (err) {
+        console.error('[unsubscribe] hot lead update failed:', lead?.id, err.message);
+      }
+    }
+    if (touched) updates.push(`hot:${touched}`);
   } catch (e) {
-    console.error('[unsubscribe] background trigger failed:', e.message);
+    console.error('[unsubscribe] hot via index failed:', e.message);
+    // Fallback: aciona background pra varrer manualmente caso o indice nao exista
+    try {
+      const origin = new URL(req.url).origin;
+      fetch(`${origin}/.netlify/functions/unsubscribe-propagate-background`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, action}),
+      }).catch(() => {});
+      updates.push('hot-fallback-bg');
+    } catch {}
   }
 
   return json({ok: true, action, email, updates});
