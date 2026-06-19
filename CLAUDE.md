@@ -149,3 +149,36 @@ Após pagamento confirmado, `stripe-webhook.mjs`:
 Webhook configurado em Stripe Dashboard → Developers → Webhooks → endpoint:
 `https://bastidoresdasindicatura.com.br/api/stripe-webhook`
 Eventos: `checkout.session.completed`, `payment_intent.payment_failed`.
+
+## WhatsApp Cloud API (Fase 1 / MVP — em construção)
+
+Módulo de disparo via WhatsApp Cloud API oficial da Meta. Vive no `/admin → WhatsApp`. **Isolado do resto** — não compartilha tabelas de leads/broadcasts de e-mail.
+
+**Arquivos:**
+- `netlify/lib/wa-meta.mjs` — cliente da Graph API (sendTemplate, listTemplates, ping, verifyWebhookSignature)
+- `netlify/lib/wa-phone.mjs` — normalização E.164 (Meta exige sem `+`)
+- `netlify/lib/wa-store.mjs` — abstração sobre Netlify Blobs (stores `wa-*`)
+- `netlify/functions/wa-config.mjs` — GET/POST config editável (keywords, caps, janela, warmup)
+- `netlify/functions/wa-status.mjs` — healthcheck completo (env vars + ping Meta + cap diário)
+- Tela: `WhatsAppPanel` no admin.jsx com sub-nav (Dashboard, Campanhas, Contatos, Templates, Conversas, Opt-outs, Auditoria, Configuração)
+
+**Env vars obrigatórias no Netlify (Fase 0 da implantação):**
+- `WHATSAPP_ACCESS_TOKEN` — Bearer token permanente (System User)
+- `WHATSAPP_PHONE_NUMBER_ID` — ID do número
+- `WHATSAPP_WABA_ID` — WhatsApp Business Account ID
+- `WHATSAPP_APP_SECRET` — pra validar X-Hub-Signature-256 dos webhooks
+- `WHATSAPP_WEBHOOK_VERIFY_TOKEN` — string definida por você que vai no Meta Dashboard
+
+**Stores Netlify Blobs criadas:**
+- `wa-config`, `wa-contacts`, `wa-optins`, `wa-optouts`, `wa-templates`, `wa-campaigns`, `wa-messages`, `wa-message-events`, `wa-daily-limits`, `wa-number-health`, `wa-conversations`, `wa-audit-logs`
+
+**Regras invioláveis (compliance):**
+- Sem opt-in válido → não envia (impedido no backend)
+- Opt-out é absoluto e definitivo (suppression_list)
+- Limite global 500/dia, cap reduzido em warmup
+- Sem duplicação no mesmo dia (`wa-daily-limits/{date}.locked` lock set)
+- Template aprovado obrigatório pra business-initiated
+- Janela 24h pra free-form (só dentro)
+- Auditoria de toda ação (`wa-audit-logs` append-only)
+
+**Webhook URL:** `https://bastidoresdasindicatura.com.br/api/wa-webhook` (a ser criado no próximo commit).

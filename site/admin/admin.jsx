@@ -1960,7 +1960,7 @@ const MergeModal = ({leads, onCancel, onConfirm, busy}) => {
 /* ============================================================
    OVERVIEW — Dashboard com estatísticas, tela inicial do admin
    ============================================================ */
-const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOpenSorteio, onOpenMentoria}) => {
+const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOpenSorteio, onOpenMentoria, onOpenWhatsApp}) => {
   const [leads, setLeads] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -2083,6 +2083,9 @@ const Overview = ({onLogout, onOpenLeads, onOpenBroadcast, onOpenColdLeads, onOp
           )}
           {onOpenMentoria && (
             <button className="ad-btn ad-btn-ghost" onClick={onOpenMentoria} style={{borderColor: '#819470', color: '#819470'}}>Mentoria</button>
+          )}
+          {onOpenWhatsApp && (
+            <button className="ad-btn ad-btn-ghost" onClick={onOpenWhatsApp} style={{borderColor: '#25d366', color: '#25d366'}}>WhatsApp</button>
           )}
           <button className="ad-btn ad-btn-ghost" onClick={logout}>Sair</button>
         </div>
@@ -5550,6 +5553,401 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
 };
 
 /* ============================================================
+   WHATSAPP PANEL — modulo de disparo via Cloud API oficial da Meta
+   Fase 1 / MVP: configuracao + status + (proximos commits) templates,
+   contatos, opt-outs, campanhas, webhook, dashboard.
+   ============================================================ */
+
+const WA_SUB_VIEWS = [
+  {id: 'dashboard',  label: 'Dashboard',  hint: 'Visao geral · saude · alertas'},
+  {id: 'campaigns',  label: 'Campanhas',  hint: 'Disparos planejados e em curso'},
+  {id: 'contacts',   label: 'Contatos',   hint: 'Base com opt-in'},
+  {id: 'templates',  label: 'Templates',  hint: 'Modelos aprovados pela Meta'},
+  {id: 'conversas',  label: 'Conversas',  hint: 'Respostas dos contatos'},
+  {id: 'optouts',    label: 'Opt-outs',   hint: 'Quem pediu sair'},
+  {id: 'audit',      label: 'Auditoria',  hint: 'Log forense'},
+  {id: 'config',     label: 'Configuração', hint: 'API Meta + limites'},
+];
+
+const WhatsAppPanel = ({onLogout, onBackToOverview}) => {
+  const [subView, setSubView] = React.useState('config'); // comeca em config porque a env vars precisam ser setadas primeiro
+  const [status, setStatus] = React.useState(null);
+  const [loadingStatus, setLoadingStatus] = React.useState(false);
+
+  const loadStatus = React.useCallback(async () => {
+    setLoadingStatus(true);
+    try {
+      const res = await api('/api/wa-status');
+      setStatus(res);
+    } catch (e) {
+      setStatus({error: e.message});
+    } finally { setLoadingStatus(false); }
+  }, []);
+
+  React.useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  // Faltam env vars? Bloqueia tudo menos a aba Configuracao
+  const envReady = status && status.env && status.env.accessToken && status.env.phoneNumberId && status.env.wabaId;
+
+  return (
+    <div className="ad-broadcast">
+      <header className="ad-broadcast-head">
+        <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onBackToOverview}>← Voltar à visão geral</button>
+        <h1 className="ad-broadcast-title">WhatsApp · Cloud API oficial</h1>
+        <div style={{display: 'flex', gap: 8}}>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={loadStatus} disabled={loadingStatus}>
+            {loadingStatus ? 'Atualizando…' : '↻ Atualizar status'}
+          </button>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={onLogout}>Sair</button>
+        </div>
+      </header>
+
+      {/* Card de saúde rapida no topo */}
+      <WAStatusCard status={status} loading={loadingStatus} />
+
+      {/* Sub-nav */}
+      <nav style={{display: 'flex', gap: 4, flexWrap: 'wrap', margin: '14px 0 22px', borderBottom: '1px solid rgba(247,245,242,0.1)', paddingBottom: 4}}>
+        {WA_SUB_VIEWS.map((v) => {
+          const disabled = !envReady && v.id !== 'config';
+          const isOn = subView === v.id;
+          return (
+            <button key={v.id} type="button"
+              onClick={() => !disabled && setSubView(v.id)}
+              disabled={disabled}
+              title={disabled ? 'Configure a API Meta antes' : v.hint}
+              style={{
+                padding: '10px 16px',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                background: isOn ? '#25d366' : 'transparent',
+                color: isOn ? '#0F1116' : (disabled ? 'rgba(247,245,242,0.25)' : 'rgba(247,245,242,0.7)'),
+                border: 'none',
+                borderBottom: isOn ? '3px solid #25d366' : '3px solid transparent',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+              }}>{v.label}</button>
+          );
+        })}
+      </nav>
+
+      {subView === 'config' && <WAConfigScreen status={status} onReload={loadStatus} />}
+      {subView !== 'config' && !envReady && (
+        <p className="ad-bc-empty">
+          Configure a API Meta primeiro (aba <strong>Configuração</strong>) pra liberar essa seção.
+        </p>
+      )}
+      {subView !== 'config' && envReady && (
+        <div className="ad-bc-empty" style={{padding: 32, textAlign: 'center', border: '1px dashed rgba(247,245,242,0.15)'}}>
+          <p style={{margin: 0, fontSize: 14, color: 'rgba(247,245,242,0.7)'}}>
+            Tela <strong style={{color: '#25d366'}}>{WA_SUB_VIEWS.find((v) => v.id === subView)?.label}</strong> chega nos próximos commits da Fase 1.
+          </p>
+          <p style={{margin: '8px 0 0', fontSize: 12, color: 'rgba(247,245,242,0.45)', fontStyle: 'italic'}}>
+            Próximo: Templates (sincronizar com a Meta) e Contatos (importar com opt-in).
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Card compacto de saude do numero — aparece em todas as sub-views
+const WAStatusCard = ({status, loading}) => {
+  if (loading && !status) return <p className="ad-bc-empty">Carregando status…</p>;
+  if (!status) return null;
+  if (status.error) return <p className="ad-bc-result is-err">Erro: {status.error}</p>;
+  const env = status.env || {};
+  const ping = status.metaPing || {};
+  const daily = status.daily || {};
+  const envOk = env.accessToken && env.phoneNumberId && env.wabaId && env.appSecret && env.webhookVerifyToken;
+  const metaOk = ping.ok;
+  const dot = (ok, txt) => (
+    <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12}}>
+      <span style={{display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: ok ? '#25d366' : '#d97757'}}></span>
+      <span>{txt}</span>
+    </span>
+  );
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12,
+      padding: 14, background: 'rgba(37,211,102,0.05)', border: '1px solid rgba(37,211,102,0.18)',
+    }}>
+      <div>
+        <span style={{fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>Env vars</span>
+        <div style={{marginTop: 6}}>{dot(envOk, envOk ? 'Configuradas' : 'Faltando')}</div>
+      </div>
+      <div>
+        <span style={{fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>Cloud API</span>
+        <div style={{marginTop: 6}}>{dot(metaOk, metaOk ? 'Conectada' : (ping.error || 'Sem conexão'))}</div>
+      </div>
+      <div>
+        <span style={{fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>Qualidade</span>
+        <div style={{marginTop: 6, fontSize: 13, fontWeight: 700, color: '#a8d4a8'}}>
+          {ping.data?.quality_rating || '—'}
+        </div>
+      </div>
+      <div>
+        <span style={{fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>Enviado hoje</span>
+        <div style={{marginTop: 6, fontSize: 13, fontWeight: 700}}>
+          {daily.sent || 0} <span style={{opacity: 0.5, fontWeight: 400}}>/ {daily.cap || 0}</span>
+        </div>
+      </div>
+      <div>
+        <span style={{fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(247,245,242,0.55)', fontWeight: 700}}>Disponível</span>
+        <div style={{marginTop: 6, fontSize: 13, fontWeight: 700, color: (daily.remaining > 0 ? '#a8d4a8' : '#d97757')}}>
+          {daily.remaining || 0}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WAConfigScreen = ({status, onReload}) => {
+  const [cfg, setCfg] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+  const [err, setErr] = React.useState('');
+  const [newKeyword, setNewKeyword] = React.useState('');
+
+  const loadCfg = React.useCallback(async () => {
+    try {
+      const res = await api('/api/wa-config');
+      setCfg(res.config);
+    } catch (e) { setErr(e.message); }
+  }, []);
+  React.useEffect(() => { loadCfg(); }, [loadCfg]);
+
+  const save = async () => {
+    if (!cfg) return;
+    setBusy(true); setMsg(''); setErr('');
+    try {
+      const res = await api('/api/wa-config', {method: 'POST', body: JSON.stringify(cfg)});
+      setCfg(res.config);
+      setMsg('Configuração salva.');
+      onReload && onReload();
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const addKeyword = () => {
+    const k = newKeyword.trim().toLowerCase();
+    if (!k) return;
+    if (cfg.optOutKeywords.includes(k)) { setNewKeyword(''); return; }
+    setCfg({...cfg, optOutKeywords: [...cfg.optOutKeywords, k]});
+    setNewKeyword('');
+  };
+  const removeKeyword = (k) => setCfg({...cfg, optOutKeywords: cfg.optOutKeywords.filter((x) => x !== k)});
+
+  if (!cfg) return <p className="ad-bc-empty">Carregando configuração…</p>;
+
+  const env = status?.env || {};
+
+  return (
+    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18}}>
+      {/* Env vars (read-only, vem do Netlify) */}
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">1 · Conexão Meta</span>
+          <h2 className="ad-widget-title">Variáveis de ambiente</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Tokens e IDs sensíveis ficam SÓ no Netlify (Site settings → Environment variables). Esse painel é read-only — pra alterar, vai no Netlify e roda um redeploy.
+        </p>
+        <table style={{width: '100%', fontSize: 13, marginTop: 12}}>
+          <tbody>
+            {[
+              ['WHATSAPP_ACCESS_TOKEN', env.accessToken, env.tokenStartsWith],
+              ['WHATSAPP_PHONE_NUMBER_ID', env.phoneNumberId, env.last4PhoneId],
+              ['WHATSAPP_WABA_ID', env.wabaId, env.last4Waba],
+              ['WHATSAPP_APP_SECRET', env.appSecret, null],
+              ['WHATSAPP_WEBHOOK_VERIFY_TOKEN', env.webhookVerifyToken, null],
+            ].map(([name, ok, hint]) => (
+              <tr key={name} style={{borderBottom: '1px dashed rgba(247,245,242,0.08)'}}>
+                <td style={{padding: '8px 0', fontFamily: 'monospace', fontSize: 11, color: 'rgba(247,245,242,0.85)'}}>{name}</td>
+                <td style={{padding: '8px 0', textAlign: 'right'}}>
+                  {ok ? (
+                    <span style={{color: '#a8d4a8', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em'}}>
+                      ✓ OK{hint ? ` · ${hint}` : ''}
+                    </span>
+                  ) : (
+                    <span style={{color: '#d97757', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em'}}>⊘ FALTANDO</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="ad-bc-hint" style={{marginTop: 14, fontSize: 11, color: 'rgba(247,245,242,0.5)'}}>
+          Quando adicionar/alterar no Netlify, clica em <strong>"↻ Atualizar status"</strong> no topo.
+        </p>
+      </section>
+
+      {/* Status da API */}
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">2 · Diagnóstico</span>
+          <h2 className="ad-widget-title">Conexão com a Meta</h2>
+        </header>
+        {status?.metaPing?.ok ? (
+          <>
+            <p style={{margin: '0 0 10px', color: '#a8d4a8', fontSize: 13, fontWeight: 600}}>
+              ✓ Conectado à Cloud API
+            </p>
+            <table style={{width: '100%', fontSize: 12, marginTop: 8}}>
+              <tbody>
+                <tr><td style={{padding: '6px 0', color: 'rgba(247,245,242,0.55)'}}>Número</td><td style={{textAlign: 'right'}}>{status.metaPing.data?.display_phone_number || '—'}</td></tr>
+                <tr><td style={{padding: '6px 0', color: 'rgba(247,245,242,0.55)'}}>Nome verificado</td><td style={{textAlign: 'right'}}>{status.metaPing.data?.verified_name || '—'}</td></tr>
+                <tr><td style={{padding: '6px 0', color: 'rgba(247,245,242,0.55)'}}>Qualidade</td><td style={{textAlign: 'right', color: '#a8d4a8'}}>{status.metaPing.data?.quality_rating || '—'}</td></tr>
+                <tr><td style={{padding: '6px 0', color: 'rgba(247,245,242,0.55)'}}>Tier de limite</td><td style={{textAlign: 'right'}}>{status.metaPing.data?.messaging_limit_tier || '—'}</td></tr>
+                <tr><td style={{padding: '6px 0', color: 'rgba(247,245,242,0.55)'}}>Status</td><td style={{textAlign: 'right'}}>{status.metaPing.data?.name_status || '—'}</td></tr>
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <>
+            <p style={{margin: '0 0 10px', color: '#d97757', fontSize: 13, fontWeight: 600}}>
+              ⊘ Sem conexão com a Cloud API
+            </p>
+            {status?.metaPing?.error && (
+              <p style={{margin: 0, fontSize: 11, fontFamily: 'monospace', color: 'rgba(217,119,87,0.85)', padding: 10, background: 'rgba(0,0,0,0.2)'}}>
+                {status.metaPing.error}
+              </p>
+            )}
+            <p className="ad-bc-hint" style={{marginTop: 12, fontSize: 11, color: 'rgba(247,245,242,0.5)'}}>
+              Comum: env vars faltando OU token expirado OU phone_number_id errado. Confere no Meta Business Manager → WhatsApp Manager.
+            </p>
+          </>
+        )}
+      </section>
+
+      {/* Webhook URL */}
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">3 · Webhook</span>
+          <h2 className="ad-widget-title">URL pra colar na Meta</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          No Meta Dashboard → WhatsApp → Configuração → Webhooks, cole essa URL como <strong>Callback URL</strong>:
+        </p>
+        <div style={{padding: 12, background: 'rgba(0,0,0,0.25)', fontFamily: 'monospace', fontSize: 12, color: 'var(--sand)', marginTop: 10, wordBreak: 'break-all'}}>
+          https://bastidoresdasindicatura.com.br/api/wa-webhook
+        </div>
+        <p className="ad-bc-hint" style={{marginTop: 12, fontSize: 11, color: 'rgba(247,245,242,0.5)'}}>
+          Campos a assinar: <strong>messages</strong>, <strong>message_template_status_update</strong>, <strong>account_update</strong>, <strong>account_review_update</strong>. O <em>Verify Token</em> é o valor de <code>WHATSAPP_WEBHOOK_VERIFY_TOKEN</code> que você definiu.
+        </p>
+      </section>
+
+      {/* Keywords de opt-out */}
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">4 · Compliance</span>
+          <h2 className="ad-widget-title">Palavras-chave de opt-out</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Quando o contato responde com qualquer uma dessas palavras, o sistema marca <strong>opt-out automático</strong> e nunca mais envia. Adicione/remova conforme política da empresa.
+        </p>
+        <div style={{display: 'flex', flexWrap: 'wrap', gap: 6, margin: '14px 0'}}>
+          {cfg.optOutKeywords.map((k) => (
+            <span key={k} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 10px', background: 'rgba(217,119,87,0.18)', color: '#d97757',
+              fontSize: 12, fontWeight: 600, letterSpacing: '0.06em',
+            }}>
+              {k}
+              <button type="button" onClick={() => removeKeyword(k)} style={{background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1}}>×</button>
+            </span>
+          ))}
+        </div>
+        <div style={{display: 'flex', gap: 6}}>
+          <input type="text" value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())} placeholder="ex.: descadastrar" style={{flex: 1, padding: '8px 10px'}} />
+          <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={addKeyword}>+ Adicionar</button>
+        </div>
+      </section>
+
+      {/* Limites */}
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">5 · Limites</span>
+          <h2 className="ad-widget-title">Cap diário e por hora</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Limites globais. O sistema NUNCA passa disso, independente da campanha. Meta ainda aplica o tier do messaging_limit em paralelo.
+        </p>
+        <label className="ad-bc-field">
+          <span className="ad-bc-label">Cap diário (mensagens únicas/dia)</span>
+          <input type="number" min="1" max="100000" value={cfg.dailyCap} onChange={(e) => setCfg({...cfg, dailyCap: parseInt(e.target.value, 10) || 0})} />
+          <span className="ad-bc-hint">Meta sugere começar em 500 e crescer com qualidade boa.</span>
+        </label>
+        <label className="ad-bc-field">
+          <span className="ad-bc-label">Cap por hora</span>
+          <input type="number" min="1" max="10000" value={cfg.hourlyCap} onChange={(e) => setCfg({...cfg, hourlyCap: parseInt(e.target.value, 10) || 0})} />
+          <span className="ad-bc-hint">Distribui o disparo na hora pra parecer humano. ~80/h ocupa 100% da fila.</span>
+        </label>
+        <label className="ad-bc-field">
+          <span className="ad-bc-label">Janela de envio (Brasília)</span>
+          <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
+            <input type="time" value={cfg.sendWindow.start} onChange={(e) => setCfg({...cfg, sendWindow: {...cfg.sendWindow, start: e.target.value}})} style={{flex: 1}} />
+            <span style={{color: 'rgba(247,245,242,0.5)'}}>até</span>
+            <input type="time" value={cfg.sendWindow.end} onChange={(e) => setCfg({...cfg, sendWindow: {...cfg.sendWindow, end: e.target.value}})} style={{flex: 1}} />
+          </div>
+          <label style={{display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'rgba(247,245,242,0.7)'}}>
+            <input type="checkbox" checked={cfg.sendWindow.weekendsAllowed} onChange={(e) => setCfg({...cfg, sendWindow: {...cfg.sendWindow, weekendsAllowed: e.target.checked}})} />
+            Permitir envios nos fins de semana
+          </label>
+        </label>
+      </section>
+
+      {/* Warmup */}
+      <section className="ad-widget">
+        <header className="ad-widget-head">
+          <span className="ad-widget-eyebrow">6 · Aquecimento</span>
+          <h2 className="ad-widget-title">Rampa progressiva</h2>
+        </header>
+        <p className="ad-bc-drafts-lead">
+          Crescimento controlado pra Meta confiar no número e manter qualidade alta. Quando ligado, o cap diário sobe sozinho conforme os dias passam:
+        </p>
+        <table style={{width: '100%', fontSize: 12, marginTop: 8}}>
+          <tbody>
+            {cfg.warmupTiers.map((t, i) => (
+              <tr key={i} style={{borderBottom: '1px dashed rgba(247,245,242,0.08)'}}>
+                <td style={{padding: '6px 0', color: 'rgba(247,245,242,0.7)'}}>{i === 0 ? 'Dias 1-' : `Dias ${cfg.warmupTiers[i-1].days+1}-`}{t.days === 9999 ? '∞' : t.days}</td>
+                <td style={{padding: '6px 0', textAlign: 'right', fontWeight: 700, color: '#a8d4a8', fontFamily: 'monospace'}}>{t.cap}/dia</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <label className="ad-bc-field" style={{marginTop: 14}}>
+          <span className="ad-bc-label">Status do aquecimento</span>
+          {cfg.warmupStartedAt ? (
+            <div style={{display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
+              <span style={{padding: '8px 12px', background: 'rgba(168,212,168,0.15)', color: '#a8d4a8', fontSize: 12, fontWeight: 700}}>
+                ✓ Ativo desde {new Date(cfg.warmupStartedAt).toLocaleDateString('pt-BR')}
+              </span>
+              <button type="button" className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => { if (window.confirm('Desligar aquecimento? Cap volta pro valor diário cheio.')) setCfg({...cfg, warmupStartedAt: null}); }}>
+                Desligar
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="ad-btn ad-btn-primary ad-btn-sm" onClick={() => setCfg({...cfg, warmupStartedAt: new Date().toISOString()})}>
+              ▶ Iniciar aquecimento hoje
+            </button>
+          )}
+          <span className="ad-bc-hint">Cap atual depois das regras: <strong>{status?.warmup?.currentCap || cfg.dailyCap}/dia</strong></span>
+        </label>
+      </section>
+
+      {/* Botao salvar (full-width) */}
+      <section className="ad-widget" style={{gridColumn: '1 / -1'}}>
+        <div style={{display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap'}}>
+          <button className="ad-btn ad-btn-primary ad-btn-lg" onClick={save} disabled={busy}>
+            {busy ? 'Salvando…' : 'Salvar configuração'}
+          </button>
+          {msg && <span style={{color: '#a8d4a8', fontSize: 13}}>{msg}</span>}
+          {err && <span style={{color: '#d97757', fontSize: 13}}>{err}</span>}
+        </div>
+      </section>
+    </div>
+  );
+};
+
+/* ============================================================
    APP
    ============================================================ */
 const App = () => {
@@ -5606,6 +6004,7 @@ const App = () => {
       onOpenColdLeads={() => setView('cold')}
       onOpenSorteio={() => setView('sorteio')}
       onOpenMentoria={() => setView('mentoria')}
+      onOpenWhatsApp={() => setView('whatsapp')}
     />;
   }
   if (view === 'broadcast') {
@@ -5637,6 +6036,12 @@ const App = () => {
       leadsAll={leadsAll}
       leadsLoading={leadsLoading}
       onReloadLeads={reloadLeads}
+    />;
+  }
+  if (view === 'whatsapp') {
+    return <WhatsAppPanel
+      onLogout={() => setAuthed(false)}
+      onBackToOverview={() => setView('overview')}
     />;
   }
   return <LeadsPanel onLogout={() => setAuthed(false)} onBackToOverview={() => setView('overview')} />;
