@@ -70,6 +70,7 @@ const MATERIAL_NAMES = {
   'saude-mental': 'o Guia de Saúde Mental',
   'gestao-sob-ataque': 'o Guia da Gestão sob Ataque',
   'terceirizados': 'o Guia dos Terceirizados em Condomínios',
+  'carregadores': 'o Guia dos Carregadores elétricos em Condomínios',
   'bombeiro': 'o Guia do Bombeiro',
   'politico': 'o Guia do Político',
   'solitario': 'o Guia do Solitário',

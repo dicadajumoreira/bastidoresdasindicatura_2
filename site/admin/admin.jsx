@@ -24,6 +24,7 @@ const ORIGEM_LABELS = {
   'saude-mental': 'Saúde Mental',
   'gestao-sob-ataque': 'Gestão sob Ataque',
   'terceirizados': 'Terceirizados',
+  'carregadores': 'Carregadores elétricos',
   'bombeiro': 'Arquétipo · Bombeiro',
   'politico': 'Arquétipo · Político',
   'solitario': 'Arquétipo · Solitário',
@@ -32,7 +33,7 @@ const ORIGEM_LABELS = {
   'sargento': 'Arquétipo · Sargento',
   'sorteio-mba': 'Sorteio MBA IBMEC',
 };
-const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
+const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'carregadores', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
@@ -3831,6 +3832,15 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
 // Quando você publicar um novo material, basta adicionar uma entrada aqui
 // e ele já aparece na lista de rascunhos disponíveis.
 const MATERIAL_BROADCASTS = [
+  {
+    origem: 'carregadores',
+    nome: 'Carregadores elétricos em condomínios',
+    eyebrow: 'Volume 21 · Guia prático',
+    titulo: 'O que o síndico precisa saber antes de aprovar.',
+    desc: 'O carro elétrico chegou na garagem e veio com pressa. 27 capítulos + 4 modelos prontos sobre marco regulatório (NBR 17019, NBR 5410, IEC 61851-1, LIGABOM 029/2025), aprovação interna, fluxo de assembleia, checklist e termo de responsabilidade.',
+    landingPath: '/carregadores/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
   {
     origem: 'terceirizados',
     nome: 'Terceirizados em Condomínios',

@@ -19,7 +19,7 @@ export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
 };
 
-const VALID_ORIGENS = new Set(['mentoria', 'mentoria-paga', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento', 'sorteio-mba']);
+const VALID_ORIGENS = new Set(['mentoria', 'mentoria-paga', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'carregadores', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento', 'sorteio-mba']);
 
 // Origens de material gratuito (isca): exigem os 7 campos do formulário padrão.
 const MATERIAL_ORIGENS = new Set(['checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento', 'sorteio-mba']);

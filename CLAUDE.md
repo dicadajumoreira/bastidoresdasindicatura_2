@@ -115,6 +115,7 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 | `/saude-mental/` | `saude-mental` | submit.mjs |
 | `/gestao-sob-ataque/` | `gestao-sob-ataque` | submit.mjs |
 | `/terceirizados/` | `terceirizados` | submit.mjs |
+| `/carregadores/` | `carregadores` | submit.mjs |
 | `/mba/` | `sorteio-mba` | submit.mjs |
 | `/quiz/` | (por arquétipo) | submit.mjs |
 | `/comprar-experience/` | `mentoria-paga` | stripe-webhook.mjs |

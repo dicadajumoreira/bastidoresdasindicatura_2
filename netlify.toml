@@ -71,6 +71,10 @@
 
 [[edge_functions]]
   function = "serve-html"
+  path = "/carregadores/"
+
+[[edge_functions]]
+  function = "serve-html"
   path = "/bombeiro/"
 
 [[edge_functions]]
