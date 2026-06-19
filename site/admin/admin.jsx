@@ -3836,7 +3836,7 @@ const MATERIAL_BROADCASTS = [
     origem: 'carregadores',
     nome: 'Carregadores elétricos em condomínios',
     eyebrow: 'Volume 21 · Guia prático',
-    titulo: 'O que o síndico precisa saber antes de aprovar.',
+    titulo: 'Carregador: O que o síndico precisa saber antes de aprovar.',
     desc: 'O carro elétrico chegou na garagem e veio com pressa. 27 capítulos + 4 modelos prontos sobre marco regulatório (NBR 17019, NBR 5410, IEC 61851-1, LIGABOM 029/2025), aprovação interna, fluxo de assembleia, checklist e termo de responsabilidade.',
     landingPath: '/carregadores/',
     ctaLabel: 'Baixar o guia em PDF',
