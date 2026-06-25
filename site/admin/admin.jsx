@@ -279,6 +279,90 @@ const clusterToRow = (c) => {
   };
 };
 
+// Linha de planilha pra UM lead frio. Mantem todos os campos uteis pra
+// auditoria/migracao: e-mails, telefones, status detalhado, datas de
+// disparo, bounces, conversao, data de nascimento.
+const coldLeadToRow = (l) => {
+  const emails = Array.isArray(l.emails) ? l.emails : (l.email ? [l.email] : []);
+  const phones = Array.isArray(l.whatsapps) ? l.whatsapps : (l.whatsapp ? [l.whatsapp] : []);
+  const origens = Array.isArray(l.sources) ? l.sources : (l.source ? [l.source] : []);
+  let statusLabel = 'ativo';
+  if (l.convertedToHotAt) statusLabel = 'virou quente';
+  else if (l.unsubscribed || l.ativo === false) statusLabel = 'descadastrado';
+  else if (l.emailStatus && String(l.emailStatus).toLowerCase().includes("can't send")) statusLabel = 'bounce';
+  else if (l.frequencia === 'menor') statusLabel = 'freq. menor';
+  return {
+    nome: l.nome || '',
+    emails: emails.join(' · '),
+    whatsapps: phones.join(' · '),
+    instagram: l.instagram || '',
+    cidade: l.cidade || '',
+    estado: l.estado || '',
+    atuacao: l.atuacao || '',
+    dataNascimento: l.data_nascimento || '',
+    origens: origens.join(' · '),
+    status: statusLabel,
+    emailStatus: l.emailStatus || '',
+    frequencia: l.frequencia || 'normal',
+    bounceCount: typeof l.bounceCount === 'number' ? l.bounceCount : '',
+    primeiroEnvio: l.firstBroadcastAt ? fmtDate(l.firstBroadcastAt) : '',
+    ultimoEnvio: l.lastBroadcastAt ? fmtDate(l.lastBroadcastAt) : '',
+    totalRecebidos: typeof l.broadcastsReceived === 'number' ? l.broadcastsReceived : '',
+    descadastradoEm: l.unsubscribedAt ? fmtDate(l.unsubscribedAt) : '',
+    convertidoEm: l.convertedToHotAt ? fmtDate(l.convertedToHotAt) : '',
+    importadoEm: l.importedAt ? fmtDate(l.importedAt) : (l.createdAt ? fmtDate(l.createdAt) : ''),
+    atualizadoEm: l.updatedAt ? fmtDate(l.updatedAt) : '',
+  };
+};
+
+// Exporta planilha XLSX especifica de leads frios. Colunas diferentes da
+// de leads quentes — guarda info de envio/bounce/conversao.
+const downloadColdXlsx = async (rows) => {
+  if (typeof ExcelJS === 'undefined') {
+    alert('Biblioteca de planilha ainda carregando. Aguarde e tente de novo.');
+    return;
+  }
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Bastidores da Sindicatura';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Leads frios', {views: [{state: 'frozen', ySplit: 1}]});
+  ws.columns = [
+    {header: 'Nome', key: 'nome', width: 32},
+    {header: 'E-mails', key: 'emails', width: 40},
+    {header: 'WhatsApps', key: 'whatsapps', width: 28},
+    {header: 'Instagram', key: 'instagram', width: 20},
+    {header: 'Cidade', key: 'cidade', width: 22},
+    {header: 'Estado', key: 'estado', width: 8},
+    {header: 'Atuação', key: 'atuacao', width: 22},
+    {header: 'Data de nascimento', key: 'dataNascimento', width: 16},
+    {header: 'Origens (planilhas)', key: 'origens', width: 32},
+    {header: 'Status', key: 'status', width: 14},
+    {header: 'E-mail status', key: 'emailStatus', width: 24},
+    {header: 'Frequência', key: 'frequencia', width: 12},
+    {header: 'Bounces', key: 'bounceCount', width: 9},
+    {header: 'Primeiro envio', key: 'primeiroEnvio', width: 22},
+    {header: 'Último envio', key: 'ultimoEnvio', width: 22},
+    {header: 'Total recebidos', key: 'totalRecebidos', width: 12},
+    {header: 'Descadastrado em', key: 'descadastradoEm', width: 22},
+    {header: 'Convertido em quente', key: 'convertidoEm', width: 22},
+    {header: 'Importado em', key: 'importadoEm', width: 22},
+    {header: 'Atualizado em', key: 'atualizadoEm', width: 22},
+  ];
+  rows.forEach((row) => ws.addRow(row));
+  ws.getRow(1).font = {bold: true};
+  ws.getRow(1).fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFEDE5DC'}};
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().slice(0, 10);
+  a.download = `leads-frios-${date}.xlsx`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+};
+
 const downloadXlsx = async (rows) => {
   if (typeof ExcelJS === 'undefined') {
     alert('Biblioteca de planilha ainda carregando. Aguarde e tente de novo.');
@@ -2368,6 +2452,43 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
   // Seleção pra mesclagem
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
   const [mergeBusy, setMergeBusy] = React.useState(false);
+  // Exportacao completa da base (paginada via /api/cold-leads)
+  const [exporting, setExporting] = React.useState(false);
+  const [exportProgress, setExportProgress] = React.useState(null);
+
+  // Pagina por toda a base de leads frios e gera XLSX completa. Sem
+  // limite de pagina — coleta TUDO. Mostra progresso. Cap de 200 calls
+  // como guarda (= 100k leads max, bem alem do esperado).
+  const exportAllCold = async () => {
+    if (exporting) return;
+    if (!window.confirm('Vai gerar uma planilha XLSX com TODOS os leads frios cadastrados (pode levar 30s-2min dependendo do tamanho da base). Continuar?')) return;
+    setExporting(true);
+    setExportProgress({loaded: 0, total: coldList?.totalAll || 0});
+    try {
+      const LIMIT = 500;
+      let offset = 0;
+      const all = [];
+      for (let i = 0; i < 200; i++) {
+        const res = await api(`/api/cold-leads?limit=${LIMIT}&offset=${offset}`);
+        const page = res.leads || [];
+        all.push(...page);
+        setExportProgress({loaded: all.length, total: res.totalAll || all.length});
+        if (page.length < LIMIT) break;
+        offset += LIMIT;
+      }
+      if (all.length === 0) {
+        alert('Nenhum lead frio encontrado pra exportar.');
+        return;
+      }
+      const rows = all.map(coldLeadToRow);
+      await downloadColdXlsx(rows);
+    } catch (e) {
+      alert('Falha ao exportar: ' + e.message);
+    } finally {
+      setExporting(false);
+      setExportProgress(null);
+    }
+  };
 
   const loadCold = React.useCallback(async (q = '') => {
     setLoading(true);
@@ -2823,6 +2944,17 @@ const ColdLeadsPanel = ({onLogout, onBackToOverview}) => {
             onKeyDown={(e) => e.key === 'Enter' && loadCold(search)}
           />
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={() => loadCold(search)}>Buscar</button>
+          <button
+            className="ad-btn ad-btn-primary ad-btn-sm"
+            onClick={exportAllCold}
+            disabled={exporting}
+            title="Baixa uma planilha XLSX com TODOS os leads frios cadastrados"
+            style={{background: '#819470', color: '#0F1116', borderColor: '#819470', fontWeight: 700}}
+          >
+            {exporting
+              ? (exportProgress ? `Exportando… ${exportProgress.loaded}/${exportProgress.total || '?'}` : 'Exportando…')
+              : '⬇ Exportar planilha completa'}
+          </button>
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={fixEncoding}>↻ Consertar acentos</button>
           <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={rebuildSummary} disabled={summaryStatus?.status === 'building'}>
             {summaryStatus?.status === 'building'
