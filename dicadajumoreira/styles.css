@@ -262,6 +262,32 @@ a.media-card:hover .media-read { gap: 14px; }
 .tv-host { display: block; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--ivory-dim); margin-top: 8px; }
 
 /* ============================================================
+   PROGRAMA AUTORAL (Cozinhando com a Sindica)
+   ============================================================ */
+.band { background: var(--onyx-soft); border-block: 1px solid var(--espresso-line); }
+.show-grid { display: grid; grid-template-columns: .82fr 1.18fr; gap: clamp(36px, 5vw, 72px); align-items: center; }
+.show-copy .h2 { margin-top: 22px; }
+.show-copy p { margin: 24px 0 32px; }
+.show-player { margin: 0; }
+
+@media (max-width: 1024px) {
+  .show-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   PODCASTS
+   ============================================================ */
+.pod-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 60px; }
+.pod-frame {
+  position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--espresso-line); background: var(--onyx-soft);
+  box-shadow: 0 30px 60px -35px rgba(0,0,0,.7);
+  transition: border-color .35s ease, transform .35s cubic-bezier(.2,.7,.2,1);
+}
+.pod-frame:hover { border-color: rgba(198,161,91,.5); transform: translateY(-5px); }
+.pod-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ============================================================
    PALESTRAS
    ============================================================ */
 .talks { background: linear-gradient(180deg, var(--onyx), var(--plum) 240%); }
