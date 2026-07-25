@@ -105,13 +105,34 @@
   function = "serve-html"
   path = "/mba/"
 
-[[edge_functions]]
-  function = "serve-html"
-  path = "/comprar-experience/"
+# Rotas de compra desativadas — enquanto a mentoria está em fase de
+# APLICAÇÃO (pré-venda), qualquer link antigo pra /comprar-* redireciona
+# 301 pro formulário de aplicação na home. Endpoints Stripe e
+# páginas /comprar-*/ permanecem no repositório pra reativação futura,
+# mas ninguém acessa elas por navegação normal.
+[[redirects]]
+  from = "/comprar-experience/"
+  to = "/#contato"
+  status = 301
+  force = true
 
-[[edge_functions]]
-  function = "serve-html"
-  path = "/comprar-executive/"
+[[redirects]]
+  from = "/comprar-experience"
+  to = "/#contato"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/comprar-executive/"
+  to = "/#contato"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/comprar-executive"
+  to = "/#contato"
+  status = 301
+  force = true
 
 # Redirect 301 da URL antiga pra preservar links já compartilhados
 [[redirects]]
