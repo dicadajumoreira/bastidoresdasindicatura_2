@@ -4458,14 +4458,21 @@ const MENTORIA_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" 
           "A mentoria é onde acontece a<br>transformação real. Quero te ver dentro."
         </p>
 
-        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
-          <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29">Juliana Moreira</p>
-          <p style="margin:6px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
-          <p style="margin:12px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
-            <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
-            <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
-          </p>
-        </div>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <tr>
+            <td width="90" valign="top" style="padding-right:18px;width:90px">
+              <img src="https://bastidoresdasindicatura.com.br/assets/ju-avatar.jpg" width="72" height="72" alt="Juliana Moreira" style="display:block;width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:center 20%;border:2px solid #B89579" />
+            </td>
+            <td valign="top">
+              <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;line-height:1.2">Juliana Moreira</p>
+              <p style="margin:4px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+              <p style="margin:10px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+                <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+                <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+              </p>
+            </td>
+          </tr>
+        </table>
       </td></tr>
       ${DRAFT_FOOTER_HTML}
     </table>
