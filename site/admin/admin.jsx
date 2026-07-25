@@ -4397,13 +4397,12 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
   </td></tr>
 </table>`;
 
-// Rascunho da Mentoria Bastidores da Sindicatura · convite pra compra.
-// Diferente dos rascunhos de material gratuito, esse eh comercial:
-// apresenta as duas modalidades (Experience e Executive), o preco de
-// cada uma e leva pras paginas de compra Stripe. O filtro sugerido
-// exclui quem ja comprou (origem 'mentoria-paga') pra nao mandar 2x
-// pra alunos ativos.
-const MENTORIA_INVITE_SUBJECT = 'Turma 01 · Mentoria Bastidores da Sindicatura · vagas limitadas';
+// Rascunho da Mentoria Bastidores da Sindicatura · convite pra APLICACAO
+// (nao venda). Este e-mail nao mostra preco nem link Stripe — leva pro
+// formulario de aplicacao na home (/#contato). Publico amplo: qualquer
+// sindico (morador, profissional, gestor, conselheiro). O filtro
+// sugerido exclui apenas quem ja comprou (mentoria-paga).
+const MENTORIA_INVITE_SUBJECT = 'Turma 01 · Mentoria Bastidores da Sindicatura · aplicações abertas';
 const MENTORIA_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
   <tr><td align="center" style="padding:32px 16px">
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
@@ -4412,15 +4411,19 @@ const MENTORIA_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" 
         <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">Mentoria · Turma 01 · 2026</p>
       </td></tr>
       <tr><td style="padding:40px">
-        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Vagas abertas</p>
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Aplicações abertas</p>
         <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">{{nome}}, quero te ver <em>dentro</em>.</h1>
 
         <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
-          A <strong>Turma 01 da Mentoria Bastidores da Sindicatura</strong> começa em <strong>setembro de 2026</strong>. Doze encontros ao vivo comigo, uma comunidade pequena de síndicos profissionais e método estruturado pra profissionalizar a gestão de vez.
+          A <strong>Turma 01 da Mentoria Bastidores da Sindicatura</strong> começa em <strong>setembro de 2026</strong>. Doze encontros ao vivo comigo, uma comunidade pequena que se conhece e um método estruturado pra <em>profissionalizar a gestão de vez</em>.
+        </p>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          A mentoria é pra <strong>síndicos</strong> — moradores, profissionais, gestores condominiais, conselheiros. Todo mundo que decidiu elevar o próprio nível de trabalho e parar de apagar incêndio como padrão.
         </p>
 
         <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 24px">
-          Você já baixou material do Bastidores — isso me diz que o assunto te importa. Agora te convido a entrar num nível diferente de trabalho comigo.
+          Você já baixou material do Bastidores — isso me diz que o assunto te importa. Agora te convido a fazer sua aplicação.
         </p>
 
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
@@ -4429,57 +4432,26 @@ const MENTORIA_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" 
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>12 aulas ao vivo</strong> no Microsoft Teams, terças às 07h30 (Brasília)</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Todas as aulas gravadas</strong> e disponíveis na sua área de membros</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Materiais exclusivos</strong> por aula (PDFs, planilhas, exercícios)</p>
-            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Comunidade fechada</strong> de síndicos profissionais</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Comunidade fechada</strong> de síndicos</p>
             <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Acesso vitalício</strong> ao conteúdo da turma</p>
           </td></tr>
         </table>
 
-        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:22px;color:#1A1C29;margin:32px 0 18px;text-align:center">Duas modalidades. Sua escolha.</p>
+        <p style="text-align:center;margin:36px 0 8px">
+          <a href="https://bastidoresdasindicatura.com.br/#contato" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:18px 40px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Fazer minha aplicação</a>
+        </p>
+        <p style="text-align:center;font-size:12px;line-height:1.6;color:#8a8881;margin:0 0 28px">
+          Preencher a aplicação leva ~3 minutos. Depois disso, entramos em contato pra conversar antes de confirmar sua vaga.
+        </p>
 
-        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 22px">
-          <tr>
-            <td width="50%" valign="top" style="padding:0 8px 0 0">
-              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;border:1px solid #E8E2D8">
-                <tr><td style="padding:20px 18px">
-                  <p style="margin:0 0 4px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#819470;font-weight:700">Experience</p>
-                  <p style="margin:0 0 12px;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:22px;color:#1A1C29;line-height:1.1">A experiência coletiva</p>
-                  <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#1A1C29">12 aulas em grupo · comunidade fechada · gravações · materiais</p>
-                  <p style="margin:14px 0 4px;font-size:11px;color:#8a8881">à vista via Pix (10% off)</p>
-                  <p style="margin:0 0 8px;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:24px;color:#1A1C29">R$ 4.497,30</p>
-                  <p style="margin:0 0 14px;font-size:11px;color:#8a8881">ou 12x de R$ 416,42 no cartão</p>
-                  <p style="margin:0;text-align:center">
-                    <a href="https://bastidoresdasindicatura.com.br/comprar-experience/" style="display:inline-block;background:#819470;color:#F7F5F2;padding:12px 20px;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">Quero Experience</a>
-                  </p>
-                </td></tr>
-              </table>
-            </td>
-            <td width="50%" valign="top" style="padding:0 0 0 8px">
-              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1A1C29;border:1px solid #B89579">
-                <tr><td style="padding:20px 18px">
-                  <p style="margin:0 0 4px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Executive</p>
-                  <p style="margin:0 0 12px;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:22px;color:#F7F5F2;line-height:1.1">A modalidade completa</p>
-                  <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#F7F5F2">Tudo da Experience + <strong>2 sessões particulares comigo</strong></p>
-                  <p style="margin:14px 0 4px;font-size:11px;color:#B89579">à vista via Pix (10% off)</p>
-                  <p style="margin:0 0 8px;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:24px;color:#F7F5F2">R$ 8.097,30</p>
-                  <p style="margin:0 0 14px;font-size:11px;color:#B89579">ou 12x de R$ 749,75 no cartão</p>
-                  <p style="margin:0;text-align:center">
-                    <a href="https://bastidoresdasindicatura.com.br/comprar-executive/" style="display:inline-block;background:#B89579;color:#1A1C29;padding:12px 20px;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">Quero Executive</a>
-                  </p>
-                </td></tr>
-              </table>
-            </td>
-          </tr>
-        </table>
+        <hr style="border:none;border-top:1px dashed #E8E2D8;margin:28px 0">
 
-        <p style="text-align:center;margin:24px 0 8px;font-size:12px;color:#8a8881">Pagamento seguro via <strong>Stripe</strong> · Pix libera acesso na hora</p>
-
-        <hr style="border:none;border-top:1px dashed #E8E2D8;margin:24px 0">
-
-        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#1A1C29;margin:0 0 8px">Depois do pagamento</p>
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#1A1C29;margin:0 0 8px">Como funciona</p>
         <ol style="margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.7;color:#1A1C29">
-          <li>Você recebe um e-mail com link pra criar senha na Área de Membros</li>
-          <li>A Sala da Mentoria libera na hora com o calendário das 12 aulas</li>
-          <li>Setembro de 2026 começamos ao vivo</li>
+          <li>Você faz a aplicação no formulário</li>
+          <li>Nossa equipe entra em contato pra uma conversa rápida</li>
+          <li>Confirmada a vaga, você recebe as instruções pra pagamento</li>
+          <li>Em setembro de 2026 começamos ao vivo</li>
         </ol>
 
         <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#B89579;margin:32px 0 0;text-align:center;line-height:1.4">
@@ -4667,11 +4639,12 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
   };
 
-  // Rascunho comercial da Mentoria. Vai pra leads QUENTES (todos os
-  // formularios do site) MENOS quem ja comprou (origem 'mentoria-paga').
-  // NAO inclui leads frios por padrao — mentoria eh oferta cara e a
-  // conversao esperada de leads frios eh muito baixa. Se quiser incluir
-  // frios, a Juliana marca o checkbox manualmente antes de enviar.
+  // Rascunho da Mentoria — convite pra APLICACAO (nao venda). Publico
+  // amplo: todos os tipos de sindico. Vai pra leads QUENTES MENOS quem
+  // ja comprou (origem 'mentoria-paga'). NAO inclui leads frios por
+  // padrao — mentoria eh oferta cara e a conversao esperada de leads
+  // frios eh muito baixa. Se quiser incluir frios, a Juliana marca o
+  // checkbox manualmente antes de enviar.
   const loadMentoriaInviteDraft = () => {
     setSubject(MENTORIA_INVITE_SUBJECT);
     setHtml(MENTORIA_INVITE_HTML);
@@ -5290,11 +5263,11 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             style={{borderColor: '#B89579', background: 'rgba(184, 149, 121, 0.10)'}}
           >
             <div className="ad-bc-draft-head">
-              <span className="ad-bc-draft-eyebrow" style={{color: '#B89579', fontWeight: 800}}>Mentoria · CONVITE COMERCIAL</span>
+              <span className="ad-bc-draft-eyebrow" style={{color: '#B89579', fontWeight: 800}}>Mentoria · APLICAÇÃO</span>
             </div>
-            <h3 className="ad-bc-draft-title">Turma 01 · Experience + Executive</h3>
+            <h3 className="ad-bc-draft-title">Turma 01 · Aplicações abertas</h3>
             <p className="ad-bc-draft-meta">
-              Pra leads quentes que ainda não compraram · CTAs pra as 2 modalidades (Stripe)
+              Pra todos os síndicos (moradores, profissionais, gestores, conselheiros) · CTA "Fazer minha aplicação" leva pro formulário na home
             </p>
           </button>
           <button
