@@ -70,7 +70,7 @@ const BsSobre = () => (
           <span className="bs-num-lbl">Condomínios sob gestão</span>
         </div>
         <div className="bs-num-item">
-          <span className="bs-num-val">+158k</span>
+          <span className="bs-num-val">+173k</span>
           <span className="bs-num-lbl">Seguidores no Instagram</span>
         </div>
         <div className="bs-num-item">
