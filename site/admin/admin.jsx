@@ -4479,6 +4479,95 @@ const MENTORIA_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" 
   </td></tr>
 </table>`;
 
+// Rascunho da Mentoria pra LEADS FRIOS · primeiro contato. Diferente
+// do MENTORIA_INVITE_HTML (leads quentes) porque quem esta em base de
+// planilha nao conhece a Juliana — o e-mail comeca com apresentacao
+// e contextualiza por que a pessoa esta recebendo. Load configura o
+// filtro pra pular todos os quentes (onlyCold=true) e opcionalmente
+// so pros que nunca receberam (onlyNeverReceivedCold=true).
+const MENTORIA_COLD_SUBJECT = 'Mentoria Bastidores da Sindicatura · aplicações abertas pra Turma 01';
+const MENTORIA_COLD_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:32px 16px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
+      <tr><td style="padding:32px 40px 18px;border-bottom:1px solid #E8E2D8">
+        <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;letter-spacing:-.01em">Bastidores da Sindicatura</p>
+        <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">Mentoria · Turma 01 · 2026</p>
+      </td></tr>
+      <tr><td style="padding:40px">
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">Aplicações abertas</p>
+        <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">Deixa eu me <em>apresentar</em>.</h1>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          Sou <strong>Juliana Moreira</strong>, CEO da Sindicompany e da Condo Academy. Trinta anos no mercado condominial, mais de <strong>300 condomínios sob gestão</strong> hoje e <strong>+173 mil</strong> síndicos e gestores acompanham meu conteúdo diário no Instagram <a href="https://instagram.com/dicadajumoreira" style="color:#B89579">@dicadajumoreira</a>.
+        </p>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 24px">
+          Você provavelmente recebeu esse e-mail porque está numa base de contato do setor condominial. Se meu trabalho não te interessa, é só descadastrar no rodapé — sem ressentimento. Se te interessa, continua lendo.
+        </p>
+
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:22px;color:#1A1C29;margin:32px 0 12px">O que é a Mentoria</p>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          A <strong>Turma 01 da Mentoria Bastidores da Sindicatura</strong> começa em <strong>setembro de 2026</strong>. Doze encontros ao vivo comigo, uma comunidade pequena que se conhece e um método estruturado pra <em>profissionalizar a gestão de vez</em>.
+        </p>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          É pra <strong>síndicos</strong> — moradores, profissionais, gestores condominiais, conselheiros. Todo mundo que decidiu parar de apagar incêndio e trabalhar com método.
+        </p>
+
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
+          <tr><td style="padding:18px 22px">
+            <p style="margin:0 0 10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">O que você recebe</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>12 aulas ao vivo</strong> no Microsoft Teams, terças às 07h30 (Brasília)</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Todas as aulas gravadas</strong> e disponíveis na sua área de membros</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Materiais exclusivos</strong> por aula (PDFs, planilhas, exercícios)</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Comunidade fechada</strong> de síndicos</p>
+            <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Acesso vitalício</strong> ao conteúdo da turma</p>
+          </td></tr>
+        </table>
+
+        <p style="text-align:center;margin:36px 0 8px">
+          <a href="https://bastidoresdasindicatura.com.br/#contato" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:18px 40px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">Quero conhecer a mentoria</a>
+        </p>
+        <p style="text-align:center;font-size:12px;line-height:1.6;color:#8a8881;margin:0 0 28px">
+          Preencher a aplicação leva ~3 minutos. Não é venda automática — conversamos antes de qualquer coisa.
+        </p>
+
+        <hr style="border:none;border-top:1px dashed #E8E2D8;margin:28px 0">
+
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#1A1C29;margin:0 0 8px">Como funciona</p>
+        <ol style="margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.7;color:#1A1C29">
+          <li>Você faz a aplicação no formulário</li>
+          <li>Nossa equipe entra em contato pra uma conversa rápida</li>
+          <li>Confirmada a vaga, você recebe as instruções pra pagamento</li>
+          <li>Em setembro de 2026 começamos ao vivo</li>
+        </ol>
+
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:18px;color:#B89579;margin:32px 0 0;text-align:center;line-height:1.4">
+          "Ninguém sai do 'apagando incêndio' sozinho.<br>Método e comunidade fazem a diferença."
+        </p>
+
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <tr>
+            <td width="90" valign="top" style="padding-right:18px;width:90px">
+              <img src="https://bastidoresdasindicatura.com.br/assets/ju-avatar.jpg" width="72" height="72" alt="Juliana Moreira" style="display:block;width:72px;height:72px;border-radius:50%;border:2px solid #B89579" />
+            </td>
+            <td valign="top">
+              <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;line-height:1.2">Juliana Moreira</p>
+              <p style="margin:4px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+              <p style="margin:10px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+                <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+                <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+      ${DRAFT_FOOTER_HTML}
+    </table>
+  </td></tr>
+</table>`;
+
 // Relatorio detalhado por motivo de filtragem. Mostra por categoria
 // quantos contatos foram excluidos antes do envio. Util pra auditar
 // "por que so X enviados e nao Y".
@@ -4556,6 +4645,11 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
   // Util pra mandar boas-vindas pra base recem-importada sem repetir
   // pra quem ja recebeu algo antes.
   const [onlyNeverReceivedCold, setOnlyNeverReceivedCold] = React.useState(false);
+  // Sub-opcao: pular todos os leads quentes e enviar SO pros frios.
+  // Combina com includeCold. Usado principalmente em campanhas de
+  // primeiro contato ("deixa eu me apresentar") que nao fazem sentido
+  // pra quem ja preencheu formulario do site.
+  const [onlyCold, setOnlyCold] = React.useState(false);
   const [coldCount, setColdCount] = React.useState(null);
   const [testEmail, setTestEmail] = React.useState('contato@dicadajumoreira.com.br');
   const [busy, setBusy] = React.useState(false);
@@ -4642,6 +4736,8 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setExcludeOrigens(new Set());
     setStatusFilter(new Set());
     setIncludeCold(false);
+    setOnlyNeverReceivedCold(false);
+    setOnlyCold(false);
     setResult(null);
     setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
   };
@@ -4658,6 +4754,24 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setExcludeOrigens(new Set(['mentoria-paga']));
     setStatusFilter(new Set());
     setIncludeCold(false);
+    setOnlyNeverReceivedCold(false);
+    setOnlyCold(false);
+    setResult(null);
+    setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
+  };
+
+  // Rascunho da Mentoria pra LEADS FRIOS (primeiro contato — apresenta a
+  // Juliana). Filtro sugerido: SO frios (pula quentes) + so quem nunca
+  // recebeu (evita spam pra base repetida). Pode desmarcar manualmente se
+  // quiser mandar pra frios que ja receberam antes.
+  const loadMentoriaColdInviteDraft = () => {
+    setSubject(MENTORIA_COLD_SUBJECT);
+    setHtml(MENTORIA_COLD_HTML);
+    setExcludeOrigens(new Set());
+    setStatusFilter(new Set());
+    setIncludeCold(true);
+    setOnlyNeverReceivedCold(true);
+    setOnlyCold(true);
     setResult(null);
     setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
   };
@@ -4891,6 +5005,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
         statuses: statusFilter.size ? [...statusFilter] : undefined,
         includeCold: includeCold || undefined,
         onlyNeverReceivedCold: (includeCold && onlyNeverReceivedCold) || undefined,
+        onlyCold: (includeCold && onlyCold) || undefined,
       };
       // Trata o valor do datetime-local SEMPRE como horário de Brasília (UTC-3),
       // ignorando o fuso do navegador da pessoa que está agendando.
@@ -5270,11 +5385,25 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
             style={{borderColor: '#B89579', background: 'rgba(184, 149, 121, 0.10)'}}
           >
             <div className="ad-bc-draft-head">
-              <span className="ad-bc-draft-eyebrow" style={{color: '#B89579', fontWeight: 800}}>Mentoria · APLICAÇÃO</span>
+              <span className="ad-bc-draft-eyebrow" style={{color: '#B89579', fontWeight: 800}}>Mentoria · APLICAÇÃO · quentes</span>
             </div>
             <h3 className="ad-bc-draft-title">Turma 01 · Aplicações abertas</h3>
             <p className="ad-bc-draft-meta">
-              Pra todos os síndicos (moradores, profissionais, gestores, conselheiros) · CTA "Fazer minha aplicação" leva pro formulário na home
+              Pra leads quentes (formulário do site) · Tom próximo "quero te ver dentro" · CTA leva pro formulário na home
+            </p>
+          </button>
+          <button
+            type="button"
+            className="ad-bc-draft"
+            onClick={loadMentoriaColdInviteDraft}
+            style={{borderColor: '#7BA8C9', background: 'rgba(123, 168, 201, 0.10)'}}
+          >
+            <div className="ad-bc-draft-head">
+              <span className="ad-bc-draft-eyebrow" style={{color: '#7BA8C9', fontWeight: 800}}>Mentoria · APLICAÇÃO · frios</span>
+            </div>
+            <h3 className="ad-bc-draft-title">Primeiro contato · Turma 01</h3>
+            <p className="ad-bc-draft-meta">
+              Pra leads frios que nunca receberam · Começa apresentando a Juliana · Filtro "só frios · nunca receberam" já vem marcado
             </p>
           </button>
           <button
@@ -5394,6 +5523,8 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                   setExcludeOrigens(new Set());
                   setStatusFilter(new Set());
                   setIncludeCold(false);
+                  setOnlyNeverReceivedCold(false);
+                  setOnlyCold(false);
                 }}
               >
                 ▶ Selecionar TODOS os leads cadastrados ({targets.funnel.uniqueEmails || '...'})
@@ -5441,6 +5572,17 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                     Só pros que <strong>nunca receberam</strong> e-mail
                     <span style={{color: 'rgba(247,245,242,0.55)', fontSize: '12px', marginLeft: 8, fontStyle: 'italic'}}>
                       (ideal pra disparar pra uma base recém-importada sem repetir pra quem já recebeu)
+                    </span>
+                  </span>
+                </label>
+              )}
+              {includeCold && (
+                <label className={'ad-bc-check' + (onlyCold ? ' is-on' : '')} style={{marginLeft: 24, marginTop: 8}}>
+                  <input type="checkbox" checked={onlyCold} onChange={(e) => setOnlyCold(e.target.checked)} />
+                  <span>
+                    Enviar <strong>SÓ pros leads frios</strong> (pular os quentes)
+                    <span style={{color: 'rgba(247,245,242,0.55)', fontSize: '12px', marginLeft: 8, fontStyle: 'italic'}}>
+                      (pra campanha de primeiro contato — não faz sentido pra quem já preencheu formulário)
                     </span>
                   </span>
                 </label>

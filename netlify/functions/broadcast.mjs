@@ -340,6 +340,21 @@ export default async (req) => {
         effectiveIncludeCold = true;
       }
 
+      // filter.onlyCold = true → descarta TODOS os leads quentes coletados
+      // ate aqui. Combinado com effectiveIncludeCold=true (forcado abaixo),
+      // manda so pros frios. Util pra campanha de "deixa eu me apresentar"
+      // que so faz sentido pra quem nunca ouviu falar do Bastidores.
+      if (filter && filter.onlyCold) {
+        breakdown.hot = {
+          total: breakdown.hot.total, deletados: 0, descadastrados: 0, inativos: 0,
+          semEmail: 0, freqMenorPulados: 0, excluidosPorOrigem: 0,
+          excluidosPorEstado: 0, excluidosPorStatus: 0, duplicatasInternas: 0,
+          finalElegiveis: 0, skippedByOnlyCold: allTargets.length,
+        };
+        allTargets = [];
+        effectiveIncludeCold = true;
+      }
+
       // ====== LEADS FRIOS (opcional) ======
       // Lê do índice resumo (cold-leads-summary) construído por uma
       // background function. UMA leitura de blob em vez de escanear 14k
