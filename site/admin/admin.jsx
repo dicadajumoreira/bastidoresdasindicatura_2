@@ -4461,7 +4461,7 @@ const MENTORIA_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" 
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;padding-top:24px;border-top:1px solid #E8E2D8">
           <tr>
             <td width="90" valign="top" style="padding-right:18px;width:90px">
-              <img src="https://bastidoresdasindicatura.com.br/assets/ju-avatar.jpg" width="72" height="72" alt="Juliana Moreira" style="display:block;width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:center 20%;border:2px solid #B89579" />
+              <img src="https://bastidoresdasindicatura.com.br/assets/ju-avatar.jpg" width="72" height="72" alt="Juliana Moreira" style="display:block;width:72px;height:72px;border-radius:50%;border:2px solid #B89579" />
             </td>
             <td valign="top">
               <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;line-height:1.2">Juliana Moreira</p>
