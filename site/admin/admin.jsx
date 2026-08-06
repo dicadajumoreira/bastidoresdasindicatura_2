@@ -6187,16 +6187,29 @@ const WAPoliScreen = () => {
                 <table style={{width: '100%', fontSize: 12}}>
                   <tbody>
                     <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Latência</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.latency}ms</td></tr>
+                    <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Endpoint OK</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.via || 'default'}</td></tr>
                     <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Customer ID</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.customerId}</td></tr>
                     <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Channel ID</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.channelId}</td></tr>
                     <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>User ID</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.userId}</td></tr>
                   </tbody>
                 </table>
+                {ping.tried && ping.tried.length > 0 && (
+                  <details style={{marginTop: 10}}>
+                    <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.5)'}}>Endpoints que falharam antes ({ping.tried.length})</summary>
+                    <pre style={{margin: '6px 0 0', padding: 8, background: 'rgba(0,0,0,0.25)', fontSize: 10, overflow: 'auto', color: 'rgba(217,119,87,0.85)'}}>{JSON.stringify(ping.tried, null, 2)}</pre>
+                  </details>
+                )}
               </>
             ) : (
               <>
                 <p style={{margin: '0 0 10px'}}>{dot(false, 'Sem conexão')}</p>
                 <div style={{padding: 10, background: 'rgba(0,0,0,0.25)', fontFamily: 'monospace', fontSize: 11, color: '#d97757'}}>{ping.error || 'erro desconhecido'}</div>
+                {ping.tried && ping.tried.length > 0 && (
+                  <details style={{marginTop: 10}} open>
+                    <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.55)'}}>Todos endpoints testados</summary>
+                    <pre style={{margin: '6px 0 0', padding: 8, background: 'rgba(0,0,0,0.25)', fontSize: 10, overflow: 'auto', color: 'rgba(217,119,87,0.85)'}}>{JSON.stringify(ping.tried, null, 2)}</pre>
+                  </details>
+                )}
               </>
             )}
         </section>

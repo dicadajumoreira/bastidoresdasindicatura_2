@@ -144,28 +144,46 @@ export async function deleteTag(tagId) {
 
 // ==================== HEALTHCHECK ====================
 
-// Testa a conexao com a Poli. Tenta uma listagem de chats com limite
-// pequeno e mede latencia. Retorna { ok, status, latency, sample? }.
+// Testa a conexao com a Poli. Tenta VARIOS endpoints em sequencia
+// ate um passar — assim se algum estiver com bug do lado deles
+// (recebemos 500 as vezes), ainda conseguimos validar que auth+customer
+// estao certos. Retorna { ok, status, latency, sample?, tried?, lastError? }.
 export async function ping() {
   const t0 = Date.now();
-  try {
-    const res = await listChats({limit: 1});
-    return {
-      ok: true,
-      latency: Date.now() - t0,
-      customerId: customerId(),
-      channelId: channelId(),
-      userId: userId(),
-      sample: Array.isArray(res?.data) ? {chats: res.data.length, total: res.total || null} : {raw: 'ok'},
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      latency: Date.now() - t0,
-      error: err.message,
-      status: err.status || 500,
-    };
+  const attempts = [
+    {name: 'tags-list', run: () => poli(`/tags/${customerId()}`)},
+    {name: 'chats-list', run: () => poli(`/customers/${customerId()}/chats`)},
+    {name: 'chats-list-limit-1', run: () => poli(`/customers/${customerId()}/chats?limit=1`)},
+  ];
+  const tried = [];
+  let lastError = null;
+  for (const a of attempts) {
+    try {
+      const res = await a.run();
+      return {
+        ok: true,
+        via: a.name,
+        latency: Date.now() - t0,
+        tried,
+        customerId: customerId(),
+        channelId: channelId(),
+        userId: userId(),
+        sample: Array.isArray(res?.data)
+          ? {items: res.data.length, total: res.total || null}
+          : (res && typeof res === 'object' ? {keys: Object.keys(res).slice(0, 5)} : {raw: 'ok'}),
+      };
+    } catch (err) {
+      tried.push({name: a.name, status: err.status || 500, error: err.message.slice(0, 160)});
+      lastError = err;
+    }
   }
+  return {
+    ok: false,
+    latency: Date.now() - t0,
+    error: lastError?.message || 'todos endpoints falharam',
+    status: lastError?.status || 500,
+    tried,
+  };
 }
 
 // ==================== STATUS DAS ENV VARS (sem expor valores) ====================
