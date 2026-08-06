@@ -5089,6 +5089,17 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     }
   };
 
+  // Dispara o broadcast em modo server-side: chama /api/broadcast-start
+  // uma unica vez, e o backend cuida de todo o processamento em background
+  // (background function + cron sweeper self-healing). A UI mostra
+  // "Disparo iniciado" e faz polling do progresso via broadcast-history
+  // — mas o disparo continua rodando mesmo se voce fechar o browser.
+  const pollingRef = React.useRef(null);
+  const stopPolling = () => {
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+  };
+  React.useEffect(() => stopPolling, []); // cleanup on unmount
+
   const sendReal = async () => {
     setConfirmOpen(false);
     const okCold = await ensureColdSummaryReady();
@@ -5096,81 +5107,88 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setBusy(true);
     setResult(null);
     setProgress({sent: 0, failed: 0, processed: 0, total: 0});
+    stopPolling();
 
     const filter = {
       excludeOrigens: [...excludeOrigens],
       statuses: statusFilter.size ? [...statusFilter] : undefined,
       includeCold: includeCold || undefined,
+      onlyNeverReceivedCold: (includeCold && onlyNeverReceivedCold) || undefined,
+      onlyCold: (includeCold && onlyCold) || undefined,
     };
-    const broadcastId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const LIMIT_PER_CALL = 40;
-    let offset = 0;
-    let totalSent = 0;
-    let totalFailed = 0;
-    let total = 0;
-    let breakdown = null; // primeira call traz; demais nao
-    const errorsAcc = [];
-    let failCount = 0;
 
     try {
-      for (let i = 0; i < 600; i++) {
-        let res;
-        try {
-          res = await api('/api/broadcast', {
-            method: 'POST',
-            body: JSON.stringify({
-              subject, html, filter,
-              offset, limit: LIMIT_PER_CALL, broadcastId,
-            }),
-          });
-        } catch (e) {
-          failCount++;
-          if (failCount >= 3) {
-            errorsAcc.push(`Backend não respondeu após 3 tentativas no offset ${offset}: ${e.message}`);
-            break;
-          }
-          await new Promise((r) => setTimeout(r, 1500 * failCount));
-          continue;
-        }
-        failCount = 0;
-
-        if (!res.ok) {
-          errorsAcc.push(res.error || 'erro desconhecido');
-          break;
-        }
-
-        totalSent += res.sent || 0;
-        totalFailed += res.failed || 0;
-        total = res.total || total;
-        if (res.breakdown && !breakdown) breakdown = res.breakdown;
-        if (res.errors && res.errors.length) errorsAcc.push(...res.errors);
-
-        setProgress({
-          sent: totalSent,
-          failed: totalFailed,
-          processed: res.nextOffset,
-          total,
-        });
-
-        if (!res.hasMore) break;
-        offset = res.nextOffset;
+      const res = await api('/api/broadcast-start', {
+        method: 'POST',
+        body: JSON.stringify({subject, html, filter}),
+      });
+      if (!res.ok || !res.broadcastId) {
+        throw new Error(res.error || 'Não conseguimos iniciar o disparo');
       }
-
+      const broadcastId = res.broadcastId;
       setResult({
-        type: 'real',
-        ok: errorsAcc.length === 0 || totalSent > 0,
-        sent: totalSent,
-        failed: totalFailed,
-        total,
-        breakdown,
-        errors: errorsAcc.slice(0, 10),
+        type: 'started',
+        ok: true,
+        broadcastId,
+        message: 'Disparo iniciado. Pode fechar essa página — o envio continua no servidor. O progresso atualiza aqui automaticamente.',
       });
       loadHistory();
+      setBusy(false);
+
+      // Polling do histórico a cada 10s pra atualizar o progresso visual
+      // Para automaticamente quando o job vira completed/cancelled ou
+      // apos 30 minutos sem mudanca (o disparo continua rodando no
+      // servidor, mas a UI para de perguntar pra economizar chamadas).
+      let stableCount = 0;
+      let lastSent = 0;
+      let pollsCount = 0;
+      const POLL_MAX = 300; // 300 * 10s = 50 min de polling
+      pollingRef.current = setInterval(async () => {
+        pollsCount++;
+        if (pollsCount > POLL_MAX) { stopPolling(); return; }
+        try {
+          const hist = await api('/api/broadcast-history');
+          const job = (hist.history || []).find((h) => h.id === broadcastId);
+          if (!job) return;
+          setProgress({
+            sent: job.sent || 0,
+            failed: job.failed || 0,
+            processed: (job.sent || 0) + (job.failed || 0),
+            total: job.total || 0,
+          });
+          if (job.status === 'completed' || job.completed) {
+            stopPolling();
+            setResult({
+              type: 'real',
+              ok: true,
+              sent: job.sent || 0,
+              failed: job.failed || 0,
+              total: job.total || 0,
+              breakdown: job.breakdown || null,
+              broadcastId,
+              serverSideCompleted: true,
+            });
+            loadHistory();
+            return;
+          }
+          if (job.status === 'cancelled') {
+            stopPolling();
+            setResult({type: 'real', ok: false, error: 'Disparo cancelado', broadcastId});
+            loadHistory();
+            return;
+          }
+          // Se ficar 30 iterações (5 min) sem novo envio, avisa mas nao para
+          if ((job.sent || 0) === lastSent) stableCount++;
+          else { stableCount = 0; lastSent = job.sent || 0; }
+        } catch (e) {
+          console.error('[polling]', e.message);
+        }
+      }, 10_000);
     } catch (e) {
       setResult({type: 'real', ok: false, error: e.message});
-    } finally {
       setBusy(false);
       setProgress(null);
+      stopPolling();
     }
   };
 
@@ -5694,13 +5712,18 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                   {busy ? 'Agendando…' : `Agendar pra ${scheduledFor ? fmtDateShort(brasiliaInputToUtcIso(scheduledFor)) : ''} (Brasília) · ${countLbl} cadastros`}
                 </button>
               ) : (
-                <button
-                  className="ad-btn ad-btn-primary ad-btn-lg"
-                  disabled={busy || !canSend}
-                  onClick={() => setConfirmOpen(true)}
-                >
-                  {busy ? 'Enviando…' : `Disparar agora pros ${countLbl} cadastros${includeCold && coldCount != null ? ' (quentes + frios)' : ''}`}
-                </button>
+                <>
+                  <button
+                    className="ad-btn ad-btn-primary ad-btn-lg"
+                    disabled={busy || !canSend}
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    {busy ? 'Iniciando…' : `Disparar agora pros ${countLbl} cadastros${includeCold && coldCount != null ? ' (quentes + frios)' : ''}`}
+                  </button>
+                  <p style={{margin: '8px 0 0', fontSize: 11, color: 'rgba(247,245,242,0.55)', fontStyle: 'italic', textAlign: 'center'}}>
+                    ↺ O disparo roda no servidor — você pode fechar essa página depois de iniciar. Se algo travar, o sistema retoma sozinho em ~1 min.
+                  </p>
+                </>
               );
             })()}
             {progress && progress.total > 0 && (
@@ -5724,11 +5747,21 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                     {result.failed > 0 && <p>{result.failed} falharam novamente. Você pode reenviar de novo pelo modal de destinatários do novo registro.</p>}
                   </>
                 )}
+                {result.type === 'started' && result.ok && (
+                  <>
+                    <p style={{fontSize: 15, fontWeight: 600, color: '#a8d4a8', margin: '0 0 8px'}}>▶ Disparo iniciado no servidor</p>
+                    <p style={{margin: '0 0 8px'}}>{result.message}</p>
+                    <p style={{margin: 0, fontSize: 12, color: 'rgba(247,245,242,0.6)', fontStyle: 'italic'}}>
+                      ID: <code>{result.broadcastId}</code> — este disparo continua rodando mesmo se você fechar essa página. Pode acompanhar o resultado no histórico embaixo, ou voltar depois.
+                    </p>
+                  </>
+                )}
                 {result.type === 'real' && result.ok && (
                   <>
                     <p><strong>{result.sent}</strong> e-mails enviados com sucesso.</p>
                     {result.failed > 0 && <p>{result.failed} falharam.</p>}
                     {result.partial && <p style={{color: '#d97757'}}>Parcial: processados {result.processed} de {result.total}. Repita o disparo (os já-enviados não voltam, mas a função não tem dedupe entre runs — use filtro pra evitar duplicar).</p>}
+                    {result.serverSideCompleted && <p style={{fontSize: 12, color: 'rgba(168,212,168,0.85)', fontStyle: 'italic', marginTop: 8}}>✓ Concluído automaticamente pelo servidor.</p>}
                   </>
                 )}
                 {!result.ok && <p>Erro: {result.error || 'desconhecido'}</p>}

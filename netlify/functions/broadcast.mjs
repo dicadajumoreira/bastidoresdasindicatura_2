@@ -517,6 +517,10 @@ export default async (req) => {
         },
         filterSummary: filterSummary.join(' · ') || 'todos os leads',
         completed: !hasMore,
+        // status usado pelo sweeper pra detectar jobs presos.
+        // 'sending' enquanto tem mais paginas, 'completed' quando termina.
+        // Preserva 'cancelled' se ja estava (evita reviver disparo abortado).
+        status: existing?.status === 'cancelled' ? 'cancelled' : (!hasMore ? 'completed' : 'sending'),
         lastBatchAt: new Date().toISOString(),
         resendOf: resendFailedFrom || null,
         // Breakdown da primeira passada (quando montamos allTargets).

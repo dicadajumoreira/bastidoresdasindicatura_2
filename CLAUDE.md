@@ -96,8 +96,12 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 
 ## Disparo em massa (broadcast)
 
-- Frontend pagina chamando `/api/broadcast` com `offset` + `limit=40` em loop, cap de 600 iterações (~24k destinatários).
-- Botão **Continuar** no histórico retoma disparos incompletos via `resumeFrom: broadcastId`, mesmo broadcastId, ordenação determinística garante que não duplica.
+- **Execução server-side (novo — jun/2026):** a UI chama `/api/broadcast-start` uma vez, que salva o job em `broadcasts` blob (`status: 'queued'`) e dispara `/api/broadcast-run-background` (Netlify Background Function, 15min). A background function faz o loop chamando `/api/broadcast` internamente com paginação (mesma lógica). Se aproximar do timeout, salva estado e re-dispara ela mesma pro próximo chunk (auto-encadeamento).
+- **Cron sweeper (self-healing):** `broadcast-sweeper-background.mjs` roda a cada 1 min via `schedule: '* * * * *'`. Detecta jobs presos (`status: 'queued'` OU `status: 'sending'` com `lastBatchAt > 3 min atrás`) e re-dispara a background function pra retomar de onde parou. Isso cobre falhas: browser fechou antes do trigger, background crashou/timeoutou, network caiu.
+- **`broadcast.mjs`** continua sendo o worker que processa 1 batch de 40 e-mails por chamada. Não mudou — só ganhou um campo `status` no histórico ('sending' ou 'completed') pra facilitar detecção pelo sweeper.
+- **UI:** botão "Disparar" agora mostra "Disparo iniciado — pode fechar essa página" e faz polling do histórico a cada 10s pra atualizar progresso. O disparo continua no servidor mesmo se fechar.
+- Botão **Continuar** no histórico ainda existe como plano C manual, mas raramente é necessário — o sweeper já resolve automaticamente.
+- Frontend antigo (loop no browser) foi removido de `sendReal`. Persiste apenas em `resumeBroadcast` (que ainda funciona pra retomar disparos legados).
 - Pra incluir leads frios, **`cold-leads-summary`** precisa estar construído. Existe botão "Reconstruir índice" no painel de leads frios.
 - **Footer obrigatório nos rascunhos**: todo rascunho de disparo (em `admin.jsx`, próximo a `MATERIAL_BROADCASTS`) DEVE terminar com `${DRAFT_FOOTER_HTML}` interpolado dentro do `<table>` do corpo. Esse rodapé tem 3 linhas: aviso de "recebendo este material por estar cadastrado em bastidoresdasindicatura.com.br", oferta de reduzir frequência / descadastrar (link `{{unsubscribe_url}}` que o backend troca por URL assinada por destinatário) e link da política de privacidade. Não criar rascunho novo com footer próprio — usar a constante.
 
