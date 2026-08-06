@@ -6096,6 +6096,17 @@ const WAPoliScreen = () => {
   const [busy, setBusy] = React.useState(false);
   const [testResult, setTestResult] = React.useState(null);
 
+  // Templates HSM
+  const [templates, setTemplates] = React.useState(null);
+  const [templatesLoading, setTemplatesLoading] = React.useState(false);
+  const [tplContact, setTplContact] = React.useState('');
+  const [tplName, setTplName] = React.useState('');
+  const [tplId, setTplId] = React.useState('');
+  const [tplLang, setTplLang] = React.useState('pt_BR');
+  const [tplParams, setTplParams] = React.useState('');
+  const [tplBusy, setTplBusy] = React.useState(false);
+  const [tplResult, setTplResult] = React.useState(null);
+
   const loadStatus = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -6118,6 +6129,40 @@ const WAPoliScreen = () => {
     } catch (e) {
       setTestResult({ok: false, error: e.message});
     } finally { setBusy(false); }
+  };
+
+  const loadTemplates = async () => {
+    setTemplatesLoading(true); setTemplates(null);
+    try {
+      const res = await api('/api/wa-poli-templates');
+      setTemplates(res);
+    } catch (e) {
+      setTemplates({ok: false, error: e.message});
+    } finally { setTemplatesLoading(false); }
+  };
+
+  const sendTemplateTest = async () => {
+    if (!tplContact.trim() || (!tplName.trim() && !tplId.trim())) return;
+    setTplBusy(true); setTplResult(null);
+    const bodyParams = tplParams
+      .split('|')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    try {
+      const res = await api('/api/wa-poli-send-template', {
+        method: 'POST',
+        body: JSON.stringify({
+          contactId: tplContact.trim(),
+          templateName: tplName.trim() || undefined,
+          templateId: tplId.trim() || undefined,
+          language: tplLang.trim() || 'pt_BR',
+          bodyParams: bodyParams.length ? bodyParams : undefined,
+        }),
+      });
+      setTplResult(res);
+    } catch (e) {
+      setTplResult({ok: false, error: e.message});
+    } finally { setTplBusy(false); }
   };
 
   const env = status?.env || {};
@@ -6251,23 +6296,104 @@ const WAPoliScreen = () => {
           )}
         </section>
 
+        {/* Enviar TEMPLATE (HSM) — pra iniciar conversa fora da janela 24h */}
+        <section className="ad-widget" style={{gridColumn: '1 / -1'}}>
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">4 · Template (HSM)</span>
+            <h2 className="ad-widget-title">Enviar template aprovado</h2>
+          </header>
+          <p className="ad-bc-drafts-lead">
+            Templates são obrigatórios pra iniciar conversa fora da janela 24h. Este teste envia UM template pra 1 contato Poli. Se der certo, a gente escala pra broadcast.
+          </p>
+          <div style={{padding: 12, background: 'rgba(91,140,175,0.08)', border: '1px dashed rgba(91,140,175,0.35)', marginTop: 12, marginBottom: 16, fontSize: 12, color: 'rgba(247,245,242,0.75)'}}>
+            Como a doc da Poli não deixa claro qual é o endpoint oficial de template, este chamador <strong>tenta várias rotas</strong> (send_notification, send_template, send_hsm) e vários formatos de body. A resposta mostra qual funcionou e o que foi enviado — se falhar, dá pra ajustar aqui na hora.
+          </div>
+
+          {/* Botao pra listar templates */}
+          <div style={{marginBottom: 14}}>
+            <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={loadTemplates} disabled={templatesLoading || !envOk}>
+              {templatesLoading ? 'Buscando…' : '↻ Listar templates aprovados'}
+            </button>
+            {templates && (
+              <details style={{marginTop: 10}} open>
+                <summary style={{cursor: 'pointer', fontSize: 12, color: 'rgba(247,245,242,0.7)'}}>
+                  {templates.ok ? `✓ ${templates.via} respondeu` : `⊘ ${templates.error || 'falhou'}`}
+                </summary>
+                <pre style={{margin: '8px 0 0', padding: 10, background: 'rgba(0,0,0,0.25)', fontSize: 11, overflow: 'auto', maxHeight: 260}}>{JSON.stringify(templates, null, 2)}</pre>
+              </details>
+            )}
+          </div>
+
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12}}>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Contact ID na Poli</span>
+              <input type="text" value={tplContact} onChange={(e) => setTplContact(e.target.value)} placeholder="ex: 123456" style={{fontFamily: 'monospace'}} />
+            </label>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Nome do template</span>
+              <input type="text" value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="ex: boas_vindas" style={{fontFamily: 'monospace'}} />
+              <span className="ad-bc-hint">Igual está no painel Poli</span>
+            </label>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">ID do template (opcional)</span>
+              <input type="text" value={tplId} onChange={(e) => setTplId(e.target.value)} placeholder="numérico" style={{fontFamily: 'monospace'}} />
+              <span className="ad-bc-hint">Se o nome não bater, usa o ID</span>
+            </label>
+            <label className="ad-bc-field">
+              <span className="ad-bc-label">Idioma</span>
+              <input type="text" value={tplLang} onChange={(e) => setTplLang(e.target.value)} placeholder="pt_BR" style={{fontFamily: 'monospace'}} />
+            </label>
+          </div>
+          <label className="ad-bc-field" style={{marginTop: 12}}>
+            <span className="ad-bc-label">Parâmetros do corpo (separados por |)</span>
+            <input type="text" value={tplParams} onChange={(e) => setTplParams(e.target.value)} placeholder="ex: Juliana|Bastidores da Sindicatura" />
+            <span className="ad-bc-hint">Se o template tem {"{{1}} {{2}}"}, coloca "valor1|valor2". Deixa vazio se o template não tem variáveis.</span>
+          </label>
+          <button className="ad-btn ad-btn-primary ad-btn-lg" onClick={sendTemplateTest} disabled={tplBusy || !envOk || !tplContact.trim() || (!tplName.trim() && !tplId.trim())} style={{marginTop: 12}}>
+            {tplBusy ? 'Enviando template…' : '▶ Enviar template de teste'}
+          </button>
+
+          {tplResult && (
+            <div style={{marginTop: 14, padding: 12, background: tplResult.ok ? 'rgba(168,212,168,0.12)' : 'rgba(217,119,87,0.12)', border: `1px solid ${tplResult.ok ? '#a8d4a8' : '#d97757'}`, fontSize: 13}}>
+              {tplResult.ok
+                ? <p style={{margin: 0, color: '#a8d4a8'}}>✓ Enviado via <code>{tplResult.via}</code>. A Poli aceitou o request. Confira no seu WhatsApp.</p>
+                : <p style={{margin: 0, color: '#d97757'}}>⊘ Falhou: {tplResult.error}</p>}
+              {tplResult.bodySent && (
+                <details style={{marginTop: 8}}>
+                  <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.6)'}}>Body enviado</summary>
+                  <pre style={{margin: '6px 0 0', padding: 8, background: 'rgba(0,0,0,0.25)', fontSize: 10, overflow: 'auto'}}>{JSON.stringify(tplResult.bodySent, null, 2)}</pre>
+                </details>
+              )}
+              {tplResult.tried && tplResult.tried.length > 0 && (
+                <details style={{marginTop: 8}} open={!tplResult.ok}>
+                  <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.6)'}}>Endpoints testados ({tplResult.tried.length})</summary>
+                  <pre style={{margin: '6px 0 0', padding: 8, background: 'rgba(0,0,0,0.25)', fontSize: 10, overflow: 'auto', maxHeight: 260}}>{JSON.stringify(tplResult.tried, null, 2)}</pre>
+                </details>
+              )}
+              <details style={{marginTop: 8}}>
+                <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.55)'}}>Resposta completa</summary>
+                <pre style={{margin: '8px 0 0', padding: 8, background: 'rgba(0,0,0,0.25)', fontSize: 11, overflow: 'auto', maxHeight: 300}}>{JSON.stringify(tplResult, null, 2)}</pre>
+              </details>
+            </div>
+          )}
+        </section>
+
         {/* Gaps na doc */}
         <section className="ad-widget" style={{gridColumn: '1 / -1', borderColor: 'rgba(217,119,87,0.4)'}}>
           <header className="ad-widget-head">
-            <span className="ad-widget-eyebrow" style={{color: '#d97757'}}>4 · Pendências</span>
-            <h2 className="ad-widget-title">O que falta da doc pra fazer broadcast</h2>
+            <span className="ad-widget-eyebrow" style={{color: '#d97757'}}>5 · Pendências</span>
+            <h2 className="ad-widget-title">O que falta pra broadcast em massa</h2>
           </header>
           <p className="ad-bc-drafts-lead">
-            Com o que a doc trouxe até agora, dá pra enviar mensagem pra contatos JÁ EXISTENTES na Poli. Pra fazer campanha em massa cold, preciso destes 4 pontos:
+            Com o que já tem, dá pra enviar mensagem pra contatos JÁ EXISTENTES na Poli (texto na janela 24h + template testado acima). Pra campanha em massa cold, ainda faltam:
           </p>
           <ol style={{margin: '12px 0', paddingLeft: 20, fontSize: 13, lineHeight: 1.7, color: 'rgba(247,245,242,0.82)'}}>
             <li><strong>Endpoint pra CRIAR contato via API</strong> (por telefone E.164) — pra sincronizar nossos leads que ainda não estão no painel Poli</li>
-            <li><strong>Endpoint pra enviar mensagem de TEMPLATE aprovado</strong> — Meta exige templates pra business-initiated (fora da janela 24h)</li>
-            <li><strong>Endpoint pra listar templates aprovados da HubStation</strong> — pra escolher qual usar em cada campanha</li>
+            <li><strong>Confirmar qual endpoint de template funciona</strong> (o teste acima descobre isso — se passar, essa pendência sai)</li>
             <li><strong>Formato do webhook da Poli</strong> (URL a configurar + payload de delivery/read/reply/opt-out) — pra receber status dos envios</li>
           </ol>
           <p className="ad-bc-hint" style={{fontSize: 12, color: 'rgba(247,245,242,0.5)'}}>
-            Quando você me passar essas partes da doc, eu completo o adapter em 1-2 horas: sincronização de contatos, campanhas em massa, dashboard e recebimento de eventos.
+            Quando o teste de template acima passar + você me passar os endpoints de criar contato e webhook, eu completo o adapter em 1-2 horas: sincronização de contatos, campanhas em massa, dashboard e recebimento de eventos.
           </p>
         </section>
 

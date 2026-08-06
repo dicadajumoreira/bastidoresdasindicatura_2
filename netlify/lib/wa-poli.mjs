@@ -121,6 +121,98 @@ export async function sendText(contactId, {text, mediaBase64, mimetype, caption}
   return poli(url, {method: 'POST', body: JSON.stringify(body)});
 }
 
+// ==================== TEMPLATES (HSM) ====================
+//
+// Poli expoe templates aprovados pela Meta via 2 rotas possiveis (a doc
+// nao esta 100% clara em qual eh a "oficial", entao tentamos varias):
+//   GET /customers/{customer}/whatsapp/templates/channels/{channel}
+//   GET /customers/{customer}/channels/{channel}/templates
+//   GET /channels/{channel}/templates
+// Retorna o primeiro que responder 2xx. Se nenhum funcionar, joga o
+// ultimo erro.
+export async function listTemplates() {
+  const candidates = [
+    `/customers/${customerId()}/whatsapp/templates/channels/${channelId()}`,
+    `/customers/${customerId()}/channels/${channelId()}/templates`,
+    `/customers/${customerId()}/whatsapp/channels/${channelId()}/templates`,
+    `/customers/${customerId()}/templates?channel_id=${channelId()}`,
+    `/channels/${channelId()}/templates`,
+  ];
+  const tried = [];
+  let lastError = null;
+  for (const path of candidates) {
+    try {
+      const res = await poli(path);
+      return {via: path, result: res, tried};
+    } catch (err) {
+      tried.push({path, status: err.status || 500, error: (err.message || '').slice(0, 200)});
+      lastError = err;
+    }
+  }
+  const e = new Error(`Nenhum endpoint de templates respondeu. Ultimo: ${lastError?.message}`);
+  e.status = lastError?.status || 500;
+  e.body = {tried};
+  throw e;
+}
+
+// Envio de TEMPLATE (HSM) — obrigatorio pra business-initiated fora
+// da janela 24h. Poli usa /send_notification na maioria das integracoes,
+// mas ja vi variacoes com /send_template. Aceita override do path via
+// opts.pathOverride, e override do body via opts.bodyOverride (raw JSON).
+//
+// Args:
+//   contactId — ID do contato na Poli (nao telefone)
+//   opts:
+//     templateName / templateId — identificador do template
+//     language        — 'pt_BR' default
+//     bodyParams      — array de strings (subs do corpo)
+//     headerParams    — array (subs do header, se houver)
+//     buttonParams    — array (subs de botoes, se houver)
+//     bodyOverride    — se passado, ignora tudo acima e usa esse body
+//     pathOverride    — se passado, ignora endpoint padrao
+export async function sendTemplate(contactId, opts = {}) {
+  if (!contactId) throw new Error('contactId obrigatorio');
+  const language = opts.language || 'pt_BR';
+
+  const bodyDefault = {
+    // Poli aceita 'template_id' (numerico) OU 'template_name' (string).
+    // Passamos os dois se disponiveis pra dar +chance.
+    ...(opts.templateId ? {template_id: opts.templateId} : {}),
+    ...(opts.templateName ? {template_name: opts.templateName, name: opts.templateName} : {}),
+    template_language: language,
+    language,
+    ...(opts.bodyParams?.length ? {template_params: opts.bodyParams, body_params: opts.bodyParams, params: opts.bodyParams} : {}),
+    ...(opts.headerParams?.length ? {header_params: opts.headerParams} : {}),
+    ...(opts.buttonParams?.length ? {button_params: opts.buttonParams} : {}),
+  };
+  const body = opts.bodyOverride || bodyDefault;
+
+  const pathCandidates = opts.pathOverride ? [opts.pathOverride] : [
+    `/customers/${customerId()}/whatsapp/send_notification/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
+    `/customers/${customerId()}/whatsapp/send_template/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
+    `/customers/${customerId()}/whatsapp/send_hsm/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
+  ];
+
+  const tried = [];
+  let lastError = null;
+  for (const path of pathCandidates) {
+    try {
+      const res = await poli(path, {method: 'POST', body: JSON.stringify(body)});
+      return {via: path, result: res, tried, bodySent: body};
+    } catch (err) {
+      tried.push({path, status: err.status || 500, error: (err.message || '').slice(0, 200)});
+      lastError = err;
+      // 404/405 = endpoint errado; qualquer outro (401/422/500) = endpoint certo mas payload/estado errado
+      // — nao adianta tentar os outros paths, ja que muitas vezes eles vao com estado consistente.
+      if (![404, 405].includes(err.status)) break;
+    }
+  }
+  const e = new Error(`Envio de template falhou. Ultimo: ${lastError?.message}`);
+  e.status = lastError?.status || 500;
+  e.body = {tried, bodySent: body};
+  throw e;
+}
+
 // ==================== TAGS ====================
 
 export async function listTags() {
