@@ -6340,7 +6340,15 @@ const WAPoliScreen = () => {
                     <p style={{margin: '6px 0 0', fontSize: 12, color: 'rgba(247,245,242,0.5)'}}>Nenhum contato encontrado. Se o contato ainda não existir na Poli, mande um "oi" pelo WhatsApp pra criar automaticamente.</p>
                   )
                 ) : (
-                  <p style={{margin: '6px 0 0', fontSize: 12, color: '#d97757'}}>⊘ {contactResults.error}</p>
+                  <>
+                    <p style={{margin: '6px 0 0', fontSize: 12, color: '#d97757'}}>⊘ {contactResults.error}</p>
+                    {contactResults.tried && contactResults.tried.length > 0 && (
+                      <details style={{marginTop: 6}}>
+                        <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.55)'}}>Rotas testadas ({contactResults.tried.length})</summary>
+                        <pre style={{margin: '4px 0 0', padding: 6, background: 'rgba(0,0,0,0.25)', fontSize: 10, overflow: 'auto', maxHeight: 200, color: 'rgba(217,119,87,0.85)'}}>{JSON.stringify(contactResults.tried, null, 2)}</pre>
+                      </details>
+                    )}
+                  </>
                 )}
               </div>
             )}

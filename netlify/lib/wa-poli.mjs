@@ -94,26 +94,65 @@ export async function listChats(params = {}) {
   return poli(url);
 }
 
-// Busca contatos por nome ou telefone. Usa o endpoint /chats
-// que aceita filtros `name` e `phone`. Retorna array simplificado
-// [{contactId, name, phone, lastMessageAt}].
+// Busca contatos por nome ou telefone. Tenta multiplas rotas ate uma
+// responder (o endpoint /chats retornou 500 em varios testes).
+// Retorna array simplificado [{contactId, name, phone, ...}].
 export async function searchContacts({name, phone, limit = 20} = {}) {
-  const qs = new URLSearchParams();
-  if (name) qs.append('name', name);
-  if (phone) qs.append('phone', phone);
-  qs.append('limit', String(limit));
-  const url = `/customers/${customerId()}/chats?${qs.toString()}`;
-  const res = await poli(url);
+  // Normaliza telefone: Poli aceita so digitos (sem +, espacos, parens, dashes)
+  const phoneDigits = phone ? String(phone).replace(/\D+/g, '') : '';
+  // Se veio 11988411181 (11 digitos = brasileiro sem DDI), acrescenta 55
+  const phoneE164 = phoneDigits && phoneDigits.length === 11 ? '55' + phoneDigits : phoneDigits;
 
-  // Normaliza — Poli devolve estrutura variável dependendo do endpoint
-  const chats = res?.data || res?.chats || (Array.isArray(res) ? res : []);
-  return chats.map((c) => ({
-    contactId: c.contact_id || c.contact?.id || c.id || null,
-    name: c.contact?.name || c.name || c.contact_name || null,
-    phone: c.contact?.phone || c.phone || null,
-    lastMessageAt: c.last_message_at || c.updated_at || null,
-    raw: c,
-  })).filter((c) => c.contactId);
+  const qs = (params) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v == null || v === '') continue;
+      p.append(k, String(v));
+    }
+    return p.toString();
+  };
+
+  // Lista de rotas a tentar. As primeiras seguem o padrao /recurso/{customer}
+  // que sabemos funcionar (/tags/, /templates/). Depois tenta variantes.
+  const candidates = [
+    // Padrao /contatos/{customer} — mais provavel (mirror de /tags e /templates)
+    ...(name ? [{path: `/contacts/${customerId()}?${qs({search: name, limit})}`}] : []),
+    ...(phoneE164 ? [{path: `/contacts/${customerId()}?${qs({phone: phoneE164, limit})}`}] : []),
+    ...(phoneDigits ? [{path: `/contacts/${customerId()}?${qs({phone: phoneDigits, limit})}`}] : []),
+    ...(name ? [{path: `/contacts/${customerId()}?${qs({name, limit})}`}] : []),
+    // /customers/{customer}/contacts variants
+    ...(name ? [{path: `/customers/${customerId()}/contacts?${qs({search: name, limit})}`}] : []),
+    ...(name ? [{path: `/customers/${customerId()}/contacts?${qs({name, limit})}`}] : []),
+    ...(phoneE164 ? [{path: `/customers/${customerId()}/contacts?${qs({phone: phoneE164, limit})}`}] : []),
+    ...(phoneDigits ? [{path: `/customers/${customerId()}/contacts?${qs({phone: phoneDigits, limit})}`}] : []),
+    // Fallback pro /chats (mesmo formato que estava antes)
+    ...(name ? [{path: `/customers/${customerId()}/chats?${qs({name, limit})}`}] : []),
+    ...(phoneE164 ? [{path: `/customers/${customerId()}/chats?${qs({phone: phoneE164, limit})}`}] : []),
+    ...(phoneDigits ? [{path: `/customers/${customerId()}/chats?${qs({phone: phoneDigits, limit})}`}] : []),
+  ];
+
+  const tried = [];
+  let lastError = null;
+  for (const c of candidates) {
+    try {
+      const res = await poli(c.path);
+      const items = res?.data || res?.contacts || res?.chats || (Array.isArray(res) ? res : []);
+      const contacts = items.map((c) => ({
+        contactId: c.contact_id || c.contact?.id || c.id || null,
+        name: c.contact?.name || c.name || c.contact_name || null,
+        phone: c.contact?.phone || c.phone || null,
+        lastMessageAt: c.last_message_at || c.updated_at || null,
+      })).filter((x) => x.contactId);
+      return {via: c.path, contacts, tried};
+    } catch (err) {
+      tried.push({path: c.path, status: err.status || 500, error: (err.message || '').slice(0, 160)});
+      lastError = err;
+    }
+  }
+  const e = new Error(`Busca de contatos falhou. Ultimo: ${lastError?.message || 'sem erro'}`);
+  e.status = lastError?.status || 500;
+  e.body = {tried};
+  throw e;
 }
 
 // Historico de mensagens de um contato especifico

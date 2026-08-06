@@ -24,10 +24,15 @@ export default async (req) => {
   if (!name && !phone) return json({error: 'name ou phone obrigatório'}, 400);
 
   try {
-    const contacts = await searchContacts({name, phone, limit});
-    return json({ok: true, count: contacts.length, contacts});
+    const {via, contacts, tried} = await searchContacts({name, phone, limit});
+    return json({ok: true, via, count: contacts.length, contacts, tried});
   } catch (err) {
-    return json({ok: false, error: err.message, status: err.status || 500, body: err.body || null}, 200);
+    return json({
+      ok: false,
+      error: err.message,
+      status: err.status || 500,
+      tried: err.body?.tried || null,
+    }, 200);
   }
 };
 
