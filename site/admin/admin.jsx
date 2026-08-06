@@ -25,6 +25,7 @@ const ORIGEM_LABELS = {
   'gestao-sob-ataque': 'Gestão sob Ataque',
   'terceirizados': 'Terceirizados',
   'carregadores': 'Carregadores elétricos',
+  'lgpd': 'Guia LGPD',
   'bombeiro': 'Arquétipo · Bombeiro',
   'politico': 'Arquétipo · Político',
   'solitario': 'Arquétipo · Solitário',
@@ -33,7 +34,7 @@ const ORIGEM_LABELS = {
   'sargento': 'Arquétipo · Sargento',
   'sorteio-mba': 'Sorteio MBA IBMEC',
 };
-const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'carregadores', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
+const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'carregadores', 'lgpd', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
@@ -3967,6 +3968,15 @@ const MentoriaPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, onRe
 // Quando você publicar um novo material, basta adicionar uma entrada aqui
 // e ele já aparece na lista de rascunhos disponíveis.
 const MATERIAL_BROADCASTS = [
+  {
+    origem: 'lgpd',
+    nome: 'LGPD em Condomínios',
+    eyebrow: 'Volume 22 · Guia definitivo',
+    titulo: 'LGPD não é projeto jurídico. É projeto de gestão.',
+    desc: 'O manual pra quem vive a portaria. 16 capítulos e 25 falhas mapeadas em cinco áreas críticas — cadastro, portaria, câmeras, comunicação e fornecedor. Sem juridiquês, sem terror, com o que o síndico precisa olhar, cobrar e documentar antes que o vazamento bata na porta da assembleia.',
+    landingPath: '/lgpd/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
   {
     origem: 'carregadores',
     nome: 'Carregadores elétricos em condomínios',

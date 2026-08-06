@@ -75,6 +75,10 @@
 
 [[edge_functions]]
   function = "serve-html"
+  path = "/lgpd/"
+
+[[edge_functions]]
+  function = "serve-html"
   path = "/bombeiro/"
 
 [[edge_functions]]

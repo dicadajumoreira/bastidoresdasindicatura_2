@@ -35,6 +35,7 @@ const MATERIALS = {
   'gestao-sob-ataque': { nome: 'Guia · Gestão sob Ataque', flow: 'material', pdf: '/gestao-sob-ataque/material.pdf' },
   'terceirizados': { nome: 'Guia · Terceirizados em Condomínios', flow: 'material', pdf: '/terceirizados/material.pdf' },
   'carregadores': { nome: 'Guia · Carregadores elétricos em condomínios', flow: 'material', pdf: '/carregadores/material.pdf' },
+  'lgpd': { nome: 'Guia · LGPD em Condomínios', flow: 'material', pdf: '/lgpd/material.pdf' },
   'bombeiro': { nome: 'Arquétipo · O Bombeiro', flow: 'material', pdf: '/bombeiro/material.pdf' },
   'politico': { nome: 'Arquétipo · O Político', flow: 'material', pdf: '/politico/material.pdf' },
   'solitario': { nome: 'Arquétipo · O Solitário', flow: 'material', pdf: '/solitario/material.pdf' },
