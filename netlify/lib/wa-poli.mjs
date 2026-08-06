@@ -146,11 +146,26 @@ export async function sendText(contactId, {text, mediaBase64, mimetype, caption}
 // ultimo erro.
 export async function listTemplates() {
   const candidates = [
+    // Padrao mais comum do BSPs
     `/customers/${customerId()}/whatsapp/templates/channels/${channelId()}`,
     `/customers/${customerId()}/channels/${channelId()}/templates`,
     `/customers/${customerId()}/whatsapp/channels/${channelId()}/templates`,
     `/customers/${customerId()}/templates?channel_id=${channelId()}`,
     `/channels/${channelId()}/templates`,
+    // Poli chama template de "notification" internamente as vezes
+    `/customers/${customerId()}/whatsapp/notifications/channels/${channelId()}`,
+    `/customers/${customerId()}/channels/${channelId()}/notifications`,
+    `/customers/${customerId()}/notifications/channels/${channelId()}`,
+    `/customers/${customerId()}/notifications`,
+    `/notifications/${customerId()}`,
+    // Padrao "recurso/{customer}" (mesmo do /tags/{customer} que sabemos funcionar)
+    `/templates/${customerId()}`,
+    `/whatsapp-templates/${customerId()}`,
+    `/message-templates/${customerId()}`,
+    `/hsm/${customerId()}`,
+    // Com channel query param
+    `/customers/${customerId()}/notifications?channel_id=${channelId()}`,
+    `/customers/${customerId()}/whatsapp/templates?channel_id=${channelId()}`,
   ];
   const tried = [];
   let lastError = null;
