@@ -186,3 +186,33 @@ Módulo de disparo via WhatsApp Cloud API oficial da Meta. Vive no `/admin → W
 - Auditoria de toda ação (`wa-audit-logs` append-only)
 
 **Webhook URL:** `https://bastidoresdasindicatura.com.br/api/wa-webhook` (a ser criado no próximo commit).
+
+### Canal alternativo · Poli Digital (BSP)
+
+Além do canal Meta direto, o admin tem uma sub-aba **"Poli Digital"** que fala com a API da Poli (BSP intermediário). Fica em `/admin → WhatsApp → Poli Digital`. Independente das env vars da Meta direct — usa suas próprias.
+
+**Arquivos:**
+- `netlify/lib/wa-poli.mjs` — cliente HTTP (sendText, listChats, listMessages, tags, ping, configStatus)
+- `netlify/functions/wa-poli-status.mjs` — healthcheck
+- `netlify/functions/wa-poli-send-test.mjs` — envio de teste pra 1 contactId
+- Tela `WAPoliScreen` no admin.jsx
+
+**Env vars obrigatórias no Netlify:**
+- `POLI_API_TOKEN` — Bearer token da API Poli
+- `POLI_CUSTOMER_ID` — ID da conta HubStation na Poli
+- `POLI_CHANNEL_ID` — ID do canal WhatsApp (ex.: 92994)
+- `POLI_USER_ID` — ID do atendente que assina os envios
+
+**Base URL:** `https://app.poli.digital/api/v1`
+
+**Endpoints implementados (com doc atual):**
+- GET `/customers/{customer}/chats` — lista chats
+- GET `/customers/{customer}/chats/contacts/{contact}/messages` — histórico
+- POST `/customers/{customer}/whatsapp/send_text/channels/{channel}/contacts/{contact}/users/{user}` — envio de texto/mídia (SÓ dentro janela 24h)
+- Tags: create/list/add/delete
+
+**Ainda faltam documentar pra broadcast em massa funcionar:**
+1. Endpoint pra criar contato via API (por telefone E.164)
+2. Endpoint pra enviar mensagem de template aprovado
+3. Endpoint pra listar templates aprovados
+4. Formato do webhook (URL + payload de delivery/read/reply/opt-out)

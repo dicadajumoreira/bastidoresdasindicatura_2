@@ -6074,6 +6074,7 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
    ============================================================ */
 
 const WA_SUB_VIEWS = [
+  {id: 'poli',       label: 'Poli Digital', hint: 'Canal Poli · teste de envio · status'},
   {id: 'dashboard',  label: 'Dashboard',  hint: 'Visao geral · saude · alertas'},
   {id: 'campaigns',  label: 'Campanhas',  hint: 'Disparos planejados e em curso'},
   {id: 'contacts',   label: 'Contatos',   hint: 'Base com opt-in'},
@@ -6083,6 +6084,184 @@ const WA_SUB_VIEWS = [
   {id: 'audit',      label: 'Auditoria',  hint: 'Log forense'},
   {id: 'config',     label: 'Configuração', hint: 'API Meta + limites'},
 ];
+
+// Tela do canal Poli Digital · fase 1 do adapter. Mostra status das
+// env vars, faz healthcheck da API Poli, e permite enviar UMA mensagem
+// de teste pra um contactId ja existente na Poli.
+const WAPoliScreen = () => {
+  const [status, setStatus] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [testContact, setTestContact] = React.useState('');
+  const [testText, setTestText] = React.useState('Teste de envio pela API — Bastidores da Sindicatura');
+  const [busy, setBusy] = React.useState(false);
+  const [testResult, setTestResult] = React.useState(null);
+
+  const loadStatus = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api('/api/wa-poli-status');
+      setStatus(res);
+    } catch (e) { setStatus({error: e.message}); }
+    finally { setLoading(false); }
+  }, []);
+  React.useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  const sendTest = async () => {
+    if (!testContact.trim() || !testText.trim()) return;
+    setBusy(true); setTestResult(null);
+    try {
+      const res = await api('/api/wa-poli-send-test', {
+        method: 'POST',
+        body: JSON.stringify({contactId: testContact.trim(), text: testText}),
+      });
+      setTestResult({ok: true, ...res});
+    } catch (e) {
+      setTestResult({ok: false, error: e.message});
+    } finally { setBusy(false); }
+  };
+
+  const env = status?.env || {};
+  const ping = status?.ping || {};
+  const envOk = env.apiToken && env.customerId && env.channelId && env.userId;
+  const dot = (ok, txt) => (
+    <span style={{display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12}}>
+      <span style={{display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: ok ? '#5b8caf' : '#d97757'}}></span>
+      <span>{txt}</span>
+    </span>
+  );
+
+  return (
+    <div>
+      <div style={{padding: 14, background: 'rgba(91,140,175,0.08)', border: '1px solid rgba(91,140,175,0.25)', marginBottom: 16}}>
+        <p style={{margin: 0, fontSize: 13, color: 'rgba(247,245,242,0.85)'}}>
+          <strong style={{color: '#5b8caf'}}>Poli Digital</strong> · BSP intermediário que fala com a Meta Cloud API pela HubStation. Independente do canal "Meta direto" (que também existe aqui).
+        </p>
+      </div>
+
+      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16}}>
+
+        {/* Env vars da Poli */}
+        <section className="ad-widget">
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">1 · Credenciais Poli</span>
+            <h2 className="ad-widget-title">Variáveis de ambiente</h2>
+          </header>
+          <p className="ad-bc-drafts-lead">
+            Configuráveis apenas via Netlify (Site settings → Environment variables). O token fica sempre server-side.
+          </p>
+          <table style={{width: '100%', fontSize: 13, marginTop: 12}}>
+            <tbody>
+              {[
+                ['POLI_API_TOKEN', env.apiToken, env.tokenStartsWith],
+                ['POLI_CUSTOMER_ID', env.customerId, env.last4CustomerId],
+                ['POLI_CHANNEL_ID', env.channelId, env.channelIdMasked],
+                ['POLI_USER_ID', env.userId, env.last4UserId],
+              ].map(([name, ok, hint]) => (
+                <tr key={name} style={{borderBottom: '1px dashed rgba(247,245,242,0.08)'}}>
+                  <td style={{padding: '8px 0', fontFamily: 'monospace', fontSize: 11, color: 'rgba(247,245,242,0.85)'}}>{name}</td>
+                  <td style={{padding: '8px 0', textAlign: 'right'}}>
+                    {ok
+                      ? <span style={{color: '#a8d4a8', fontSize: 11, fontWeight: 700}}>✓ OK{hint ? ' · ' + hint : ''}</span>
+                      : <span style={{color: '#d97757', fontSize: 11, fontWeight: 700}}>⊘ FALTANDO</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={loadStatus} disabled={loading} style={{marginTop: 12}}>
+            {loading ? 'Atualizando…' : '↻ Verificar credenciais'}
+          </button>
+        </section>
+
+        {/* Ping/status */}
+        <section className="ad-widget">
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">2 · Diagnóstico</span>
+            <h2 className="ad-widget-title">Conexão com a Poli</h2>
+          </header>
+          {loading && !status ? <p className="ad-bc-empty">Carregando…</p>
+            : !envOk ? <p style={{margin: 0, color: '#d97757', fontSize: 13}}>Configure as env vars primeiro.</p>
+            : ping.ok ? (
+              <>
+                <p style={{margin: '0 0 10px'}}>{dot(true, 'Conectado')}</p>
+                <table style={{width: '100%', fontSize: 12}}>
+                  <tbody>
+                    <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Latência</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.latency}ms</td></tr>
+                    <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Customer ID</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.customerId}</td></tr>
+                    <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>Channel ID</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.channelId}</td></tr>
+                    <tr><td style={{padding: '4px 0', color: 'rgba(247,245,242,0.55)'}}>User ID</td><td style={{textAlign: 'right', fontFamily: 'monospace'}}>{ping.userId}</td></tr>
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <>
+                <p style={{margin: '0 0 10px'}}>{dot(false, 'Sem conexão')}</p>
+                <div style={{padding: 10, background: 'rgba(0,0,0,0.25)', fontFamily: 'monospace', fontSize: 11, color: '#d97757'}}>{ping.error || 'erro desconhecido'}</div>
+              </>
+            )}
+        </section>
+
+        {/* Envio de teste */}
+        <section className="ad-widget" style={{gridColumn: '1 / -1'}}>
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow">3 · Teste</span>
+            <h2 className="ad-widget-title">Enviar mensagem de teste</h2>
+          </header>
+          <p className="ad-bc-drafts-lead">
+            Envia uma mensagem de texto pra <strong>UM contato que já existe no seu painel Poli</strong>. Use pra validar credenciais e canal antes de escalar.
+          </p>
+          <div style={{padding: 12, background: 'rgba(217,119,87,0.08)', border: '1px dashed rgba(217,119,87,0.35)', marginTop: 12, marginBottom: 16, fontSize: 12, color: '#d97757'}}>
+            ⚠ Este endpoint envia <strong>texto livre</strong>, que a Meta só aceita dentro da janela de 24h após a última mensagem do contato. Pra iniciar conversa fria (business-initiated), a Poli precisa expor <strong>endpoint de template</strong> — ainda não tenho essa parte da doc. Enquanto isso, esse teste só funciona pra contatos que já falaram com você recentemente.
+          </div>
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">Contact ID na Poli</span>
+            <input type="text" value={testContact} onChange={(e) => setTestContact(e.target.value)} placeholder="ex: 123456" style={{fontFamily: 'monospace'}} />
+            <span className="ad-bc-hint">Você acha esse ID no painel Poli, na lista de contatos.</span>
+          </label>
+          <label className="ad-bc-field">
+            <span className="ad-bc-label">Mensagem</span>
+            <textarea rows={3} value={testText} onChange={(e) => setTestText(e.target.value)} />
+          </label>
+          <button className="ad-btn ad-btn-primary ad-btn-lg" onClick={sendTest} disabled={busy || !envOk || !testContact.trim() || !testText.trim()}>
+            {busy ? 'Enviando…' : '▶ Enviar teste'}
+          </button>
+          {testResult && (
+            <div style={{marginTop: 14, padding: 12, background: testResult.ok ? 'rgba(168,212,168,0.12)' : 'rgba(217,119,87,0.12)', border: `1px solid ${testResult.ok ? '#a8d4a8' : '#d97757'}`, fontSize: 13}}>
+              {testResult.ok
+                ? <p style={{margin: 0, color: '#a8d4a8'}}>✓ Enviado. A Poli aceitou o request.</p>
+                : <p style={{margin: 0, color: '#d97757'}}>⊘ Falhou: {testResult.error}</p>}
+              <details style={{marginTop: 8}}>
+                <summary style={{cursor: 'pointer', fontSize: 11, color: 'rgba(247,245,242,0.55)'}}>Resposta completa</summary>
+                <pre style={{margin: '8px 0 0', padding: 8, background: 'rgba(0,0,0,0.25)', fontSize: 11, overflow: 'auto', maxHeight: 300}}>{JSON.stringify(testResult, null, 2)}</pre>
+              </details>
+            </div>
+          )}
+        </section>
+
+        {/* Gaps na doc */}
+        <section className="ad-widget" style={{gridColumn: '1 / -1', borderColor: 'rgba(217,119,87,0.4)'}}>
+          <header className="ad-widget-head">
+            <span className="ad-widget-eyebrow" style={{color: '#d97757'}}>4 · Pendências</span>
+            <h2 className="ad-widget-title">O que falta da doc pra fazer broadcast</h2>
+          </header>
+          <p className="ad-bc-drafts-lead">
+            Com o que a doc trouxe até agora, dá pra enviar mensagem pra contatos JÁ EXISTENTES na Poli. Pra fazer campanha em massa cold, preciso destes 4 pontos:
+          </p>
+          <ol style={{margin: '12px 0', paddingLeft: 20, fontSize: 13, lineHeight: 1.7, color: 'rgba(247,245,242,0.82)'}}>
+            <li><strong>Endpoint pra CRIAR contato via API</strong> (por telefone E.164) — pra sincronizar nossos leads que ainda não estão no painel Poli</li>
+            <li><strong>Endpoint pra enviar mensagem de TEMPLATE aprovado</strong> — Meta exige templates pra business-initiated (fora da janela 24h)</li>
+            <li><strong>Endpoint pra listar templates aprovados da HubStation</strong> — pra escolher qual usar em cada campanha</li>
+            <li><strong>Formato do webhook da Poli</strong> (URL a configurar + payload de delivery/read/reply/opt-out) — pra receber status dos envios</li>
+          </ol>
+          <p className="ad-bc-hint" style={{fontSize: 12, color: 'rgba(247,245,242,0.5)'}}>
+            Quando você me passar essas partes da doc, eu completo o adapter em 1-2 horas: sincronização de contatos, campanhas em massa, dashboard e recebimento de eventos.
+          </p>
+        </section>
+
+      </div>
+    </div>
+  );
+};
 
 const WhatsAppPanel = ({onLogout, onBackToOverview}) => {
   const [subView, setSubView] = React.useState('config'); // comeca em config porque a env vars precisam ser setadas primeiro
@@ -6101,8 +6280,11 @@ const WhatsAppPanel = ({onLogout, onBackToOverview}) => {
 
   React.useEffect(() => { loadStatus(); }, [loadStatus]);
 
-  // Faltam env vars? Bloqueia tudo menos a aba Configuracao
+  // Faltam env vars? Bloqueia tudo menos a aba Configuracao e a Poli
+  // (que tem env vars proprias e roda independente da Meta direct).
   const envReady = status && status.env && status.env.accessToken && status.env.phoneNumberId && status.env.wabaId;
+  // Sub-views que NAO dependem das env vars da Meta direct
+  const ALLOWED_WITHOUT_META = new Set(['config', 'poli']);
 
   return (
     <div className="ad-broadcast">
@@ -6123,8 +6305,10 @@ const WhatsAppPanel = ({onLogout, onBackToOverview}) => {
       {/* Sub-nav */}
       <nav style={{display: 'flex', gap: 4, flexWrap: 'wrap', margin: '14px 0 22px', borderBottom: '1px solid rgba(247,245,242,0.1)', paddingBottom: 4}}>
         {WA_SUB_VIEWS.map((v) => {
-          const disabled = !envReady && v.id !== 'config';
+          const disabled = !envReady && !ALLOWED_WITHOUT_META.has(v.id);
           const isOn = subView === v.id;
+          const isPoli = v.id === 'poli';
+          const activeColor = isPoli ? '#5b8caf' : '#25d366';
           return (
             <button key={v.id} type="button"
               onClick={() => !disabled && setSubView(v.id)}
@@ -6133,10 +6317,10 @@ const WhatsAppPanel = ({onLogout, onBackToOverview}) => {
               style={{
                 padding: '10px 16px',
                 fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-                background: isOn ? '#25d366' : 'transparent',
-                color: isOn ? '#0F1116' : (disabled ? 'rgba(247,245,242,0.25)' : 'rgba(247,245,242,0.7)'),
+                background: isOn ? activeColor : 'transparent',
+                color: isOn ? '#0F1116' : (disabled ? 'rgba(247,245,242,0.25)' : (isPoli ? '#5b8caf' : 'rgba(247,245,242,0.7)')),
                 border: 'none',
-                borderBottom: isOn ? '3px solid #25d366' : '3px solid transparent',
+                borderBottom: isOn ? `3px solid ${activeColor}` : '3px solid transparent',
                 cursor: disabled ? 'not-allowed' : 'pointer',
               }}>{v.label}</button>
           );
@@ -6144,12 +6328,13 @@ const WhatsAppPanel = ({onLogout, onBackToOverview}) => {
       </nav>
 
       {subView === 'config' && <WAConfigScreen status={status} onReload={loadStatus} />}
-      {subView !== 'config' && !envReady && (
+      {subView === 'poli' && <WAPoliScreen />}
+      {subView !== 'config' && subView !== 'poli' && !envReady && (
         <p className="ad-bc-empty">
-          Configure a API Meta primeiro (aba <strong>Configuração</strong>) pra liberar essa seção.
+          Configure a API Meta primeiro (aba <strong>Configuração</strong>) pra liberar essa seção · OU use o canal <strong>Poli Digital</strong> (aba azul, tem env vars próprias).
         </p>
       )}
-      {subView !== 'config' && envReady && (
+      {subView !== 'config' && subView !== 'poli' && envReady && (
         <div className="ad-bc-empty" style={{padding: 32, textAlign: 'center', border: '1px dashed rgba(247,245,242,0.15)'}}>
           <p style={{margin: 0, fontSize: 14, color: 'rgba(247,245,242,0.7)'}}>
             Tela <strong style={{color: '#25d366'}}>{WA_SUB_VIEWS.find((v) => v.id === subView)?.label}</strong> chega nos próximos commits da Fase 1.
