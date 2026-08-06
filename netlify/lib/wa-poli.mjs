@@ -53,8 +53,22 @@ async function poli(path, options = {}) {
 
   const res = await fetch(url, {...options, headers});
   const text = await res.text();
+  const ctype = (res.headers.get('content-type') || '').toLowerCase();
   let body;
   try { body = text ? JSON.parse(text) : {}; } catch { body = {raw: text}; }
+
+  // Poli devolve HTML de redirect pro /login quando a URL nao existe como API
+  // (rota so do painel web). Isso vem com 200 mas nao eh resposta valida —
+  // tratamos como 404 pra que o fallback tente proxima rota.
+  const looksLikeHtmlLogin = ctype.includes('text/html') ||
+    (typeof body?.raw === 'string' && /<!doctype html|<html|url=[^\s>]*login|href=[^"']*login/i.test(body.raw));
+  if (looksLikeHtmlLogin) {
+    const err = new Error(`Poli API: endpoint devolveu HTML (rota inexistente ou nao-API) — ${res.status}`);
+    err.status = 404;
+    err.body = {contentType: ctype, snippet: (body?.raw || text || '').slice(0, 300)};
+    throw err;
+  }
+
   if (!res.ok) {
     const msg = body?.message || body?.error || body?.errors || `HTTP ${res.status}`;
     const err = new Error(`Poli API ${res.status}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
