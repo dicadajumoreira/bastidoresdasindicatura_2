@@ -166,6 +166,12 @@ export async function listTemplates() {
     // Com channel query param
     `/customers/${customerId()}/notifications?channel_id=${channelId()}`,
     `/customers/${customerId()}/whatsapp/templates?channel_id=${channelId()}`,
+    // Poli chama internamente de "messages-builder" (visto no source do painel)
+    `/customers/${customerId()}/messages-builder`,
+    `/customers/${customerId()}/messages-builder/channels/${channelId()}`,
+    `/messages-builder/${customerId()}`,
+    `/customers/${customerId()}/messages`,
+    `/customers/${customerId()}/message-builders`,
   ];
   const tried = [];
   let lastError = null;
@@ -220,6 +226,8 @@ export async function sendTemplate(contactId, opts = {}) {
     `/customers/${customerId()}/whatsapp/send_notification/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
     `/customers/${customerId()}/whatsapp/send_template/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
     `/customers/${customerId()}/whatsapp/send_hsm/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
+    `/customers/${customerId()}/whatsapp/send_messages_builder/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
+    `/customers/${customerId()}/whatsapp/send_message_builder/channels/${channelId()}/contacts/${contactId}/users/${userId()}`,
   ];
 
   const tried = [];
