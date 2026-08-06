@@ -94,6 +94,28 @@ export async function listChats(params = {}) {
   return poli(url);
 }
 
+// Busca contatos por nome ou telefone. Usa o endpoint /chats
+// que aceita filtros `name` e `phone`. Retorna array simplificado
+// [{contactId, name, phone, lastMessageAt}].
+export async function searchContacts({name, phone, limit = 20} = {}) {
+  const qs = new URLSearchParams();
+  if (name) qs.append('name', name);
+  if (phone) qs.append('phone', phone);
+  qs.append('limit', String(limit));
+  const url = `/customers/${customerId()}/chats?${qs.toString()}`;
+  const res = await poli(url);
+
+  // Normaliza — Poli devolve estrutura variável dependendo do endpoint
+  const chats = res?.data || res?.chats || (Array.isArray(res) ? res : []);
+  return chats.map((c) => ({
+    contactId: c.contact_id || c.contact?.id || c.id || null,
+    name: c.contact?.name || c.name || c.contact_name || null,
+    phone: c.contact?.phone || c.phone || null,
+    lastMessageAt: c.last_message_at || c.updated_at || null,
+    raw: c,
+  })).filter((c) => c.contactId);
+}
+
 // Historico de mensagens de um contato especifico
 export async function listMessages(contactId, params = {}) {
   const qs = new URLSearchParams();

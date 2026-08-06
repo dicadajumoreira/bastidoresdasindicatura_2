@@ -6096,6 +6096,12 @@ const WAPoliScreen = () => {
   const [busy, setBusy] = React.useState(false);
   const [testResult, setTestResult] = React.useState(null);
 
+  // Busca de contatos
+  const [contactQuery, setContactQuery] = React.useState('');
+  const [contactSearchBy, setContactSearchBy] = React.useState('name'); // 'name' | 'phone'
+  const [contactResults, setContactResults] = React.useState(null);
+  const [contactBusy, setContactBusy] = React.useState(false);
+
   // Templates HSM
   const [templates, setTemplates] = React.useState(null);
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
@@ -6129,6 +6135,20 @@ const WAPoliScreen = () => {
     } catch (e) {
       setTestResult({ok: false, error: e.message});
     } finally { setBusy(false); }
+  };
+
+  const searchContacts = async () => {
+    if (!contactQuery.trim()) return;
+    setContactBusy(true); setContactResults(null);
+    try {
+      const qs = new URLSearchParams();
+      qs.append(contactSearchBy, contactQuery.trim());
+      qs.append('limit', '20');
+      const res = await api('/api/wa-poli-contacts-search?' + qs.toString());
+      setContactResults(res);
+    } catch (e) {
+      setContactResults({ok: false, error: e.message});
+    } finally { setContactBusy(false); }
   };
 
   const loadTemplates = async () => {
@@ -6271,10 +6291,65 @@ const WAPoliScreen = () => {
           <div style={{padding: 12, background: 'rgba(217,119,87,0.08)', border: '1px dashed rgba(217,119,87,0.35)', marginTop: 12, marginBottom: 16, fontSize: 12, color: '#d97757'}}>
             ⚠ Este endpoint envia <strong>texto livre</strong>, que a Meta só aceita dentro da janela de 24h após a última mensagem do contato. Pra iniciar conversa fria (business-initiated), a Poli precisa expor <strong>endpoint de template</strong> — ainda não tenho essa parte da doc. Enquanto isso, esse teste só funciona pra contatos que já falaram com você recentemente.
           </div>
+          {/* Busca de contato — descobre o ID sem sair do admin */}
+          <div style={{padding: 12, background: 'rgba(91,140,175,0.06)', border: '1px solid rgba(91,140,175,0.25)', marginBottom: 14}}>
+            <p style={{margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#5b8caf', textTransform: 'uppercase', letterSpacing: '0.1em'}}>Buscar Contact ID</p>
+            <div style={{display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap'}}>
+              <select value={contactSearchBy} onChange={(e) => setContactSearchBy(e.target.value)} style={{padding: '8px 10px', fontSize: 12, background: 'transparent', border: '1px solid rgba(247,245,242,0.2)', color: 'rgba(247,245,242,0.85)'}}>
+                <option value="name">por nome</option>
+                <option value="phone">por telefone</option>
+              </select>
+              <input type="text" value={contactQuery} onChange={(e) => setContactQuery(e.target.value)}
+                placeholder={contactSearchBy === 'name' ? 'ex: Juliana' : 'ex: 11988411181'}
+                style={{flex: 1, minWidth: 180, padding: '8px 10px', fontSize: 13, background: 'transparent', border: '1px solid rgba(247,245,242,0.2)', color: 'rgba(247,245,242,0.9)'}}
+                onKeyDown={(e) => e.key === 'Enter' && searchContacts()} />
+              <button className="ad-btn ad-btn-ghost ad-btn-sm" onClick={searchContacts} disabled={contactBusy || !envOk || !contactQuery.trim()}>
+                {contactBusy ? 'Buscando…' : '🔍 Buscar'}
+              </button>
+            </div>
+            {contactResults && (
+              <div style={{marginTop: 10}}>
+                {contactResults.ok ? (
+                  contactResults.count > 0 ? (
+                    <table style={{width: '100%', fontSize: 12, marginTop: 6}}>
+                      <thead>
+                        <tr style={{borderBottom: '1px solid rgba(247,245,242,0.12)'}}>
+                          <th style={{textAlign: 'left', padding: '6px 4px', color: 'rgba(247,245,242,0.55)', fontWeight: 500}}>Nome</th>
+                          <th style={{textAlign: 'left', padding: '6px 4px', color: 'rgba(247,245,242,0.55)', fontWeight: 500}}>Telefone</th>
+                          <th style={{textAlign: 'left', padding: '6px 4px', color: 'rgba(247,245,242,0.55)', fontWeight: 500}}>Contact ID</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contactResults.contacts.map((c) => (
+                          <tr key={c.contactId} style={{borderBottom: '1px dashed rgba(247,245,242,0.06)'}}>
+                            <td style={{padding: '6px 4px'}}>{c.name || <em style={{color: 'rgba(247,245,242,0.35)'}}>sem nome</em>}</td>
+                            <td style={{padding: '6px 4px', fontFamily: 'monospace', fontSize: 11}}>{c.phone || '—'}</td>
+                            <td style={{padding: '6px 4px', fontFamily: 'monospace', color: '#5b8caf'}}>{c.contactId}</td>
+                            <td style={{padding: '6px 4px', textAlign: 'right'}}>
+                              <button className="ad-btn ad-btn-ghost ad-btn-sm" style={{fontSize: 10, padding: '4px 8px'}}
+                                onClick={() => { setTestContact(String(c.contactId)); setTplContact(String(c.contactId)); }}>
+                                usar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p style={{margin: '6px 0 0', fontSize: 12, color: 'rgba(247,245,242,0.5)'}}>Nenhum contato encontrado. Se o contato ainda não existir na Poli, mande um "oi" pelo WhatsApp pra criar automaticamente.</p>
+                  )
+                ) : (
+                  <p style={{margin: '6px 0 0', fontSize: 12, color: '#d97757'}}>⊘ {contactResults.error}</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <label className="ad-bc-field">
             <span className="ad-bc-label">Contact ID na Poli</span>
             <input type="text" value={testContact} onChange={(e) => setTestContact(e.target.value)} placeholder="ex: 123456" style={{fontFamily: 'monospace'}} />
-            <span className="ad-bc-hint">Você acha esse ID no painel Poli, na lista de contatos.</span>
+            <span className="ad-bc-hint">Use a busca acima ou digite direto se já souber.</span>
           </label>
           <label className="ad-bc-field">
             <span className="ad-bc-label">Mensagem</span>
