@@ -4568,6 +4568,72 @@ const MENTORIA_COLD_HTML = `<table cellpadding="0" cellspacing="0" border="0" wi
   </td></tr>
 </table>`;
 
+// Rascunho de conteudo/engajamento · avisa sobre nota fiscal em
+// condominios (mudanca regulatoria de 01/12/2026) e leva pra um
+// reel no Instagram. Formato leve: pergunta > video > convite pra
+// seguir. Serve tanto pra hot quanto pra cold. Nao eh venda.
+const NOVIDADE_NF_SUBJECT = 'Você já tá sabendo? Condomínios vão emitir nota fiscal a partir de 01/12/2026';
+const NOVIDADE_NF_INSTAGRAM_URL = 'https://www.instagram.com/reel/DbjBbF-xQ8d/?igsh=MzFna25ta3Q1YXUw';
+const NOVIDADE_NF_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
+  <tr><td align="center" style="padding:32px 16px">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
+      <tr><td style="padding:32px 40px 18px;border-bottom:1px solid #E8E2D8">
+        <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;letter-spacing:-.01em">Bastidores da Sindicatura</p>
+        <p style="margin:6px 0 0;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#B89579;font-weight:600">Novidade regulatória · condomínios</p>
+      </td></tr>
+      <tr><td style="padding:40px">
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">A partir de 01/12/2026</p>
+        <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">Você já tá <em>sabendo</em>?</h1>
+
+        <p style="font-size:17px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
+          A partir de <strong>01 de dezembro de 2026</strong>, condomínios vão precisar <strong>emitir nota fiscal</strong>. Muda a rotina do síndico, da administradora e da gestão como um todo.
+        </p>
+
+        <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 28px">
+          Gravei um vídeo rápido no meu Instagram explicando o que muda, o que você precisa organizar antes e onde a maioria vai se atrapalhar. Vale os 60 segundos.
+        </p>
+
+        <p style="text-align:center;margin:32px 0 12px">
+          <a href="${NOVIDADE_NF_INSTAGRAM_URL}" style="display:inline-block;background:#1A1C29;color:#F7F5F2;padding:18px 36px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">▶ Assistir no Instagram</a>
+        </p>
+        <p style="text-align:center;font-size:12px;line-height:1.6;color:#8a8881;margin:0 0 28px">
+          Abre direto no seu Instagram · reel de ~1 minuto
+        </p>
+
+        <hr style="border:none;border-top:1px dashed #E8E2D8;margin:32px 0">
+
+        <p style="font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;margin:0 0 12px;text-align:center">
+          Quer continuar por dentro?
+        </p>
+        <p style="font-size:15px;line-height:1.6;color:#1A1C29;margin:0 0 22px;text-align:center">
+          Publico conteúdo <strong>diário</strong> sobre viver e trabalhar em condomínios — novidades regulatórias, casos reais, checklists, decisões difíceis. Se te interessa, segue lá.
+        </p>
+
+        <p style="text-align:center;margin:0 0 8px">
+          <a href="https://instagram.com/dicadajumoreira" style="display:inline-block;background:transparent;color:#B89579;padding:14px 28px;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border:1px solid #B89579">Seguir @dicadajumoreira</a>
+        </p>
+
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:36px;padding-top:24px;border-top:1px solid #E8E2D8">
+          <tr>
+            <td width="90" valign="top" style="padding-right:18px;width:90px">
+              <img src="https://bastidoresdasindicatura.com.br/assets/ju-avatar.jpg" width="72" height="72" alt="Juliana Moreira" style="display:block;width:72px;height:72px;border-radius:50%;border:2px solid #B89579" />
+            </td>
+            <td valign="top">
+              <p style="margin:0;font-family:'Bodoni Moda',Georgia,serif;font-style:italic;font-size:20px;color:#1A1C29;line-height:1.2">Juliana Moreira</p>
+              <p style="margin:4px 0 0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a8881;font-weight:600">CEO Sindicompany · Condo Academy</p>
+              <p style="margin:10px 0 0;font-size:12px;line-height:1.7;color:#8a8881">
+                <a href="https://instagram.com/dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">Instagram @dicadajumoreira</a><br>
+                <a href="https://youtube.com/@dicadajumoreira" style="color:#B89579;text-decoration:none;font-weight:600">YouTube @dicadajumoreira</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+      ${DRAFT_FOOTER_HTML}
+    </table>
+  </td></tr>
+</table>`;
+
 // Relatorio detalhado por motivo de filtragem. Mostra por categoria
 // quantos contatos foram excluidos antes do envio. Util pra auditar
 // "por que so X enviados e nao Y".
@@ -4754,6 +4820,22 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
     setExcludeOrigens(new Set(['mentoria-paga']));
     setStatusFilter(new Set());
     setIncludeCold(false);
+    setOnlyNeverReceivedCold(false);
+    setOnlyCold(false);
+    setResult(null);
+    setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 50);
+  };
+
+  // Rascunho de conteudo/engajamento — novidade da nota fiscal em
+  // condominios com CTA pro Instagram. Filtro pra TODA base (hot + cold),
+  // sem exclusoes especificas. Pode desmarcar frios se quiser mandar so
+  // pros quentes.
+  const loadNovidadeNFDraft = () => {
+    setSubject(NOVIDADE_NF_SUBJECT);
+    setHtml(NOVIDADE_NF_HTML);
+    setExcludeOrigens(new Set());
+    setStatusFilter(new Set());
+    setIncludeCold(true);
     setOnlyNeverReceivedCold(false);
     setOnlyCold(false);
     setResult(null);
@@ -5396,6 +5478,20 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
           Cada material já publicado tem um rascunho pré-formatado. Clica em um deles pra carregar no compositor abaixo. O filtro já vem marcado pra excluir quem <em>já tem</em> o material, ou seja, só vai pros leads que ainda não receberam.
         </p>
         <div className="ad-bc-drafts-grid">
+          <button
+            type="button"
+            className="ad-bc-draft"
+            onClick={loadNovidadeNFDraft}
+            style={{borderColor: '#d97757', background: 'rgba(217, 119, 87, 0.10)'}}
+          >
+            <div className="ad-bc-draft-head">
+              <span className="ad-bc-draft-eyebrow" style={{color: '#d97757', fontWeight: 800}}>Conteúdo · NOVIDADE REGULATÓRIA</span>
+            </div>
+            <h3 className="ad-bc-draft-title">Nota fiscal em condomínios · 01/12/2026</h3>
+            <p className="ad-bc-draft-meta">
+              Convite pra assistir o reel no Instagram + seguir @dicadajumoreira · Pra toda a base (hot + cold)
+            </p>
+          </button>
           <button
             type="button"
             className="ad-bc-draft"
