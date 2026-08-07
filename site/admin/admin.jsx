@@ -3972,9 +3972,9 @@ const MATERIAL_BROADCASTS = [
   {
     origem: 'reforma-tributaria',
     nome: 'Reforma Tributária nos Condomínios',
-    eyebrow: 'Volume 23 · Guia técnico',
-    titulo: 'Manchete simplifica. Lei decide.',
-    desc: 'Enquanto o mercado simplifica, esse guia diferencia. O que a LC 214/2025 e o Decreto 12.955/2026 mudam no condomínio — e o que ainda depende de regulamentação. Regra dos 80%, regime regular opcional, energia com geração compartilhada, mito x verdade e checklist prático. 10 capítulos com data de corte em agosto de 2026.',
+    eyebrow: 'Guia gratuito · Reforma Tributária',
+    titulo: 'Um guia gratuito para entender a Reforma Tributária no seu condomínio.',
+    desc: 'Preparei um material prático em PDF para síndicos, administradoras, contadores e conselheiros. O que muda na prática, o que já está valendo e o que ainda depende de regulamentação. Sem juridiquês, com o que você precisa saber antes da próxima assembleia.',
     landingPath: '/reforma-tributaria/',
     ctaLabel: 'Baixar o guia em PDF',
   },
