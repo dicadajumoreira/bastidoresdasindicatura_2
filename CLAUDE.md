@@ -82,6 +82,18 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 
 **Índice de e-mails:** a função background `members-email-index-build-background.mjs` constrói o blob `members-email-index/index` com mapeamento email → {id, nome}. Submit.mjs atualiza incrementalmente.
 
+### 9. Novo material = atualizar Área de Membros E rascunhos de e-mail
+
+**Regra invioável:** toda vez que um novo material for publicado no site (nova landing `/algo/` + `material.pdf`), OBRIGATORIAMENTE atualizar TRÊS lugares além dos habituais (submit.mjs, email-resend.mjs, netlify.toml, admin.jsx ORIGEM_LABELS/ORDER, sitemap.xml, CLAUDE.md):
+
+1. **Array `MATERIAIS`** em `site/membros/index.html` — adicionar entry no topo (mais recentes primeiro) com `{volume, eyebrow, titulo, desc, pdf, landing, tags}`. É a fonte da verdade do painel da Área de Membros.
+
+2. **`MATERIAL_BROADCASTS`** em `site/admin/admin.jsx` — adicionar rascunho de e-mail marketing pra base (padrão: eyebrow "Guia/E-book gratuito · [tema]", título direto "Um guia gratuito para…", desc em 3 frases). Todo material publicado precisa ter rascunho pronto pra disparo.
+
+3. **`MEMBROS_INVITE_HTML`** em `site/admin/admin.jsx` — atualizar a lista de materiais dentro do e-mail de convite pra Área de Membros (bloco "O que tem dentro") E o contador ("São X materiais reunidos…"). Mover o novo material pro bloco "Novidades" no topo se for lançamento recente.
+
+Se um material for publicado sem essas 3 atualizações: a Área de Membros vai mostrar biblioteca desatualizada, o painel de broadcast vai estar incompleto e o e-mail que convida pra biblioteca vai mentir sobre o que tem lá dentro. Todos os três **quebram a promessa da marca** — nunca esquecer.
+
 ## Convenções
 
 - **Português coloquial** em mensagens UI e nos commits (a Juliana lê tudo).
