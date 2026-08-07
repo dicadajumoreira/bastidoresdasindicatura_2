@@ -4352,7 +4352,7 @@ const MBA_FINAL_CHANCE_HTML = `<table cellpadding="0" cellspacing="0" border="0"
 // Convite pra Área de Membros — pra disparar pros leads quentes que já
 // têm acesso. Apresenta a área, lista os tipos de material e instrui
 // como criar a senha.
-const MEMBROS_INVITE_SUBJECT = 'Sua biblioteca tá pronta · Acesse a Área de Membros do Bastidores';
+const MEMBROS_INVITE_SUBJECT = 'Sua biblioteca cresceu · Reforma Tributária e LGPD já estão na Área de Membros';
 const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
   <tr><td align="center" style="padding:32px 16px">
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
@@ -4365,13 +4365,14 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
         <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">{{nome}}, sua <em>biblioteca</em> tá pronta.</h1>
 
         <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
-          Lancei uma <strong>Área de Membros</strong> exclusiva pra quem já se cadastrou em algum formulário do Bastidores. Lá ficam reunidos, num só lugar, <strong>todos os materiais</strong> que publicamos até hoje.
+          A <strong>Área de Membros</strong> do Bastidores acabou de crescer. Agora tem os dois guias mais recentes — <strong>Reforma Tributária nos Condomínios</strong> (Vol. 23) e <strong>LGPD em Condomínios</strong> (Vol. 22) — reunidos com toda a biblioteca que já publicamos.
         </p>
 
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
           <tr><td style="padding:18px 22px">
             <p style="margin:0 0 10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">O que tem dentro</p>
-            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guias editoriais</strong> · Saúde Mental, Conflitos, Gestão sob Ataque, NR-1, 50 Frases</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Novidades</strong> · Reforma Tributária (Vol. 23), LGPD (Vol. 22)</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guias editoriais</strong> · Carregadores elétricos, Terceirizados, Saúde Mental, Conflitos, Gestão sob Ataque, NR-1, 50 Frases</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>E-books</strong> · Síndico Profissional, IA em Condomínios</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Manuais e checklists</strong> · WhatsApp do condomínio, Organização de assembleia</p>
             <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Série Arquétipos</strong> · Bombeiro, Político, Solitário, Burocrata, Estrategista, Sargento (libera depois do quiz)</p>
@@ -4379,7 +4380,7 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
         </table>
 
         <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 24px">
-          São <strong>16 materiais</strong> reunidos num só painel, com filtros por categoria e download direto em PDF.
+          São <strong>19 materiais</strong> reunidos num só painel, com filtros por categoria e download direto em PDF.
         </p>
 
         <p style="text-align:center;margin:0 0 12px">
