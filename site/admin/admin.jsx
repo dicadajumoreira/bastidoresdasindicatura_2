@@ -27,6 +27,8 @@ const ORIGEM_LABELS = {
   'carregadores': 'Carregadores elétricos',
   'lgpd': 'Guia LGPD',
   'reforma-tributaria': 'Guia Reforma Tributária',
+  'reputacao-sindico': 'Guia Reputação do Síndico',
+  'copa-condominio': 'Guia Copa do Mundo',
   'bombeiro': 'Arquétipo · Bombeiro',
   'politico': 'Arquétipo · Político',
   'solitario': 'Arquétipo · Solitário',
@@ -35,7 +37,7 @@ const ORIGEM_LABELS = {
   'sargento': 'Arquétipo · Sargento',
   'sorteio-mba': 'Sorteio MBA IBMEC',
 };
-const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'carregadores', 'lgpd', 'reforma-tributaria', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
+const ORIGEM_ORDER = ['mentoria', 'sorteio-mba', 'checklist', 'ebook-ia', 'sindico-profissional', 'sobrevivencia-whatsapp', '50-frases', 'nr1', 'reputacao-sindico', 'copa-condominio', 'conflitos', 'saude-mental', 'gestao-sob-ataque', 'terceirizados', 'carregadores', 'lgpd', 'reforma-tributaria', 'bombeiro', 'politico', 'solitario', 'burocrata', 'estrategista', 'sargento'];
 
 /* ============================================================
    Helpers — gênero (inferido pelo primeiro nome)
@@ -3979,6 +3981,24 @@ const MATERIAL_BROADCASTS = [
     ctaLabel: 'Baixar o guia em PDF',
   },
   {
+    origem: 'copa-condominio',
+    nome: 'Copa do Mundo no Condomínio',
+    eyebrow: 'Guia gratuito · Copa do Mundo',
+    titulo: 'Um guia gratuito para atravessar a Copa sem crise no condomínio.',
+    desc: 'Preparei um material prático em PDF para síndicos e administradoras. As 50 confusões mais comuns durante os jogos — de bandeira na fachada a churrasco lotado, de barulho tarde da noite ao fiscal do grupo — com base legal, matriz jurídica, kit de comunicados prontos, plano de ação em 7 marcos e checklists operacionais.',
+    landingPath: '/copa-condominio/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
+    origem: 'reputacao-sindico',
+    nome: 'Reputação do Síndico',
+    eyebrow: 'Guia gratuito · Reputação do síndico',
+    titulo: 'Um guia gratuito para proteger sua reputação como síndico.',
+    desc: 'Preparei um material prático em PDF para síndicos que querem crescer na carreira sem perder autoridade, credibilidade e mercado. 18 capítulos sobre o que corrói a reputação (comunicação, registro, WhatsApp, prestação de contas, conselho, favorecimento) com 5 testes diagnósticos, diagnóstico completo de risco e plano de ação de 30 dias.',
+    landingPath: '/reputacao-sindico/',
+    ctaLabel: 'Baixar o guia em PDF',
+  },
+  {
     origem: 'lgpd',
     nome: 'LGPD em Condomínios',
     eyebrow: 'Volume 22 · Guia definitivo',
@@ -4379,7 +4399,7 @@ const MBA_FINAL_CHANCE_HTML = `<table cellpadding="0" cellspacing="0" border="0"
 // Convite pra Área de Membros — pra disparar pros leads quentes que já
 // têm acesso. Apresenta a área, lista os tipos de material e instrui
 // como criar a senha.
-const MEMBROS_INVITE_SUBJECT = 'Sua biblioteca cresceu · Reforma Tributária e LGPD já estão na Área de Membros';
+const MEMBROS_INVITE_SUBJECT = 'Sua biblioteca cresceu · 4 guias novos na Área de Membros (Reforma Tributária, LGPD, Copa e Reputação)';
 const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F2EFE9;font-family:Georgia,'Bodoni Moda',serif">
   <tr><td align="center" style="padding:32px 16px">
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#F7F5F2">
@@ -4392,22 +4412,23 @@ const MEMBROS_INVITE_HTML = `<table cellpadding="0" cellspacing="0" border="0" w
         <h1 style="font-family:'Bodoni Moda',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 18px;color:#1A1C29">{{nome}}, sua <em>biblioteca</em> tá pronta.</h1>
 
         <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 16px">
-          A <strong>Área de Membros</strong> do Bastidores acabou de crescer. Agora tem os dois guias mais recentes — <strong>Reforma Tributária nos Condomínios</strong> (Vol. 23) e <strong>LGPD em Condomínios</strong> (Vol. 22) — reunidos com toda a biblioteca que já publicamos.
+          A <strong>Área de Membros</strong> do Bastidores acabou de crescer. Chegaram <strong>4 guias novos</strong> — Reforma Tributária (Vol. 23), LGPD (Vol. 22), Copa do Mundo no Condomínio (Vol. 18) e Reputação do Síndico (Vol. 10) — reunidos com toda a biblioteca que já publicamos.
         </p>
 
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:22px 0;background:#FBF8F2;border-left:3px solid #B89579">
           <tr><td style="padding:18px 22px">
             <p style="margin:0 0 10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#B89579;font-weight:700">O que tem dentro</p>
-            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Novidades</strong> · Reforma Tributária (Vol. 23), LGPD (Vol. 22)</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Novidades</strong> · Reforma Tributária (Vol. 23), LGPD (Vol. 22), Copa do Mundo no Condomínio (Vol. 18), Reputação do Síndico (Vol. 10)</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Guias editoriais</strong> · Carregadores elétricos, Terceirizados, Saúde Mental, Conflitos, Gestão sob Ataque, NR-1, 50 Frases</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>E-books</strong> · Síndico Profissional, IA em Condomínios</p>
             <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Manuais e checklists</strong> · WhatsApp do condomínio, Organização de assembleia</p>
+            <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Quiz de arquétipos</strong> · Descubra em 2 minutos que tipo de síndico você é</p>
             <p style="margin:0 0 0;font-size:14px;line-height:1.6;color:#1A1C29">• <strong>Série Arquétipos</strong> · Bombeiro, Político, Solitário, Burocrata, Estrategista, Sargento (libera depois do quiz)</p>
           </td></tr>
         </table>
 
         <p style="font-size:16px;line-height:1.6;color:#1A1C29;margin:0 0 24px">
-          São <strong>19 materiais</strong> reunidos num só painel, com filtros por categoria e download direto em PDF.
+          São <strong>22 materiais</strong> reunidos num só painel, com filtros por categoria e download direto em PDF.
         </p>
 
         <p style="text-align:center;margin:0 0 12px">

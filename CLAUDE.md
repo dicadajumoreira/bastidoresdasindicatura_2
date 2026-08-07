@@ -134,6 +134,8 @@ Se um material for publicado sem essas 3 atualizações: a Área de Membros vai 
 | `/carregadores/` | `carregadores` | submit.mjs |
 | `/lgpd/` | `lgpd` | submit.mjs |
 | `/reforma-tributaria/` | `reforma-tributaria` | submit.mjs |
+| `/reputacao-sindico/` | `reputacao-sindico` | submit.mjs |
+| `/copa-condominio/` | `copa-condominio` | submit.mjs |
 | `/mba/` | `sorteio-mba` | submit.mjs |
 | `/quiz/` | (por arquétipo) | submit.mjs |
 | `/comprar-experience/` | `mentoria-paga` | stripe-webhook.mjs |

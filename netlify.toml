@@ -83,6 +83,14 @@
 
 [[edge_functions]]
   function = "serve-html"
+  path = "/reputacao-sindico/"
+
+[[edge_functions]]
+  function = "serve-html"
+  path = "/copa-condominio/"
+
+[[edge_functions]]
+  function = "serve-html"
   path = "/bombeiro/"
 
 [[edge_functions]]
