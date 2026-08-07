@@ -65,6 +65,21 @@ export default async (req) => {
   while (iterations < MAX_ITER) {
     iterations++;
 
+    // Verifica se o broadcast foi deletado ou cancelado externamente
+    // (via /api/broadcast-delete ou marcacao manual). Sem isso, o loop
+    // continua enviando ate esgotar destinatarios mesmo apos a exclusao.
+    try {
+      const cur = await store.get(broadcastId, {type: 'json'});
+      if (!cur) {
+        console.log(`[broadcast-run] job ${broadcastId} foi DELETADO, encerrando após ${iterations} iter`);
+        return json({ok: true, aborted: true, reason: 'deleted', iterations, processedTotal});
+      }
+      if (cur.status === 'cancelled') {
+        console.log(`[broadcast-run] job ${broadcastId} foi CANCELADO, encerrando após ${iterations} iter`);
+        return json({ok: true, aborted: true, reason: 'cancelled', iterations, processedTotal});
+      }
+    } catch {}
+
     // Time budget: se restar menos que 60s, re-dispara pro proximo chunk
     // e sai. O proximo chunk continua de onde parou.
     if (Date.now() - start > TIME_BUDGET_MS - 60_000) {
@@ -98,14 +113,18 @@ export default async (req) => {
       res = await r.json();
     } catch (err) {
       console.error(`[broadcast-run] falha no worker iter ${iterations}:`, err.message);
-      // Marca lastBatchAt pra sweeper nao considerar preso ainda
+      // Marca lastBatchAt pra sweeper nao considerar preso ainda.
+      // IMPORTANTE: so grava se o job ainda existe. Sem isso, um erro
+      // no worker apos delete ia RECRIAR o registro que a usuaria apagou.
       try {
-        const cur = await store.get(broadcastId, {type: 'json'}) || job;
-        await store.setJSON(broadcastId, {
-          ...cur,
-          lastBatchAt: new Date().toISOString(),
-          lastWorkerError: String(err.message).slice(0, 200),
-        });
+        const cur = await store.get(broadcastId, {type: 'json'});
+        if (cur) {
+          await store.setJSON(broadcastId, {
+            ...cur,
+            lastBatchAt: new Date().toISOString(),
+            lastWorkerError: String(err.message).slice(0, 200),
+          });
+        }
       } catch {}
       // Aguarda e tenta de novo (max 3 falhas seguidas)
       await new Promise((r) => setTimeout(r, 3000));
@@ -114,14 +133,17 @@ export default async (req) => {
 
     if (!res.ok) {
       console.error(`[broadcast-run] worker respondeu !ok:`, res.error);
-      // Salva erro e tenta de novo depois do proximo sweeper
+      // Salva erro e tenta de novo depois do proximo sweeper. So grava
+      // se o job ainda existe (nao ressuscita registro deletado).
       try {
-        const cur = await store.get(broadcastId, {type: 'json'}) || job;
-        await store.setJSON(broadcastId, {
-          ...cur,
-          lastBatchAt: new Date().toISOString(),
-          lastWorkerError: String(res.error || 'erro').slice(0, 200),
-        });
+        const cur = await store.get(broadcastId, {type: 'json'});
+        if (cur) {
+          await store.setJSON(broadcastId, {
+            ...cur,
+            lastBatchAt: new Date().toISOString(),
+            lastWorkerError: String(res.error || 'erro').slice(0, 200),
+          });
+        }
       } catch {}
       return json({ok: false, workerError: res.error});
     }
@@ -129,16 +151,22 @@ export default async (req) => {
     processedTotal = res.nextOffset || offset;
     offset = processedTotal;
 
-    // Se worker diz que acabou, marca completed e sai
+    // Se worker diz que acabou, marca completed e sai.
+    // So marca completed se o registro ainda existe — sem isso, deletar
+    // um disparo em curso o faria ressuscitar como "completed" no fim.
     if (!res.hasMore) {
       try {
-        const cur = await store.get(broadcastId, {type: 'json'}) || job;
-        await store.setJSON(broadcastId, {
-          ...cur,
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-          lastBatchAt: new Date().toISOString(),
-        });
+        const cur = await store.get(broadcastId, {type: 'json'});
+        if (cur && cur.status !== 'cancelled') {
+          await store.setJSON(broadcastId, {
+            ...cur,
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            lastBatchAt: new Date().toISOString(),
+          });
+        } else if (!cur) {
+          console.log(`[broadcast-run] job ${broadcastId} foi deletado antes do complete, nao ressuscitando`);
+        }
       } catch {}
       console.log(`[broadcast-run] completed apos ${iterations} iter · total ${processedTotal}`);
       return json({ok: true, chunk: 'final', iterations, processedTotal});

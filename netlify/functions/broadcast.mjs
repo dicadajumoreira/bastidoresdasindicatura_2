@@ -166,6 +166,27 @@ export default async (req) => {
   const limit = Math.max(1, Math.min(60, parseInt(body.limit || 40, 10) || 40));
   const broadcastId = String(body.broadcastId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
 
+  // ====== ABORTA SE O BROADCAST FOI DELETADO OU CANCELADO ======
+  // Sem essa checagem, o worker manda o batch atual (40 e-mails) e
+  // depois RECRIA o registro no historico via setJSON, e o sweeper cron
+  // ainda reactivate o job. A usuária clica em "Excluir" e o disparo
+  // continua ate esgotar destinatarios. Bug real reportado em ago/2026.
+  if (!resendFailedFrom && (body.broadcastId || body.resumeFrom)) {
+    try {
+      const preCheck = getStore({name: 'broadcasts', consistency: 'strong'});
+      const preJob = await preCheck.get(broadcastId, {type: 'json'});
+      // No 1o batch de um disparo novo o registro pode ainda nao existir
+      // (broadcast-start ja cria; mas se veio direto sem passar pelo start
+      // e sem resume, nao existe mesmo — nesse caso, deixa criar).
+      if (body.resumeFrom && !preJob) {
+        return json({ok: false, aborted: true, reason: 'deleted', error: 'Broadcast foi excluído — envio abortado.'}, 410);
+      }
+      if (preJob && preJob.status === 'cancelled') {
+        return json({ok: false, aborted: true, reason: 'cancelled', error: 'Broadcast foi cancelado — envio abortado.'}, 410);
+      }
+    } catch {}
+  }
+
   try {
     let allTargets;
     // Estes vars são populados no modo NORMAL e usados depois pra salvar
@@ -488,9 +509,35 @@ export default async (req) => {
     const nextOffset = offset + processed;
     const hasMore = nextOffset < preservedTotal;
 
-    // Atualiza histórico cumulativamente (best-effort)
+    // Atualiza histórico cumulativamente (best-effort).
+    // IMPORTANTE: re-le o snapshot no momento da gravacao pra detectar
+    // se o broadcast foi deletado durante o envio do batch (~10-15s).
+    // Sem essa checagem, deletar durante um batch RECRIA o registro.
     try {
       const histStore = getStore({name: 'broadcasts', consistency: 'strong'});
+      const currentSnapshot = await histStore.get(broadcastId, {type: 'json'});
+      // Se o registro foi deletado durante o envio (usuaria clicou
+      // "Excluir" enquanto o batch rodava): nao ressuscita. Loga e sai.
+      if (!currentSnapshot && (body.resumeFrom || existing)) {
+        console.log(`[broadcast] broadcast ${broadcastId} foi deletado durante o envio. Nao regravando historico.`);
+        return json({
+          ok: true, aborted: true, reason: 'deleted-during-send',
+          sent, failed, processed, offset, nextOffset, hasMore: false, broadcastId,
+        });
+      }
+      // Se ja estava cancelled: preserva o cancelled e so atualiza contadores.
+      if (currentSnapshot && currentSnapshot.status === 'cancelled') {
+        await histStore.setJSON(broadcastId, {
+          ...currentSnapshot,
+          sent: (currentSnapshot.sent || 0) + sent,
+          failed: (currentSnapshot.failed || 0) + failed,
+          lastBatchAt: new Date().toISOString(),
+        });
+        return json({
+          ok: true, aborted: true, reason: 'cancelled',
+          sent, failed, processed, offset, nextOffset, hasMore: false, broadcastId,
+        });
+      }
       const filterSummary = [];
       if (resendFailedFrom) {
         filterSummary.push(`reenvio dos que falharam · origem ${resendFailedFrom}`);
