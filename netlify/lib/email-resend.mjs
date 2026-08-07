@@ -36,6 +36,7 @@ const MATERIALS = {
   'terceirizados': { nome: 'Guia · Terceirizados em Condomínios', flow: 'material', pdf: '/terceirizados/material.pdf' },
   'carregadores': { nome: 'Guia · Carregadores elétricos em condomínios', flow: 'material', pdf: '/carregadores/material.pdf' },
   'lgpd': { nome: 'Guia · LGPD em Condomínios', flow: 'material', pdf: '/lgpd/material.pdf' },
+  'reforma-tributaria': { nome: 'Guia · Reforma Tributária nos Condomínios', flow: 'material', pdf: '/reforma-tributaria/material.pdf' },
   'bombeiro': { nome: 'Arquétipo · O Bombeiro', flow: 'material', pdf: '/bombeiro/material.pdf' },
   'politico': { nome: 'Arquétipo · O Político', flow: 'material', pdf: '/politico/material.pdf' },
   'solitario': { nome: 'Arquétipo · O Solitário', flow: 'material', pdf: '/solitario/material.pdf' },

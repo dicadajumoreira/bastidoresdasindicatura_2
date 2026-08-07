@@ -79,6 +79,10 @@
 
 [[edge_functions]]
   function = "serve-html"
+  path = "/reforma-tributaria/"
+
+[[edge_functions]]
+  function = "serve-html"
   path = "/bombeiro/"
 
 [[edge_functions]]
