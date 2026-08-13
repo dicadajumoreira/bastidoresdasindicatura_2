@@ -1502,6 +1502,18 @@ const LeadsPanel = ({onLogout, onBackToOverview}) => {
             }}>
             <span>↻ Sincronizar descadastros</span>
           </button>
+          <button
+            style={{color: 'rgba(247,245,242,0.55)', fontSize: 11}}
+            title="Migração one-off: converte todos os WhatsApp da base pro formato +5511999999999. Idempotente: pode rodar quantas vezes quiser, só migra os que ainda não foram migrados."
+            onClick={async () => {
+              if (!window.confirm('Vai rodar a migração de WhatsApp pra formato +55 (background, 3-8 min pra ~14k leads quentes + ~14k frios). É idempotente e não apaga dados. Continuar?')) return;
+              try {
+                await api('/api/leads-migrate-whatsapp-background', {method: 'POST', body: JSON.stringify({})});
+                alert('Migração rodando em background. Vai levar uns 3-8 min pra terminar.\n\nPra ver o progresso, chama no console:\n  fetch("/api/leads-migrate-whatsapp-status", {headers:{Authorization:"Bearer "+localStorage.getItem("bs-admin-token")}}).then(r=>r.json()).then(console.log)\n\nOu me chama pra ver depois.');
+              } catch (e) { alert('Falha: ' + e.message); }
+            }}>
+            <span>↻ Migrar WhatsApp pra +55</span>
+          </button>
         </nav>
 
         <span className="ad-side-section">Duplicatas</span>
