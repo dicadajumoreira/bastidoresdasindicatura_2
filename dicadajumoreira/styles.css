@@ -350,6 +350,20 @@ a.media-card:hover .media-read { gap: 14px; }
 .reach-content .ct:hover { border-color: rgba(198,161,91,.45); transform: translateX(6px); }
 .reach-content .ct::before { content: '✦'; color: var(--gold); font-style: normal; font-size: 13px; }
 
+/* Genero */
+.gender { margin-top: 30px; }
+.gender-hero { font-family: var(--serif); line-height: 1; }
+.gender-hero strong { font-size: clamp(40px, 6vw, 60px); color: var(--gold-light); font-weight: 600; }
+.gender-hero small { display: block; font-family: var(--sans); font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ivory-dim); margin-top: 14px; }
+.gender-bar { display: flex; height: 8px; border-radius: 6px; overflow: hidden; margin: 30px 0 18px; }
+.gender-bar span { display: block; height: 100%; }
+.gender-bar .gf { background: linear-gradient(90deg, var(--gold-deep), var(--gold-light)); }
+.gender-bar .gm { background: var(--espresso-line); }
+.gender-legend { display: flex; flex-wrap: wrap; gap: 24px; font-family: var(--sans); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ivory-dim); }
+.gender-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 9px; vertical-align: middle; }
+.gender-legend i.f { background: var(--gold-light); }
+.gender-legend i.m { background: var(--espresso-line); }
+
 /* ============================================================
    GALERIA (bastidores)
    ============================================================ */
