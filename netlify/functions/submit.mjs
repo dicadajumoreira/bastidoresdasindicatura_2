@@ -14,6 +14,7 @@
 
 import { getStore } from '@netlify/blobs';
 import { sendEmails } from '../lib/email-resend.mjs';
+import { toE164 } from '../lib/wa-phone.mjs';
 
 export const config = {
   path: ['/api/submit', '/.netlify/functions/submit'],
@@ -77,6 +78,18 @@ export default async (req) => {
     return raw;
   })();
 
+  // Normaliza WhatsApp pro padrao E.164 com +55 na frente.
+  // Aceita qualquer coisa que o usuario digitou: '11999999999',
+  // '(11) 99999-9999', '+55 11 99999-9999', '551199999999' etc.
+  // Sempre grava '+5511999999999' (formato oficial internacional).
+  // Se nao conseguir normalizar (numero invalido/curto demais), preserva
+  // o valor original + guarda flag pra flagar no admin.
+  const normWhatsapp = (() => {
+    const raw = String(body.whatsapp || '').trim();
+    const e164 = toE164(raw);
+    return e164 ? '+' + e164 : raw;
+  })();
+
   const lead = {
     id,
     createdAt: new Date().toISOString(),
@@ -85,6 +98,10 @@ export default async (req) => {
     origem,          // mentoria | checklist | ebook-ia | sindico-profissional | sobrevivencia-whatsapp | 50-frases | nr1
     ...body,
     data_nascimento: normDataNasc,
+    whatsapp: normWhatsapp,
+    // Preserva o original em campo separado pra referencia (se normalizacao
+    // divergiu do que o usuario digitou, da pra investigar).
+    whatsapp_raw: body.whatsapp && body.whatsapp !== normWhatsapp ? body.whatsapp : undefined,
   };
 
   // 1) Gravação principal (com retry). Se falhar de vez, devolve erro: o front
