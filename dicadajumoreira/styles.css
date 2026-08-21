@@ -321,6 +321,8 @@ a.media-card:hover .media-read { gap: 14px; }
 .ag-date { font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-light); }
 .ag-name { font-family: var(--serif); font-size: 20px; color: var(--ivory); line-height: 1.35; }
 .ag-meta { font-family: var(--sans); font-size: 13px; color: var(--ivory-dim); margin-top: 7px; letter-spacing: .02em; }
+.ag-meta a { color: var(--gold-light); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(198,161,91,.4); transition: text-decoration-color .3s ease; }
+.ag-meta a:hover { text-decoration-color: var(--gold-light); }
 @media (max-width: 640px) { .agenda-list li { grid-template-columns: 1fr; gap: 6px; } }
 
 /* ============================================================
