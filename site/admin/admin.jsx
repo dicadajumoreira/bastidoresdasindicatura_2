@@ -4013,9 +4013,9 @@ const MATERIAL_BROADCASTS = [
   {
     origem: 'lgpd',
     nome: 'LGPD em Condomínios',
-    eyebrow: 'Volume 22 · Guia definitivo',
-    titulo: 'LGPD não é projeto jurídico. É projeto de gestão.',
-    desc: 'O manual pra quem vive a portaria. 16 capítulos e 25 falhas mapeadas em cinco áreas críticas — cadastro, portaria, câmeras, comunicação e fornecedor. Sem juridiquês, sem terror, com o que o síndico precisa olhar, cobrar e documentar antes que o vazamento bata na porta da assembleia.',
+    eyebrow: 'Guia gratuito · LGPD em condomínios',
+    titulo: 'LGPD. O manual de quem vive a Sindicatura.',
+    desc: 'Preparei um material prático em PDF para síndicos, administradoras e conselheiros. 16 capítulos e 25 falhas mapeadas em cinco áreas críticas — cadastro, portaria, câmeras, comunicação e fornecedor. Sem juridiquês, com o que você precisa olhar, cobrar e documentar antes que o vazamento bata na porta da assembleia.',
     landingPath: '/lgpd/',
     ctaLabel: 'Baixar o guia em PDF',
   },
