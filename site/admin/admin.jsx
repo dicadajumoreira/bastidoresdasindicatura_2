@@ -6043,6 +6043,14 @@ const BroadcastPanel = ({onLogout, onBackToOverview, leadsAll, leadsLoading, lea
                     {isIncomplete && (
                       <button className="ad-btn ad-btn-primary ad-btn-sm" style={{marginRight: 6}} onClick={() => resumeBroadcast(h)}>Continuar</button>
                     )}
+                    {h.failed > 0 && (
+                      <button
+                        className="ad-btn ad-btn-sm"
+                        style={{marginRight: 6, background: '#d97757', color: '#F7F5F2', borderColor: '#d97757'}}
+                        title={`Reenvia SÓ pros ${h.failed} e-mails que falharam nesse disparo (mesmo assunto e HTML original)`}
+                        onClick={() => resendFailed(h.id, h.failed)}
+                      >↻ Reenviar {h.failed} falha{h.failed === 1 ? '' : 's'}</button>
+                    )}
                     <button className="ad-btn ad-btn-ghost ad-btn-sm" style={{marginRight: 6}} onClick={() => openRecipients(h)}>Ver destinatários</button>
                     <button
                       className="ad-btn ad-btn-sm"
