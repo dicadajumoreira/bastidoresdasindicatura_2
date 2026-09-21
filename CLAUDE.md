@@ -94,6 +94,10 @@ O script já trata: skip em `/admin/` e `/membros/`, troca de label quando o mem
 
 Se um material for publicado sem essas 3 atualizações: a Área de Membros vai mostrar biblioteca desatualizada, o painel de broadcast vai estar incompleto e o e-mail que convida pra biblioteca vai mentir sobre o que tem lá dentro. Todos os três **quebram a promessa da marca** — nunca esquecer.
 
+### 10. Amazon Kindle (KDP) vive no repositório `bastidores`
+
+Os arquivos pra publicar os e-books na Amazon (EPUB + capa + ficha de cadastro) ficam no repositório `dicadajumoreira/bastidores`, pasta `Amazon/`, gerados por `_skill/kdp/build_kdp.py` a partir dos HTMLs em `Ebooks/`. Material novo publicado aqui no site = copiar o HTML pra `Ebooks/` de lá, adicionar o volume em `_skill/kdp/volumes.json` e rodar o script. Instruções em `Amazon/LEIA-ME.md`.
+
 ## Convenções
 
 - **Português coloquial** em mensagens UI e nos commits (a Juliana lê tudo).
