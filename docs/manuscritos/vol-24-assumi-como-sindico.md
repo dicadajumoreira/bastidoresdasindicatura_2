@@ -33,7 +33,7 @@ Síndicos moradores que acabaram de ser eleitos, síndicos profissionais assumin
 COMO USAR
 Leia primeiro os capítulos 2 a 4 (as 72 horas e a transição). Depois use o inventário do capítulo 5 e o diagnóstico do capítulo 6 para montar o retrato do condomínio. Os 13 modelos do final são para copiar, adaptar e usar. Se você é morador, ajuste o ritmo ao seu tempo. Se é profissional, ajuste ao contrato e às visitas.
 
-Os prazos de 24 horas, 7, 30, 60 e 90 dias são referências de organização. Não são carência. Emergência, vencimento, ordem judicial e obrigação exigível não esperam o calendário deste guia.
+Os prazos de 24 horas, 7, 30, 60 e 90 dias são referências de organização. Não são prazo de carência. Emergência, vencimento, ordem judicial e obrigação exigível não esperam o calendário deste guia.
 
 # SUMÁRIO
 
@@ -71,7 +71,7 @@ Antes de mudar qualquer coisa, confirme quatro pontos: quando o mandato começou
 
 ### A eleição e o início do mandato
 
-Confira a data de início, a duração, o nome de quem foi eleito e as condições aprovadas. Se existe empresa contratada para sindicatura, o nome da ata, o da representação e o do contrato precisam bater. Uma divergência de nome ou de data trava a conta bancária e a assinatura de qualquer ato.
+Confira a data de início, a duração, o nome de quem foi eleito e as condições aprovadas. Se existe empresa contratada para a sindicatura, o nome da ata, o da representação e o do contrato precisam bater. Uma divergência de nome ou de data trava a conta bancária e a assinatura de qualquer ato.
 
 Peça à administradora a ata, o edital, a lista de presença e as procurações usadas na assembleia. Pergunte o que cada banco, o CNPJ e os sistemas exigem para atualizar o cadastro. Cada instituição tem a própria lista.
 
@@ -256,7 +256,7 @@ Perguntas que rendem: o que ainda não foi conciliado? Que informação depende 
 
 A Lei 4.591/1964 fala em guarda por cinco anos da documentação do condomínio para verificação contábil (art. 22, § 1º, g). Isso não é autorização geral de descarte no sexto ano. Documento estrutural, trabalhista, técnico, garantia, dado pessoal e prova de litígio seguem regra própria. Monte uma tabela de guarda com apoio jurídico, contábil e técnico.
 
-> Regra de bolso. Documento que ninguém conferiu é documento que ainda não existe para gestão.
+> Regra de bolso. Documento que ninguém conferiu é documento que ainda não existe para a gestão.
 
 # CAPÍTULO 06 · DIAGNÓSTICO
 
@@ -511,7 +511,7 @@ Imagem identificável é dado pessoal. Biometria é dado pessoal sensível. O tr
 
 Na transição, veja quem acessa as imagens, qual é a retenção, como se pede uma cópia e como um incidente é preservado. A LGPD não fixa um prazo único de guarda de imagem que sirva para todo condomínio. Defina critério considerando finalidade, necessidade e obrigações de preservação de prova.
 
-Pedido de imagem se analisa caso a caso, inclusive quanto a terceiros que aparecem na gravação. Não mande para grupo. E não adote a frase genérica de que "nenhuma imagem sai sem ordem judicial", porque ela também está errada.
+Pedido de imagem se analisa caso a caso, inclusive quanto a terceiros que aparecem na gravação. Não mande para o grupo. E não adote a frase genérica de que "nenhuma imagem sai sem ordem judicial", porque ela também está errada.
 
 ### Se houver suspeita de incidente
 
@@ -578,7 +578,7 @@ Não transforme o diagnóstico inicial em campanha contra o antecessor. Descreva
 
 Se o atendimento é em dia útil, escreva isso. Se existe cobertura de emergência fora do horário, apresente o canal e o responsável. "Estamos à disposição" não é procedimento.
 
-Na sindicatura profissional, informe a rotina de presença e como o trabalho é acompanhado entre visitas. Na sindicatura de morador, defina horários e apoios para que toda solicitação não dependa de uma abordagem no elevador.
+Na sindicatura profissional, informe a rotina de presença e como o trabalho é acompanhado entre visitas. Na sindicatura de morador, defina horários e apoios para que as solicitações não dependam de uma abordagem no elevador.
 
 ### Um fluxo simples de atendimento
 
@@ -599,7 +599,7 @@ Mantenha meio compatível com quem mora lá. Se parte dos moradores não usa apl
 
 ### Rotina de atualização
 
-Semana 1: apresentação. Início da gestão: uma atualização curta por semana sobre o que está andando, quando houver conteúdo. Dia 30: diagnóstico preliminar. Dia 60: execução. Dia 90: resultados e próximo ciclo. Emergência e fato relevante se comunicam quando acontecem, fora desse calendário.
+Na primeira semana, a apresentação. Nos primeiros meses, uma atualização curta por semana sobre o que está andando, quando houver o que dizer. No dia 30, o diagnóstico preliminar. No dia 60, a execução. No dia 90, os resultados e o próximo ciclo. Emergência e fato relevante se comunicam quando acontecem, fora desse calendário.
 
 > Frase de sobrevivência. Quem não comunica o andamento entrega a narrativa para o grupo de WhatsApp. E o grupo não devolve.
 
@@ -747,7 +747,7 @@ Comece pelos riscos e pela continuidade. Registros simples. Aproveite os serviç
 
 Se uma medida indispensável não cabe no caixa, apresente o problema, as consequências e as alternativas pela via de decisão adequada. Falta de dinheiro exige gestão e orientação. Não torna seguro continuar com uma atividade perigosa.
 
-### Condomínio recém entregue
+### Condomínio recém-entregue
 
 Acrescente uma frente para recebimento das áreas comuns: projetos, manuais, equipamentos, testes, garantias e pendências de entrega. Conte com avaliação técnica independente. Registre defeitos e comunicações à construtora com data e identificação.
 
@@ -777,7 +777,7 @@ Situações fictícias, montadas com o que se repete em transição real.
 
 O novo síndico recebe a informação de que há R$ 180 mil em conta. Parte dos moradores pede a reforma do salão. O diagnóstico mostra recursos vinculados e compromissos que deixam R$ 5 mil livres, nas condições do exemplo do capítulo 7.
 
-Encaminhamento: conferir extratos, separar fundos, levantar obrigações e projetar receitas. Explicar a disponibilidade efetiva e apresentar alternativas para reforma quando houver viabilidade e aprovação.
+Encaminhamento: conferir extratos, separar fundos, levantar obrigações e projetar receitas. Explicar a disponibilidade efetiva e apresentar alternativas para a reforma quando houver viabilidade e aprovação.
 
 Erro a evitar: anunciar o início da obra com base no saldo bruto. O pagamento das despesas essenciais não pode depender de uma expectativa não conferida.
 
